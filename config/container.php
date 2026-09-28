@@ -23,6 +23,7 @@ use Amtgard\Denarius\Contract\OrkKingdomClient;
 use Amtgard\Denarius\Contract\PolicyGateway;
 use Amtgard\Denarius\Contract\PrincipalStore;
 use Amtgard\Denarius\Contract\RoleGrantStore;
+use Amtgard\Denarius\Contract\PlaidApi;
 use Amtgard\Denarius\Contract\SecretStore;
 use Amtgard\Denarius\Contract\StripeApi;
 use Amtgard\Denarius\Contract\TellerApi;
@@ -64,6 +65,9 @@ use Amtgard\Denarius\Service\Admin\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\RevokeManagerCommand;
+use Amtgard\Denarius\Plaid\CurlPlaidApi;
+use Amtgard\Denarius\Plaid\PlaidLedgerProvider;
+use Amtgard\Denarius\Plaid\PlaidWebhookVerifier;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\Denarius\Stripe\CurlStripeApi;
 use Amtgard\Denarius\Stripe\StripeLedgerProvider;
@@ -174,8 +178,23 @@ return [
         new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? '']),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
     ),
+    PlaidApi::class => fn () => new CurlPlaidApi(
+        $_ENV['PLAID_API_BASE'] ?? 'https://sandbox.plaid.com',
+        $_ENV['PLAID_CLIENT_ID'] ?? '',
+        $_ENV['PLAID_SECRET'] ?? '',
+        $_ENV['PLAID_CLIENT_NAME'] ?? 'Denarius',
+    ),
+    PlaidWebhookVerifier::class => fn (ContainerInterface $c) => new PlaidWebhookVerifier($c->get(PlaidApi::class)),
+    PlaidLedgerProvider::class => fn (ContainerInterface $c) => new PlaidLedgerProvider(
+        $c->get(PlaidApi::class),
+        $c->get(PlaidWebhookVerifier::class),
+        PlaidLedgerProvider::actions(),
+        new PresentCredentials([$_ENV['PLAID_CLIENT_ID'] ?? '', $_ENV['PLAID_SECRET'] ?? '']),
+        new PreviousMonthWindow(new DateTimeImmutable('now')),
+    ),
     LedgerProviderRegistry::class => fn (ContainerInterface $c) => (new ConfiguredLedgerProviders([
         new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? ''])),
+        new ProviderAdmission($c->get(PlaidLedgerProvider::class), new PresentCredentials([$_ENV['PLAID_CLIENT_ID'] ?? '', $_ENV['PLAID_SECRET'] ?? ''])),
         new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? ''])),
     ]))->registry(),
     EnrollmentService::class => fn (ContainerInterface $c) => new EnrollmentService(

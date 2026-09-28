@@ -63,3 +63,11 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Transaction reads cover the previous calendar month through today. A later page in the same sync does not call Stripe again.
 - Line coverage: 97.27% (1459/1500).
 - Infection covered MSI: 91%.
+
+## Plaid adapter
+
+- Branch: `plaid-adapter`
+- Plaid is admitted when `PLAID_CLIENT_ID` and `PLAID_SECRET` are both set, after Stripe and before Teller. Institution search answers yes or no for US transaction coverage. Connect returns a Link token. The stored secret is the access token and the enrollment id is the Item id.
+- `Plaid-Verification` is an ES256 JWT. The body hash and a five-minute issued-at window have to match. Transaction sync is drained inside the adapter for the previous calendar month through today.
+- Line coverage: 97.50% (1674/1717).
+- Infection covered MSI: 93%.
