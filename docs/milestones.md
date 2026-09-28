@@ -40,3 +40,11 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - A different bank is a container binding. Denarius notice actions stay `refresh` and `disconnect`.
 - Line coverage: 96.82% (1189/1228).
 - Infection covered MSI: 90%.
+
+## Provider registry
+
+- Branch: `provider-registry`
+- A `LedgerProviderRegistry` walks configured providers in order. A rejected institution, or one the manager skipped, falls through to the next provider. An unknown id resolves to a missing provider.
+- Teller reports unknown coverage when its application id is present, and no coverage when the id or the institution name is blank.
+- Line coverage: 96.93% (1233/1272).
+- Infection covered MSI: 91%.

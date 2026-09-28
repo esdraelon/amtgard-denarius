@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Teller;
 
 use Amtgard\Denarius\Bank\ConnectedEnrollment;
+use Amtgard\Denarius\Bank\InstitutionSupport;
 use Amtgard\Denarius\Bank\LedgerProvider;
 use Amtgard\Denarius\Bank\ProviderAccount;
 use Amtgard\Denarius\Bank\ProviderNotice;
+use Amtgard\Denarius\Bank\ProviderReady;
 use Amtgard\Denarius\Bank\ProviderTransaction;
 use Amtgard\Denarius\Contract\TellerApi;
 
@@ -20,12 +22,39 @@ final class TellerLedgerProvider implements LedgerProvider
         private readonly TellerApi $api,
         private readonly TellerWebhookVerifier $verifier,
         private readonly array $actions,
+        private readonly ProviderReady $ready,
+        private readonly string $applicationId,
+        private readonly string $environment,
     ) {
+    }
+
+    public function id(): string
+    {
+        return 'teller';
     }
 
     public function signatureHeader(): string
     {
         return 'Teller-Signature';
+    }
+
+    public function supports(string $institution): InstitutionSupport
+    {
+        if (!$this->ready->ready() || trim($institution) === '') {
+            return InstitutionSupport::no();
+        }
+
+        return InstitutionSupport::unknown();
+    }
+
+    public function connectConfig(string $kingdomKey): array
+    {
+        return [
+            'provider' => $this->id(),
+            'applicationId' => $this->applicationId,
+            'environment' => $this->environment,
+            'kingdomKey' => $kingdomKey,
+        ];
     }
 
     public function enrollment(array $payload): ConnectedEnrollment

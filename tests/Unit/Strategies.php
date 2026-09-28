@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Bank\AlwaysReady;
 use Amtgard\Denarius\Bank\DisconnectLedgerNotice;
 use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
 use Amtgard\Denarius\Bank\LedgerProvider;
@@ -52,6 +53,9 @@ final class Strategies
             $api ?? new FakeTeller(),
             $verifier ?? new TellerWebhookVerifier('whsec', 300),
             TellerLedgerProvider::actions(),
+            new AlwaysReady(),
+            'app_test',
+            'sandbox',
         );
     }
 

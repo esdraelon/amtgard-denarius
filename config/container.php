@@ -9,6 +9,7 @@ use Amtgard\Denarius\Auth\IdpPolicyGateway;
 use Amtgard\Denarius\Bank\DisconnectLedgerNotice;
 use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
 use Amtgard\Denarius\Bank\LedgerProvider;
+use Amtgard\Denarius\Bank\PresentCredentials;
 use Amtgard\Denarius\Bank\RefreshLedgerNotice;
 use Amtgard\Denarius\Contract\AccountStore;
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
@@ -149,6 +150,9 @@ return [
         $c->get(TellerApi::class),
         $c->get(TellerWebhookVerifier::class),
         TellerLedgerProvider::actions(),
+        new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? '']),
+        $_ENV['TELLER_APPLICATION_ID'] ?? '',
+        $_ENV['TELLER_ENVIRONMENT'] ?? 'sandbox',
     ),
     EnrollmentService::class => fn (ContainerInterface $c) => new EnrollmentService(
         $c->get(KingdomStore::class),
