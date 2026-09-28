@@ -118,7 +118,7 @@ final class ControllerTest extends AmtgardTestCase
             $kingdoms,
             $accounts,
             new KingdomSettings($kingdoms),
-            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue),
+            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue, Strategies::months()),
             $queue,
             $twig,
             'app_test',
@@ -136,7 +136,7 @@ final class ControllerTest extends AmtgardTestCase
         $this->assertSame(302, $refreshed->getStatusCode());
         $this->assertSame(403, $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
 
-        $webhook = new WebhookController(new TellerWebhookHandler(new TellerWebhookVerifier('whsec'), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue))));
+        $webhook = new WebhookController(new TellerWebhookHandler(new TellerWebhookVerifier('whsec'), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue, Strategies::months()))));
         $rejected = $webhook->teller($this->request('POST', '/webhooks/teller'), new Response());
         $this->assertSame(400, $rejected->getStatusCode());
 

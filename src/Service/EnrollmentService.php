@@ -12,6 +12,7 @@ use Amtgard\Denarius\Contract\TellerApi;
 use Amtgard\Denarius\Record\AccountRecord;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Service\Month\MonthInvalidator;
 
 final class EnrollmentService
 {
@@ -22,6 +23,7 @@ final class EnrollmentService
         private readonly TellerApi $teller,
         private readonly TokenCipher $cipher,
         private readonly KingdomRefreshQueue $queue,
+        private readonly MonthInvalidator $months,
     ) {
     }
 
@@ -41,6 +43,7 @@ final class EnrollmentService
 
         $saved = $this->kingdoms->save($this->copy($kingdom, $enrollmentId, $institution, 'connected'));
         $this->importAccounts($saved, $token);
+        $this->months->forget((int) $saved->getId());
         $this->queue->publishLedger($saved->getOrkKingdomId());
 
         return $saved;
@@ -63,6 +66,7 @@ final class EnrollmentService
                 ->published($published)
                 ->build());
         }
+        $this->months->forget((int) $kingdom->getId());
     }
 
     public function markDisconnected(KingdomRecord $kingdom): KingdomRecord

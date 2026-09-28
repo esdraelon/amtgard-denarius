@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Contract\KeyValueStore;
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
+use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\Admin\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\GrantManagerCommand;
@@ -38,6 +40,11 @@ final class Strategies
             new TransactionsProcessedEvent($queue),
             new EnrollmentDisconnectedEvent($enrollments),
         ]);
+    }
+
+    public static function months(?KeyValueStore $store = null): MonthInvalidator
+    {
+        return new MonthInvalidator($store ?? new ArrayStore());
     }
 
     public static function jobs(CachedKingdomDirectory $directory, TransactionSynchronizer $synchronizer): RefreshJobRegistry

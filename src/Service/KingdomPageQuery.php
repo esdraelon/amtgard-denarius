@@ -12,8 +12,9 @@ use Amtgard\Denarius\Domain\MonthStatement;
 use Amtgard\Denarius\Domain\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\MonthWindow;
 use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Service\Month\MonthReader;
 
-final class KingdomPageQuery
+final class KingdomPageQuery implements MonthReader
 {
     public function __construct(
         private readonly TransactionStore $transactions,

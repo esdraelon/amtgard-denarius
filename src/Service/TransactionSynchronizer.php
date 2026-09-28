@@ -13,6 +13,7 @@ use Amtgard\Denarius\Domain\Money;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Record\TransactionRecord;
 use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Service\Month\MonthInvalidator;
 
 final class TransactionSynchronizer
 {
@@ -24,6 +25,7 @@ final class TransactionSynchronizer
         private readonly TellerApi $teller,
         private readonly TokenCipher $cipher,
         private readonly \DateTimeImmutable $now,
+        private readonly MonthInvalidator $months,
     ) {
     }
 
@@ -59,6 +61,7 @@ final class TransactionSynchronizer
             ->enrollmentStatus($kingdom->getEnrollmentStatus())
             ->lastSyncedAt($this->now->format('c'))
             ->build());
+        $this->months->forget((int) $kingdom->getId());
 
         return true;
     }

@@ -198,7 +198,8 @@ final class ApplicationTest extends AmtgardTestCase
         $queue = new MemoryRefresh();
         $teller = new FakeTeller();
         $cipher = new TokenCipher('app-key');
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $teller, $cipher, $queue);
+        $cache = new ArrayStore();
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $teller, $cipher, $queue, Strategies::months($cache));
         $connected = $enrollment->connect($updated, [
             'accessToken' => 'token-1',
             'enrollment' => ['id' => 'enr_1', 'institution' => ['name' => 'Bank']],
@@ -218,7 +219,7 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertThrows(\RuntimeException::class, fn () => $cipher->decrypt(base64_encode('short')));
 
         $transactions = new MemoryTransactions();
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, $secrets, $transactions, $teller, $cipher, new \DateTimeImmutable('2026-09-01'));
+        $sync = new TransactionSynchronizer($kingdoms, $accounts, $secrets, $transactions, $teller, $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
         $enrollment->setPublished($kingdoms->findByOrkId(4), ['acc_1' => true]);
         $kingdoms->save(KingdomRecord::builder()
             ->id($connected->getId())
@@ -232,6 +233,7 @@ final class ApplicationTest extends AmtgardTestCase
             ->enrollmentStatus('connected')
             ->build());
         $this->assertTrue($sync->sync(4));
+        $this->assertGreaterThan(0, (int) $cache->get('denarius:month-gen:1'));
         $this->assertFalse($sync->sync(99));
         $this->assertSame(2, count($transactions->forKingdom((int) $connected->getId())));
         $this->assertNotNull($kingdoms->findByOrkId(4)->getLastSyncedAt());
@@ -321,6 +323,7 @@ final class ApplicationTest extends AmtgardTestCase
             new FakeTeller(),
             new TokenCipher('k'),
             new \DateTimeImmutable('now'),
+            Strategies::months(),
         );
         $worker = new LedgerWorker($messages, Strategies::jobs($directory, $sync), 0);
         $worker->handle('nope');
