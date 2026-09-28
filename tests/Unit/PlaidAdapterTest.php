@@ -15,7 +15,7 @@ use Amtgard\Denarius\Bank\Plaid\CurlPlaidApi;
 use Amtgard\Denarius\Bank\Plaid\PlaidLedgerProvider;
 use Amtgard\Denarius\Bank\Plaid\PlaidWebhookVerifier;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
-use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\PHPUnit\AmtgardTestCase;

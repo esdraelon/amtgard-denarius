@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Controller;
 
-use Amtgard\Denarius\Auth\CurrentActor;
+use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
-use Amtgard\Denarius\Queue\KingdomRefreshQueue;
+use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\Visibility;
-use Amtgard\Denarius\Http\CsrfToken;
-use Amtgard\Denarius\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Http\CsrfToken;
+use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\BankConnect;
 use Amtgard\Denarius\Service\EnrollmentService;

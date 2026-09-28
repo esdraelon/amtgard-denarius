@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Month;
 
-use Amtgard\Denarius\Queue\KeyValueStore;
+use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
 
 final class MonthInvalidator
 {

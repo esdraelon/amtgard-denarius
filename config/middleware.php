@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Amtgard\Denarius\Http\CsrfToken;
-use Amtgard\Denarius\Session\RedisSessionHandler;
+use Amtgard\Denarius\Utilities\Http\CsrfToken;
+use Amtgard\Denarius\Utilities\Session\RedisSessionHandler;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;

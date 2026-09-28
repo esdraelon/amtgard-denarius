@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Auth\BootstrapAdmins;
-use Amtgard\Denarius\Auth\DenariusAuthorizer;
-use Amtgard\Denarius\Queue\KeyValueStore;
-use Amtgard\Denarius\Auth\PolicyGateway;
+use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
+use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
+use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
 
 final class PermissionService
 {

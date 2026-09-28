@@ -131,3 +131,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Kingdom, account, principal, role-grant, and transaction records sit under `Persistence/Record`, next to the repositories that build them.
 - Line coverage: 97.68% (1933/1979).
 - Infection covered MSI: 94%.
+
+## Utility modules
+
+- Branch: `utility-modules`
+- Auth, HTTP, queue, security, session, and setup sit under `Utilities`. They stay siblings: the only cross-use is HTTP middleware reading the current actor, and that actor is also used outside HTTP. Queue and setup ports sit above an `Impl` folder. Setup is split into client, guide, I/O, field, and env.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.

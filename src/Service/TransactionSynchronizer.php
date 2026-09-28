@@ -13,7 +13,7 @@ use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
 use Amtgard\Denarius\Domain\Money;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
-use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Optional\Optional;
 

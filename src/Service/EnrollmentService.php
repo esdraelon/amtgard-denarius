@@ -6,12 +6,12 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
-use Amtgard\Denarius\Queue\KingdomRefreshQueue;
+use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\SecretRepositoryInterface;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
-use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Optional\Optional;
 

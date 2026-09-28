@@ -13,7 +13,7 @@ use Amtgard\Denarius\Bank\ProviderNotice;
 use Amtgard\Denarius\Bank\ProviderTransaction;
 use Amtgard\Denarius\Bank\Teller\TellerApi;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
-use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\TransactionSynchronizer;

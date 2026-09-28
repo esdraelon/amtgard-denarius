@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Auth\BootstrapAdmins;
-use Amtgard\Denarius\Auth\ClaimOrn;
-use Amtgard\Denarius\Auth\DenariusAuthorizer;
-use Amtgard\Denarius\Queue\MessageQueue;
+use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
+use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
+use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Queue\Message\MessageQueue;
 use Amtgard\Denarius\Controller\AdminController;
 use Amtgard\Denarius\Controller\KingdomPageController;
 use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Domain\KingdomAccess;
 use Amtgard\Denarius\Domain\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\MonthWindow;
-use Amtgard\Denarius\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
-use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\BankConnect;
 use Amtgard\Denarius\Service\DailySweep;
 use Amtgard\Denarius\Service\EnrollmentService;

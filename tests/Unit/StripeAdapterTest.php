@@ -11,7 +11,7 @@ use Amtgard\Denarius\Bank\PreviousMonthWindow;
 use Amtgard\Denarius\Bank\ProviderAdmission;
 use Amtgard\Denarius\Bank\Stripe\StripeApi;
 use Amtgard\Denarius\Controller\WebhookController;
-use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\Denarius\Bank\Stripe\CurlStripeApi;

@@ -6,7 +6,7 @@ namespace Amtgard\Denarius\Tests\Integration;
 
 use Amtgard\ActiveRecordOrm\Configuration\Repository\DatabaseConfiguration;
 use Amtgard\ActiveRecordOrm\Configuration\Repository\MysqlPdoProvider;
-use Amtgard\Denarius\Auth\CurrentActor;
+use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use Amtgard\Denarius\Persistence\Orm;
 use Amtgard\Denarius\Persistence\Repository\AccountRepository;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepository;

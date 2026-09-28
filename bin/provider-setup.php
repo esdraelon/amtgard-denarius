@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use Amtgard\Denarius\Setup\ConsoleIo;
-use Amtgard\Denarius\Setup\CurlSetupClient;
-use Amtgard\Denarius\Setup\EnvFragment;
-use Amtgard\Denarius\Setup\HiddenLine;
-use Amtgard\Denarius\Setup\PlaidGuide;
-use Amtgard\Denarius\Setup\ProviderSetup;
-use Amtgard\Denarius\Setup\RequiredSettings;
-use Amtgard\Denarius\Setup\SimpleFinGuide;
-use Amtgard\Denarius\Setup\StripeGuide;
-use Amtgard\Denarius\Setup\TellerGuide;
+use Amtgard\Denarius\Utilities\Setup\Io\Impl\ConsoleIo;
+use Amtgard\Denarius\Utilities\Setup\Client\Impl\CurlSetupClient;
+use Amtgard\Denarius\Utilities\Setup\Env\EnvFragment;
+use Amtgard\Denarius\Utilities\Setup\Io\HiddenLine;
+use Amtgard\Denarius\Utilities\Setup\Guide\Impl\PlaidGuide;
+use Amtgard\Denarius\Utilities\Setup\ProviderSetup;
+use Amtgard\Denarius\Utilities\Setup\Field\RequiredSettings;
+use Amtgard\Denarius\Utilities\Setup\Guide\Impl\SimpleFinGuide;
+use Amtgard\Denarius\Utilities\Setup\Guide\Impl\StripeGuide;
+use Amtgard\Denarius\Utilities\Setup\Guide\Impl\TellerGuide;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 

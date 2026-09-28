@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Bank\Notice;
 
 use Amtgard\Denarius\Bank\ProviderNotice;
-use Amtgard\Denarius\Queue\KingdomRefreshQueue;
+use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 
 final class RefreshLedgerNotice implements LedgerNotice

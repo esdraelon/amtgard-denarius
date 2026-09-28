@@ -7,7 +7,7 @@ use Amtgard\Denarius\Controller\HomeController;
 use Amtgard\Denarius\Controller\KingdomPageController;
 use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
-use Amtgard\Denarius\Http\SyncPrincipalMiddleware;
+use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
 use Amtgard\IdpClient\Slim\IdpAuthController;
 use Amtgard\IdpClient\Slim\SessionMiddleware;
 use Slim\App;

@@ -13,7 +13,7 @@ use Amtgard\Denarius\Domain\LedgerLine;
 use Amtgard\Denarius\Domain\MonthWindow;
 use Amtgard\Denarius\Domain\Viewer;
 use Amtgard\Denarius\Domain\Visibility;
-use Amtgard\Denarius\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;

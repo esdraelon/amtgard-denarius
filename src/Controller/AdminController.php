@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Controller;
 
-use Amtgard\Denarius\Auth\CurrentActor;
+use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
-use Amtgard\Denarius\Auth\PolicyGateway;
+use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
 use Amtgard\Denarius\Persistence\Repository\PrincipalRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
-use Amtgard\Denarius\Http\CsrfToken;
-use Amtgard\Denarius\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Http\CsrfToken;
+use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\Denarius\Service\RoleAdmin;
