@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Bank\AlwaysReady;
 use Amtgard\Denarius\Bank\ConnectedEnrollment;
+use Amtgard\Denarius\Bank\InstitutionSupport;
 use Amtgard\Denarius\Bank\LedgerProvider;
 use Amtgard\Denarius\Bank\ProviderAccount;
 use Amtgard\Denarius\Bank\ProviderNotice;
@@ -29,9 +31,24 @@ final class LedgerFacadeTest extends AmtgardTestCase
         $queue = new MemoryRefresh();
         $cipher = new TokenCipher('app-key');
         $provider = new class implements LedgerProvider {
+            public function id(): string
+            {
+                return 'other';
+            }
+
             public function signatureHeader(): string
             {
                 return 'X-Bank-Signature';
+            }
+
+            public function supports(string $institution): InstitutionSupport
+            {
+                return InstitutionSupport::yes();
+            }
+
+            public function connectConfig(string $kingdomKey): array
+            {
+                return ['provider' => 'other', 'kingdomKey' => $kingdomKey];
             }
 
             public function enrollment(array $payload): ConnectedEnrollment
@@ -96,7 +113,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
 
     public function testTellerAdapterMapsSparseRowsAndUnknownNotices(): void
     {
-        $provider = new TellerLedgerProvider(new SparseTeller(), new \Amtgard\Denarius\Teller\TellerWebhookVerifier('whsec', 300), TellerLedgerProvider::actions());
+        $provider = new TellerLedgerProvider(new SparseTeller(), new \Amtgard\Denarius\Teller\TellerWebhookVerifier('whsec', 300), TellerLedgerProvider::actions(), new AlwaysReady(), 'app_test', 'sandbox');
         $this->assertSame('Teller-Signature', $provider->signatureHeader());
 
         $accounts = $provider->accounts('token');

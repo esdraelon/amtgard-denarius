@@ -6,7 +6,16 @@ namespace Amtgard\Denarius\Bank;
 
 interface LedgerProvider
 {
+    public function id(): string;
+
     public function signatureHeader(): string;
+
+    public function supports(string $institution): InstitutionSupport;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function connectConfig(string $kingdomKey): array;
 
     /**
      * @param array<string, mixed> $payload
