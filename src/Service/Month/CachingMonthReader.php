@@ -10,7 +10,7 @@ use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\LedgerLine;
 use Amtgard\Denarius\Domain\MonthStatement;
 use Amtgard\Denarius\Domain\MonthWindow;
-use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 
 final class CachingMonthReader implements MonthReader
 {

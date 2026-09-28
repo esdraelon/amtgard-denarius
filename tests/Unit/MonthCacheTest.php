@@ -8,7 +8,7 @@ use Amtgard\Denarius\Domain\CategoryTotal;
 use Amtgard\Denarius\Domain\LedgerLine;
 use Amtgard\Denarius\Domain\MonthStatement;
 use Amtgard\Denarius\Domain\MonthWindow;
-use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Month\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;

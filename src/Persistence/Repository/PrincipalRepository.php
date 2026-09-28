@@ -10,7 +10,7 @@ use Amtgard\ActiveRecordOrm\Interface\EntityRepositoryInterface;
 use Amtgard\ActiveRecordOrm\Query\OrderBy;
 use Amtgard\Denarius\Persistence\Entity\PrincipalEntity;
 use Optional\Optional;
-use Amtgard\Denarius\Record\PrincipalRecord;
+use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
 
 #[RepositoryOf('principals', PrincipalEntity::class)]
 class PrincipalRepository extends Repository implements EntityRepositoryInterface, PrincipalRepositoryInterface

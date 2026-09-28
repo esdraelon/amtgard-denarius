@@ -10,7 +10,7 @@ use Amtgard\ActiveRecordOrm\Interface\EntityRepositoryInterface;
 use Amtgard\ActiveRecordOrm\Query\OrderBy;
 use Amtgard\Denarius\Persistence\Entity\AccountEntity;
 use Optional\Optional;
-use Amtgard\Denarius\Record\AccountRecord;
+use Amtgard\Denarius\Persistence\Record\AccountRecord;
 
 #[RepositoryOf('published_accounts', AccountEntity::class)]
 class AccountRepository extends Repository implements EntityRepositoryInterface, AccountRepositoryInterface

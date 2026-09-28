@@ -10,7 +10,7 @@ use Amtgard\ActiveRecordOrm\Interface\EntityRepositoryInterface;
 use Amtgard\ActiveRecordOrm\Query\OrderBy;
 use Amtgard\Denarius\Persistence\Entity\KingdomEntity;
 use Optional\Optional;
-use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 
 #[RepositoryOf('kingdoms', KingdomEntity::class)]
 class KingdomRepository extends Repository implements EntityRepositoryInterface, KingdomRepositoryInterface

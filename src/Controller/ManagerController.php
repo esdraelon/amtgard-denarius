@@ -12,7 +12,7 @@ use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\Visibility;
 use Amtgard\Denarius\Http\CsrfToken;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
-use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\BankConnect;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomSettings;

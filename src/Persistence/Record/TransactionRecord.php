@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Record;
+namespace Amtgard\Denarius\Persistence\Record;
 
 use Amtgard\Traits\Builder\Builder;
 use Amtgard\Traits\Builder\Data;

@@ -8,7 +8,7 @@ use Amtgard\ActiveRecordOrm\Attribute\RepositoryOf;
 use Amtgard\ActiveRecordOrm\Entity\Repository\Repository;
 use Amtgard\ActiveRecordOrm\Interface\EntityRepositoryInterface;
 use Amtgard\Denarius\Persistence\Entity\RoleGrantEntity;
-use Amtgard\Denarius\Record\RoleGrantRecord;
+use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
 
 #[RepositoryOf('role_grants', RoleGrantEntity::class)]
 class RoleGrantRepository extends Repository implements EntityRepositoryInterface, RoleGrantRepositoryInterface
