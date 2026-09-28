@@ -273,6 +273,7 @@ ensure_sessions_store() {
     fi
 
     echo "==> Ensuring shared Redis store is running (${SESSIONS_CONTAINER})..."
+    echo "==> This container is shared by both slots. Month cache uses Redis DB 0. Session flush uses DB ${SESSION_REDIS_DB}."
     compose_sessions up -d
 
     if [[ "$INSTALL_RESET_SESSIONS" == "1" ]]; then

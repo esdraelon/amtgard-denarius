@@ -44,6 +44,9 @@ use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomPageQuery;
 use Amtgard\Denarius\Service\KingdomSettings;
+use Amtgard\Denarius\Service\Month\CachingMonthReader;
+use Amtgard\Denarius\Service\Month\MonthInvalidator;
+use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\Denarius\Service\PrincipalSync;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
@@ -96,6 +99,7 @@ return [
     Redis::class => function () {
         $redis = new Redis();
         $redis->connect($_ENV['REDIS_HOST'] ?? '127.0.0.1', (int) ($_ENV['REDIS_PORT'] ?? 6379));
+        $redis->select((int) ($_ENV['REDIS_DB'] ?? 0));
         return $redis;
     },
     RedisKeyValueStore::class => fn (Redis $redis) => new RedisKeyValueStore($redis),
@@ -146,6 +150,7 @@ return [
         $c->get(TellerApi::class),
         $c->get(TokenCipher::class),
         $c->get(KingdomRefreshQueue::class),
+        $c->get(MonthInvalidator::class),
     ),
     TransactionSynchronizer::class => fn (ContainerInterface $c) => new TransactionSynchronizer(
         $c->get(KingdomStore::class),
@@ -155,6 +160,7 @@ return [
         $c->get(TellerApi::class),
         $c->get(TokenCipher::class),
         new DateTimeImmutable('now'),
+        $c->get(MonthInvalidator::class),
     ),
     TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier($_ENV['TELLER_WEBHOOK_SECRET'] ?? ''),
     TellerWebhookHandler::class => fn (ContainerInterface $c) => new TellerWebhookHandler(
@@ -169,6 +175,11 @@ return [
         $c->get(TransactionStore::class),
         $c->get(AccountStore::class),
         new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
+    ),
+    MonthInvalidator::class => fn (RedisKeyValueStore $store) => new MonthInvalidator($store),
+    MonthReader::class => fn (ContainerInterface $c) => new CachingMonthReader(
+        $c->get(KingdomPageQuery::class),
+        $c->get(RedisKeyValueStore::class),
     ),
     StatementPresenterRegistry::class => fn () => StatementPresenterRegistry::standard(),
     VisibilityPolicyRegistry::class => fn () => VisibilityPolicyRegistry::standard(),
@@ -195,7 +206,7 @@ return [
     ),
     KingdomPageController::class => fn (ContainerInterface $c) => new KingdomPageController(
         $c->get(KingdomStore::class),
-        $c->get(KingdomPageQuery::class),
+        $c->get(MonthReader::class),
         $c->get(KingdomAccess::class),
         $c->get(SessionAuthStore::class),
         $c->get(TwigHtmlRenderer::class),
@@ -239,6 +250,7 @@ return [
     RedisSessionHandler::class => function () {
         $redis = new Redis();
         $redis->connect($_ENV['SESSION_REDIS_HOST'] ?? '127.0.0.1', (int) ($_ENV['SESSION_REDIS_PORT'] ?? 6379));
+        $redis->select((int) ($_ENV['SESSION_REDIS_DB'] ?? 1));
         return new RedisSessionHandler($redis);
     },
     IdpAuthController::class => function (ContainerInterface $container) {

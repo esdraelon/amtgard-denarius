@@ -14,7 +14,7 @@ use Amtgard\Denarius\Domain\MonthWindow;
 use Amtgard\Denarius\Domain\Viewer;
 use Amtgard\Denarius\Domain\Visibility;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
-use Amtgard\Denarius\Service\KingdomPageQuery;
+use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -23,7 +23,7 @@ final class KingdomPageController
 {
     public function __construct(
         private readonly KingdomStore $kingdoms,
-        private readonly KingdomPageQuery $pages,
+        private readonly MonthReader $pages,
         private readonly KingdomAccess $access,
         private readonly SessionAuthStore $auth,
         private readonly TwigHtmlRenderer $html,
