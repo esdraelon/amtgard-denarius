@@ -1,0 +1,24 @@
+services:
+  denariusapp:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+    working_dir: /var/www
+    volumes:
+      - ./.env:/var/www/denarius.amtgard.com/.env:ro
+      - ./keys:/var/www/denarius.amtgard.com/keys:ro
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=PROD
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - amtgard-denarius-net
+      - amtgard-denarius-shared
+
+networks:
+  amtgard-denarius-net:
+  amtgard-denarius-shared:
+    name: amtgard-denarius-shared
+    external: true

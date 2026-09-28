@@ -1,0 +1,63 @@
+{% extends "base.twig" %}
+{% block title %}Manage {{ kingdom.name }}{% endblock %}
+{% block body %}
+<h1>Manage {{ kingdom.name }}</h1>
+<p><a href="/{{ kingdom.slug }}">Public statement</a></p>
+<form method="post" action="/manage/{{ kingdom.slug }}/settings">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Visibility
+        <select name="visibility">
+            {% for value in ['public', 'registered', 'kingdom_only'] %}
+                <option value="{{ value }}" {% if kingdom.visibility == value %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>Display
+        <select name="display_mode">
+            {% for value in ['all', 'redacted', 'summarized'] %}
+                <option value="{{ value }}" {% if kingdom.displayMode == value %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button type="submit">Save</button>
+</form>
+<p>Status: {{ kingdom.enrollmentStatus }}</p>
+<button type="button" id="teller-connect">Connect bank</button>
+<form id="enrollment-form" method="post" action="/manage/{{ kingdom.slug }}/enrollment">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="enrollment" id="enrollment-json">
+</form>
+<form method="post" action="/manage/{{ kingdom.slug }}/accounts">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% for account in accounts %}
+        <label>
+            <input type="checkbox" name="published[]" value="{{ account.tellerAccountId }}" {% if account.published %}checked{% endif %}>
+            {{ account.name }} ({{ account.type }})
+        </label>
+    {% endfor %}
+    <button type="submit">Save accounts</button>
+</form>
+<form method="post" action="/manage/{{ kingdom.slug }}/refresh">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="submit">Refresh transactions</button>
+</form>
+{% if kingdom.enrollmentStatus == 'disconnected' %}
+    <p>Reconnect this enrollment from Teller Connect.</p>
+{% endif %}
+<script src="https://cdn.teller.io/connect/connect.js"></script>
+<script>
+document.getElementById('teller-connect').addEventListener('click', function () {
+    var connect = TellerConnect.setup({
+        applicationId: {{ applicationId|json_encode|raw }},
+        environment: {{ environment|json_encode|raw }},
+        products: ['transactions'],
+        {% if kingdom.enrollmentId %}enrollmentId: {{ kingdom.enrollmentId|json_encode|raw }},{% endif %}
+        onSuccess: function (enrollment) {
+            document.getElementById('enrollment-json').value = JSON.stringify(enrollment);
+            document.getElementById('enrollment-form').submit();
+        }
+    });
+    connect.open();
+});
+</script>
+{% endblock %}

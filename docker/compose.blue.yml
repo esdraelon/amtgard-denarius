@@ -1,0 +1,12 @@
+services:
+  denariusapp:
+    ports:
+      - "37180:80"
+    container_name: amtgard-denarius-blue
+    hostname: amtgard-denarius-blue
+    volumes:
+      - amtgard-denarius-blue-logs:/var/www/denarius.amtgard.com/logs
+
+volumes:
+  amtgard-denarius-blue-logs:
+    name: amtgard-denarius-blue-logs
