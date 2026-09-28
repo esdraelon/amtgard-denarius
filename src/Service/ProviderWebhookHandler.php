@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
+use Amtgard\Denarius\Bank\Notice\LedgerNoticeRegistry;
 use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Contract\KingdomStore;
 

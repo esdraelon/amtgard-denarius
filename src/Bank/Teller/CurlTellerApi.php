@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Teller;
-
-use Amtgard\Denarius\Contract\TellerApi;
+namespace Amtgard\Denarius\Bank\Teller;
 
 final class CurlTellerApi implements TellerApi
 {

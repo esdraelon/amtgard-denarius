@@ -11,13 +11,13 @@ use Amtgard\Denarius\Bank\LedgerProvider;
 use Amtgard\Denarius\Bank\ProviderAccount;
 use Amtgard\Denarius\Bank\ProviderNotice;
 use Amtgard\Denarius\Bank\ProviderTransaction;
-use Amtgard\Denarius\Contract\TellerApi;
+use Amtgard\Denarius\Bank\Teller\TellerApi;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Security\TokenCipher;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
-use Amtgard\Denarius\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Bank\Teller\TellerLedgerProvider;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class LedgerFacadeTest extends AmtgardTestCase
@@ -113,7 +113,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
 
     public function testTellerAdapterMapsSparseRowsAndUnknownNotices(): void
     {
-        $provider = new TellerLedgerProvider(new SparseTeller(), new \Amtgard\Denarius\Teller\TellerWebhookVerifier('whsec', 300), TellerLedgerProvider::actions(), new AlwaysReady(), 'app_test', 'sandbox');
+        $provider = new TellerLedgerProvider(new SparseTeller(), new \Amtgard\Denarius\Bank\Teller\TellerWebhookVerifier('whsec', 300), TellerLedgerProvider::actions(), new AlwaysReady(), 'app_test', 'sandbox');
         $this->assertSame('Teller-Signature', $provider->signatureHeader());
 
         $accounts = $provider->accounts('token');

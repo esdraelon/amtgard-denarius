@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Stripe;
+namespace Amtgard\Denarius\Bank\Stripe;
 
 use Amtgard\Denarius\Bank\ConnectedEnrollment;
 use Amtgard\Denarius\Bank\InstitutionSupport;
@@ -12,7 +12,6 @@ use Amtgard\Denarius\Bank\ProviderAccount;
 use Amtgard\Denarius\Bank\ProviderNotice;
 use Amtgard\Denarius\Bank\ProviderReady;
 use Amtgard\Denarius\Bank\ProviderTransaction;
-use Amtgard\Denarius\Contract\StripeApi;
 use Amtgard\Denarius\Domain\Money;
 use Optional\Optional;
 

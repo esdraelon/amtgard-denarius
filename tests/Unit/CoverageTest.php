@@ -30,7 +30,7 @@ use Amtgard\Denarius\Service\KingdomSettings;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
-use Amtgard\Denarius\Teller\CurlTellerApi;
+use Amtgard\Denarius\Bank\Teller\CurlTellerApi;
 use Amtgard\Denarius\Worker\LedgerWorker;
 use Amtgard\IdpClient\OAuth\TokenSet;
 use Amtgard\IdpClient\Resource\AuthenticatedSession;

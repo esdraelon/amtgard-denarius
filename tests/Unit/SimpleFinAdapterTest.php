@@ -9,10 +9,10 @@ use Amtgard\Denarius\Bank\ConfiguredLedgerProviders;
 use Amtgard\Denarius\Bank\PresentCredentials;
 use Amtgard\Denarius\Bank\PreviousMonthWindow;
 use Amtgard\Denarius\Bank\ProviderAdmission;
-use Amtgard\Denarius\Contract\SimpleFinApi;
-use Amtgard\Denarius\SimpleFin\CurlSimpleFinApi;
-use Amtgard\Denarius\SimpleFin\SimpleFinHost;
-use Amtgard\Denarius\SimpleFin\SimpleFinLedgerProvider;
+use Amtgard\Denarius\Bank\SimpleFin\SimpleFinApi;
+use Amtgard\Denarius\Bank\SimpleFin\CurlSimpleFinApi;
+use Amtgard\Denarius\Bank\SimpleFin\SimpleFinHost;
+use Amtgard\Denarius\Bank\SimpleFin\SimpleFinLedgerProvider;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class SimpleFinAdapterTest extends AmtgardTestCase
