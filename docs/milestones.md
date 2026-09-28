@@ -159,3 +159,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Services are grouped into enrollment, ledger sync, kingdom pages, access, admin, and month. Admin commands, the cached month reader, and refresh jobs sit under `Impl`. Statement lines and display mode sit in their own modules so the statement folder stays small.
 - Line coverage: 97.68% (1933/1979).
 - Infection covered MSI: 95%.
+
+## Provider framework
+
+- Branch: `provider-framework`
+- Shared ledger-provider types sit under `Domain/Bank/Provider/Framework`. Plaid, SimpleFIN, Stripe, and Teller sit under `Domain/Bank/Provider/Providers`.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.

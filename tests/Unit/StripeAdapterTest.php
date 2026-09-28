@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\AlwaysReady;
-use Amtgard\Denarius\Domain\Bank\Providers\Registry\ConfiguredLedgerProviders;
-use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\PresentCredentials;
-use Amtgard\Denarius\Domain\Bank\Providers\Support\PreviousMonthWindow;
-use Amtgard\Denarius\Domain\Bank\Providers\Registry\ProviderAdmission;
-use Amtgard\Denarius\Domain\Bank\Providers\Stripe\StripeApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AlwaysReady;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ConfiguredLedgerProviders;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\PresentCredentials;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Support\PreviousMonthWindow;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ProviderAdmission;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeApi;
 use Amtgard\Denarius\Controller\WebhookController;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
-use Amtgard\Denarius\Domain\Bank\Providers\Stripe\Impl\CurlStripeApi;
-use Amtgard\Denarius\Domain\Bank\Providers\Stripe\StripeLedgerProvider;
-use Amtgard\Denarius\Domain\Bank\Providers\Stripe\StripeWebhookVerifier;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier;
 use Amtgard\PHPUnit\AmtgardTestCase;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Factory\StreamFactory;

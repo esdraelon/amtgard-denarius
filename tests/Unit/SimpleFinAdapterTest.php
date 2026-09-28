@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\AlwaysReady;
-use Amtgard\Denarius\Domain\Bank\Providers\Registry\ConfiguredLedgerProviders;
-use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\PresentCredentials;
-use Amtgard\Denarius\Domain\Bank\Providers\Support\PreviousMonthWindow;
-use Amtgard\Denarius\Domain\Bank\Providers\Registry\ProviderAdmission;
-use Amtgard\Denarius\Domain\Bank\Providers\SimpleFin\SimpleFinApi;
-use Amtgard\Denarius\Domain\Bank\Providers\SimpleFin\Impl\CurlSimpleFinApi;
-use Amtgard\Denarius\Domain\Bank\Providers\SimpleFin\SimpleFinHost;
-use Amtgard\Denarius\Domain\Bank\Providers\SimpleFin\SimpleFinLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AlwaysReady;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ConfiguredLedgerProviders;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\PresentCredentials;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Support\PreviousMonthWindow;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ProviderAdmission;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\Impl\CurlSimpleFinApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinHost;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinLedgerProvider;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class SimpleFinAdapterTest extends AmtgardTestCase
