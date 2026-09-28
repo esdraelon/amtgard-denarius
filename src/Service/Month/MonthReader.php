@@ -6,7 +6,7 @@ namespace Amtgard\Denarius\Service\Month;
 
 use Amtgard\Denarius\Domain\MonthStatement;
 use Amtgard\Denarius\Domain\MonthWindow;
-use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 
 interface MonthReader
 {

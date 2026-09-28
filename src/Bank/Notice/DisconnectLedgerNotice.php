@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Bank\Notice;
 
 use Amtgard\Denarius\Bank\ProviderNotice;
-use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\EnrollmentService;
 
 final class DisconnectLedgerNotice implements LedgerNotice

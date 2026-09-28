@@ -9,8 +9,8 @@ use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Auth\PolicyGateway;
 use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
 use Amtgard\Denarius\Domain\KingdomSlug;
-use Amtgard\Denarius\Record\KingdomRecord;
-use Amtgard\Denarius\Record\RoleGrantRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
 
 final class RoleAdmin
 {

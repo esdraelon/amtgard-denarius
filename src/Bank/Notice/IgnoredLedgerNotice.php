@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Bank\Notice;
 
-use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 
 final class IgnoredLedgerNotice implements LedgerNotice
 {

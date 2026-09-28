@@ -9,7 +9,7 @@ use Amtgard\ActiveRecordOrm\Entity\Repository\Repository;
 use Amtgard\ActiveRecordOrm\Interface\EntityRepositoryInterface;
 use Amtgard\ActiveRecordOrm\Query\OrderBy;
 use Amtgard\Denarius\Persistence\Entity\TransactionEntity;
-use Amtgard\Denarius\Record\TransactionRecord;
+use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 
 #[RepositoryOf('transactions', TransactionEntity::class)]
 class TransactionRepository extends Repository implements EntityRepositoryInterface, TransactionRepositoryInterface

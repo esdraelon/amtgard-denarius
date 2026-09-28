@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Persistence\Repository;
 
-use Amtgard\Denarius\Record\RoleGrantRecord;
+use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
 
 interface RoleGrantRepositoryInterface
 {

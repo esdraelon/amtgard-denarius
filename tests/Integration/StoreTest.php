@@ -14,11 +14,11 @@ use Amtgard\Denarius\Persistence\Repository\PrincipalRepository;
 use Amtgard\Denarius\Persistence\Repository\RoleGrantRepository;
 use Amtgard\Denarius\Persistence\Repository\SecretRepository;
 use Amtgard\Denarius\Persistence\Repository\TransactionRepository;
-use Amtgard\Denarius\Record\AccountRecord;
-use Amtgard\Denarius\Record\KingdomRecord;
-use Amtgard\Denarius\Record\PrincipalRecord;
-use Amtgard\Denarius\Record\RoleGrantRecord;
-use Amtgard\Denarius\Record\TransactionRecord;
+use Amtgard\Denarius\Persistence\Record\AccountRecord;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
+use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
+use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\PHPUnit\AmtgardTestCase;
 use PDO;
 
