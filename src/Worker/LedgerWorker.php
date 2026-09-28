@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Worker;
 
-use Amtgard\Denarius\Queue\MessageQueue;
+use Amtgard\Denarius\Utilities\Queue\Message\MessageQueue;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 
 final class LedgerWorker

@@ -14,7 +14,7 @@ use Amtgard\ActiveRecordOrm\Entity\Policy\UncachedPolicy;
 use Amtgard\ActiveRecordOrm\EntityManager;
 use Amtgard\ActiveRecordOrm\Factory\TableFactory;
 use Amtgard\ActiveRecordOrm\Repository\Database;
-use Amtgard\Denarius\Auth\CurrentActor;
+use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 
 final class Orm
 {

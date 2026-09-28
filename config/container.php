@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Amtgard\Denarius\Auth\BootstrapAdmins;
-use Amtgard\Denarius\Auth\CurrentActor;
-use Amtgard\Denarius\Auth\DenariusAuthorizer;
-use Amtgard\Denarius\Auth\IdpPolicyGateway;
-use Amtgard\Denarius\Auth\PolicyGateway;
+use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
+use Amtgard\Denarius\Utilities\Auth\CurrentActor;
+use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Auth\Impl\IdpPolicyGateway;
+use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
 use Amtgard\Denarius\Bank\AlwaysReady;
 use Amtgard\Denarius\Bank\ConfiguredLedgerProviders;
 use Amtgard\Denarius\Bank\Notice\DisconnectLedgerNotice;
@@ -42,14 +42,14 @@ use Amtgard\Denarius\Domain\KingdomAccess;
 use Amtgard\Denarius\Domain\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\VisibilityPolicyRegistry;
-use Amtgard\Denarius\Http\SyncPrincipalMiddleware;
-use Amtgard\Denarius\Http\TwigHtmlRenderer;
-use Amtgard\Denarius\Queue\KingdomRefreshQueue;
-use Amtgard\Denarius\Queue\MessageKingdomRefreshQueue;
-use Amtgard\Denarius\Queue\MessageQueue;
-use Amtgard\Denarius\Queue\PubSubMessageQueue;
-use Amtgard\Denarius\Queue\RedisKeyValueStore;
-use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
+use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
+use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\Impl\MessageKingdomRefreshQueue;
+use Amtgard\Denarius\Utilities\Queue\Message\MessageQueue;
+use Amtgard\Denarius\Utilities\Queue\Message\Impl\PubSubMessageQueue;
+use Amtgard\Denarius\Utilities\Queue\KeyValue\Impl\RedisKeyValueStore;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Bank\SimpleFin\CurlSimpleFinApi;
 use Amtgard\Denarius\Bank\SimpleFin\SimpleFinHost;
 use Amtgard\Denarius\Bank\SimpleFin\SimpleFinLedgerProvider;
@@ -79,7 +79,7 @@ use Amtgard\Denarius\Bank\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
 use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
-use Amtgard\Denarius\Session\RedisSessionHandler;
+use Amtgard\Denarius\Utilities\Session\RedisSessionHandler;
 use Amtgard\Denarius\Bank\Teller\CurlTellerApi;
 use Amtgard\Denarius\Bank\Teller\TellerWebhookVerifier;
 use Amtgard\Denarius\Worker\LedgerWorker;
@@ -244,7 +244,7 @@ return [
             'cache' => __DIR__ . '/cache/twig',
             'auto_reload' => true,
         ]);
-        $twig->addFunction(new Twig\TwigFunction('csrf_token', static fn (): string => Amtgard\Denarius\Http\CsrfToken::issue()));
+        $twig->addFunction(new Twig\TwigFunction('csrf_token', static fn (): string => Amtgard\Denarius\Utilities\Http\CsrfToken::issue()));
         return $twig;
     },
     TwigHtmlRenderer::class => fn (TwigEnvironment $twig) => new TwigHtmlRenderer($twig),

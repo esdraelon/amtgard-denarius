@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Auth\BootstrapAdmins;
-use Amtgard\Denarius\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
+use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Controller\AdminController;
 use Amtgard\Denarius\Controller\HomeController;
 use Amtgard\Denarius\Controller\KingdomPageController;
@@ -13,11 +13,11 @@ use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
 use Amtgard\Denarius\Domain\KingdomAccess;
 use Amtgard\Denarius\Domain\MonthStatementBuilder;
-use Amtgard\Denarius\Http\SyncPrincipalMiddleware;
-use Amtgard\Denarius\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
+use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
-use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomPageQuery;
 use Amtgard\Denarius\Service\KingdomSettings;
@@ -85,7 +85,7 @@ final class ControllerTest extends AmtgardTestCase
         $denied = $page->show($this->request('GET', '/golden-plains', ['month' => '2026-09']), new Response(), ['slug' => 'golden-plains']);
         $this->assertSame(403, $denied->getStatusCode());
 
-        $permissions = new PermissionService(new FakePolicies([\Amtgard\Denarius\Auth\ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
+        $permissions = new PermissionService(new FakePolicies([\Amtgard\Denarius\Utilities\Auth\ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $principals = new MemoryPrincipals();
         $principals->save(PrincipalRecord::builder()->idpUserId('9')->email('person@example.com')->build());
         $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin());

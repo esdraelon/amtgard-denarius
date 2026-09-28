@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Controller;
 
-use Amtgard\Denarius\Http\BuildInfo;
-use Amtgard\Denarius\Http\CsrfToken;
-use Amtgard\Denarius\Http\JsonBody;
-use Amtgard\Denarius\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Http\BuildInfo;
+use Amtgard\Denarius\Utilities\Http\CsrfToken;
+use Amtgard\Denarius\Utilities\Http\JsonBody;
+use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
