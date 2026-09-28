@@ -18,9 +18,19 @@ final class WebhookController
 
     public function teller(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $signature = $request->getHeaderLine($this->handler->signatureHeader('teller'));
+        return $this->accept('teller', $request, $response);
+    }
+
+    public function stripe(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        return $this->accept('stripe', $request, $response);
+    }
+
+    private function accept(string $providerId, ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        $signature = $request->getHeaderLine($this->handler->signatureHeader($providerId));
         $ok = $this->handler->handle(
-            'teller',
+            $providerId,
             (string) $request->getBody(),
             $signature !== '' ? $signature : null,
             time(),

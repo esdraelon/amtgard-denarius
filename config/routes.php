@@ -17,6 +17,7 @@ return function (App $app): void {
     $app->get('/', [HomeController::class, 'home'])->setName('home');
     $app->get('/version', [HomeController::class, 'version'])->setName('version');
     $app->post('/webhooks/teller', [WebhookController::class, 'teller']);
+    $app->post('/webhooks/stripe', [WebhookController::class, 'stripe']);
 
     $app->group('', function (RouteCollectorProxy $group): void {
         $group->get('/login', [IdpAuthController::class, 'login'])->setName('auth.login');
