@@ -12,7 +12,7 @@ use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderAccount;
 use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderNotice;
 use Amtgard\Denarius\Domain\Bank\Providers\Readiness\ProviderReady;
 use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderTransaction;
-use Amtgard\Denarius\Domain\Statement\Money;
+use Amtgard\Denarius\Domain\Statement\Line\Money;
 use Optional\Optional;
 
 final class StripeLedgerProvider implements LedgerProvider

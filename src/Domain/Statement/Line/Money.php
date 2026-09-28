@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Domain\Statement;
+namespace Amtgard\Denarius\Domain\Statement\Line;
 
 final class Money
 {

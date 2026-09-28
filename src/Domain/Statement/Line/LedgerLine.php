@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Domain\Statement;
+namespace Amtgard\Denarius\Domain\Statement\Line;
 
 use Amtgard\Traits\Builder\Builder;
 use Amtgard\Traits\Builder\Data;

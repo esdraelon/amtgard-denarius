@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Service;
+namespace Amtgard\Denarius\Service\Kingdom;
 
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
-use Amtgard\Denarius\Domain\Statement\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 

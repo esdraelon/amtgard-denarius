@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Service\Admin;
+namespace Amtgard\Denarius\Service\Admin\Impl;
 
-use Amtgard\Denarius\Service\RoleAdmin;
+use Amtgard\Denarius\Service\Admin\AdminCommand;
+use Amtgard\Denarius\Service\Admin\RoleAdmin;
 
 final class GrantManagerCommand implements AdminCommand
 {

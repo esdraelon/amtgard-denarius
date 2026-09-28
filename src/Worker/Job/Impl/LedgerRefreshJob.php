@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Worker\Job;
+namespace Amtgard\Denarius\Worker\Job\Impl;
 
-use Amtgard\Denarius\Service\TransactionSynchronizer;
+use Amtgard\Denarius\Worker\Job\RefreshJob;
+use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 
 final class LedgerRefreshJob implements RefreshJob
 {

@@ -7,7 +7,7 @@ namespace Amtgard\Denarius\Domain\Statement\Presentation;
 use Amtgard\Denarius\Domain\Statement\Presentation\Impl\AllFieldsPresenter;
 use Amtgard\Denarius\Domain\Statement\Presentation\Impl\RedactedPresenter;
 use Amtgard\Denarius\Domain\Statement\Presentation\Impl\SummarizedPresenter;
-use Amtgard\Denarius\Domain\Statement\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 
 final class StatementPresenterRegistry
 {

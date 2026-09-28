@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Utilities\Http;
 
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
-use Amtgard\Denarius\Service\PrincipalSync;
+use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;

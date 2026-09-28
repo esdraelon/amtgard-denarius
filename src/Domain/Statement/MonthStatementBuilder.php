@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Statement;
 
+use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 
 final class MonthStatementBuilder

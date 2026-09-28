@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Statement;
 
+use Amtgard\Denarius\Domain\Statement\Line\CategoryTotal;
+use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
+
 final class MonthStatement
 {
     /**

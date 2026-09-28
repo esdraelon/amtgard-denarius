@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Service;
+namespace Amtgard\Denarius\Service\Access;
 
 use Amtgard\Denarius\Persistence\Repository\Principal\PrincipalRepositoryInterface;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;

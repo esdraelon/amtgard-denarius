@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Domain\Statement\Presentation\Impl;
 
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenter;
-use Amtgard\Denarius\Domain\Statement\DisplayMode;
-use Amtgard\Denarius\Domain\Statement\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 
 final class AllFieldsPresenter implements StatementPresenter
 {

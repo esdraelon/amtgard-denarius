@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Service;
+namespace Amtgard\Denarius\Service\Ledger;
 
 use Amtgard\Denarius\Domain\Bank\Notice\LedgerNoticeRegistry;
 use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;

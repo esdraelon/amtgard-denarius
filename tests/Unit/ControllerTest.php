@@ -18,12 +18,12 @@ use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
-use Amtgard\Denarius\Service\EnrollmentService;
-use Amtgard\Denarius\Service\KingdomPageQuery;
-use Amtgard\Denarius\Service\KingdomSettings;
-use Amtgard\Denarius\Service\PermissionService;
-use Amtgard\Denarius\Service\PrincipalSync;
-use Amtgard\Denarius\Service\ProviderWebhookHandler;
+use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
+use Amtgard\Denarius\Service\Access\PermissionService;
+use Amtgard\Denarius\Service\Access\PrincipalSync;
+use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\IdpClient\OAuth\TokenSet;
 use Amtgard\IdpClient\Resource\AuthenticatedSession;
 use Amtgard\IdpClient\Resource\OrkProfile;
@@ -111,7 +111,7 @@ final class ControllerTest extends AmtgardTestCase
             new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
             $queue,
             $twig,
-            new \Amtgard\Denarius\Service\BankConnect(Strategies::providers(Strategies::teller())),
+            new \Amtgard\Denarius\Service\Enrollment\BankConnect(Strategies::providers(Strategies::teller())),
         );
         $manage = $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), ['slug' => 'golden-plains']);
         $this->assertStringContainsString('manage golden-plains', (string) $manage->getBody());

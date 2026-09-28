@@ -7,7 +7,7 @@ namespace Amtgard\Denarius\Domain\Bank\Notice\Impl;
 use Amtgard\Denarius\Domain\Bank\Notice\LedgerNotice;
 use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderNotice;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
-use Amtgard\Denarius\Service\EnrollmentService;
+use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 
 final class DisconnectLedgerNotice implements LedgerNotice
 {
