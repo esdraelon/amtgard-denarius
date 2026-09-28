@@ -87,3 +87,11 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - A kingdom that already connected through Teller passes that enrollment id back into Teller Connect. Stripe's widget uses `STRIPE_PUBLISHABLE_KEY`.
 - Line coverage: 97.60% (1870/1916).
 - Infection covered MSI: 94%.
+
+## Provider setup
+
+- Branch: `provider-setup`
+- `bin/provider-setup.php` prints the human steps for Stripe, Plaid, Teller, and SimpleFIN. Secret prompts hide terminal echo. Stripe and Plaid are checked with a read-only request. Teller is checked by reading the certificate and key paths. SimpleFIN has no platform secret.
+- Verified values are written to a mode 0600 env fragment. The script does not print those values, and `provider.env` is gitignored.
+- Line coverage: 97.70% (2000/2047).
+- Infection covered MSI: 94%.

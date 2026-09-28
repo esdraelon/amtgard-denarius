@@ -1,4 +1,5 @@
 .env
+provider.env
 .idea
 .phpunit.cache
 .phpunit.cache/
