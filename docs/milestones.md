@@ -55,3 +55,11 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - A kingdom stores the provider chosen when it connects. Sync and webhooks look the kingdom up by that provider and enrollment id, so a later fallback does not move an existing link.
 - Line coverage: 97.00% (1263/1302).
 - Infection covered MSI: 90%.
+
+## Stripe adapter
+
+- Branch: `stripe-adapter`
+- Stripe Financial Connections is admitted when `STRIPE_SECRET_KEY` is set, ahead of Teller. Connect creates a customer and a transactions session. The stored secret is the Stripe customer id. Account refresh and disconnect webhooks verify `Stripe-Signature`.
+- Transaction reads cover the previous calendar month through today. A later page in the same sync does not call Stripe again.
+- Line coverage: 97.27% (1459/1500).
+- Infection covered MSI: 91%.

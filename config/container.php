@@ -6,11 +6,14 @@ use Amtgard\Denarius\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Auth\CurrentActor;
 use Amtgard\Denarius\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Auth\IdpPolicyGateway;
+use Amtgard\Denarius\Bank\ConfiguredLedgerProviders;
 use Amtgard\Denarius\Bank\DisconnectLedgerNotice;
 use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
 use Amtgard\Denarius\Bank\LedgerProvider;
 use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Bank\PresentCredentials;
+use Amtgard\Denarius\Bank\PreviousMonthWindow;
+use Amtgard\Denarius\Bank\ProviderAdmission;
 use Amtgard\Denarius\Bank\RefreshLedgerNotice;
 use Amtgard\Denarius\Contract\AccountStore;
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
@@ -21,6 +24,7 @@ use Amtgard\Denarius\Contract\PolicyGateway;
 use Amtgard\Denarius\Contract\PrincipalStore;
 use Amtgard\Denarius\Contract\RoleGrantStore;
 use Amtgard\Denarius\Contract\SecretStore;
+use Amtgard\Denarius\Contract\StripeApi;
 use Amtgard\Denarius\Contract\TellerApi;
 use Amtgard\Denarius\Contract\TransactionStore;
 use Amtgard\Denarius\Controller\AdminController;
@@ -61,6 +65,9 @@ use Amtgard\Denarius\Service\Admin\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\RevokeManagerCommand;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
+use Amtgard\Denarius\Stripe\CurlStripeApi;
+use Amtgard\Denarius\Stripe\StripeLedgerProvider;
+use Amtgard\Denarius\Stripe\StripeWebhookVerifier;
 use Amtgard\Denarius\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Worker\Job\DirectoryRefreshJob;
 use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
@@ -155,9 +162,22 @@ return [
         $_ENV['TELLER_APPLICATION_ID'] ?? '',
         $_ENV['TELLER_ENVIRONMENT'] ?? 'sandbox',
     ),
-    LedgerProviderRegistry::class => fn (ContainerInterface $c) => new LedgerProviderRegistry([
-        $c->get(LedgerProvider::class),
-    ]),
+    StripeApi::class => fn () => new CurlStripeApi(
+        $_ENV['STRIPE_API_BASE'] ?? 'https://api.stripe.com',
+        $_ENV['STRIPE_SECRET_KEY'] ?? '',
+    ),
+    StripeWebhookVerifier::class => fn () => new StripeWebhookVerifier($_ENV['STRIPE_WEBHOOK_SECRET'] ?? ''),
+    StripeLedgerProvider::class => fn (ContainerInterface $c) => new StripeLedgerProvider(
+        $c->get(StripeApi::class),
+        $c->get(StripeWebhookVerifier::class),
+        StripeLedgerProvider::actions(),
+        new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? '']),
+        new PreviousMonthWindow(new DateTimeImmutable('now')),
+    ),
+    LedgerProviderRegistry::class => fn (ContainerInterface $c) => (new ConfiguredLedgerProviders([
+        new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? ''])),
+        new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? ''])),
+    ]))->registry(),
     EnrollmentService::class => fn (ContainerInterface $c) => new EnrollmentService(
         $c->get(KingdomStore::class),
         $c->get(SecretStore::class),
