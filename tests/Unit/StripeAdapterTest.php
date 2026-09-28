@@ -113,6 +113,8 @@ PHP);
         $this->assertSame('stripe', $config['provider']);
         $this->assertSame('cus_1', $config['customerId']);
         $this->assertSame('cs_test', $config['clientSecret']);
+        $this->assertSame('', $config['publishableKey']);
+        $this->assertSame('pk_test', $this->provider($api, null, 'pk_test')->connectConfig('golden-plains')['publishableKey']);
         $this->assertSame('golden-plains', $api->customers[0]);
 
         $blank = new ScriptedStripe(customer: []);
@@ -279,7 +281,7 @@ PHP);
         $this->assertSame(4, $queue->ledger[0]);
     }
 
-    private function provider(StripeApi $api, ?PresentCredentials $ready = null): StripeLedgerProvider
+    private function provider(StripeApi $api, ?PresentCredentials $ready = null, string $publishableKey = ''): StripeLedgerProvider
     {
         return new StripeLedgerProvider(
             $api,
@@ -287,6 +289,7 @@ PHP);
             StripeLedgerProvider::actions(),
             $ready ?? new AlwaysReady(),
             new PreviousMonthWindow(new \DateTimeImmutable('@' . self::NOW)),
+            $publishableKey,
         );
     }
 

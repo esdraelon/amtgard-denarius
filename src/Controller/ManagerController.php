@@ -12,10 +12,13 @@ use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\Visibility;
 use Amtgard\Denarius\Http\CsrfToken;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Record\KingdomRecord;
+use Amtgard\Denarius\Service\BankConnect;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomSettings;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\IdpClient\Session\SessionAuthStore;
+use Optional\Optional;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -30,8 +33,7 @@ final class ManagerController
         private readonly EnrollmentService $enrollments,
         private readonly KingdomRefreshQueue $queue,
         private readonly TwigHtmlRenderer $html,
-        private readonly string $tellerApplicationId,
-        private readonly string $tellerEnvironment,
+        private readonly BankConnect $connects,
     ) {
     }
 
@@ -42,13 +44,21 @@ final class ManagerController
             return $kingdom;
         }
 
-        return $this->html->html($response, 'manage.twig', [
-            'csrf' => CsrfToken::issue(),
-            'kingdom' => $kingdom->view(),
-            'accounts' => array_map(static fn ($account) => $account->view(), $this->accounts->forKingdom((int) $kingdom->getId())),
-            'applicationId' => $this->tellerApplicationId,
-            'environment' => $this->tellerEnvironment,
-        ]);
+        return $this->page($response, $kingdom, $this->connects->blank($this->remembered($kingdom)));
+    }
+
+    public function connect(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    {
+        $kingdom = $this->managed($response, (string) ($args['slug'] ?? ''));
+        if ($kingdom instanceof ResponseInterface) {
+            return $kingdom;
+        }
+        $body = (array) $request->getParsedBody();
+        if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
+            return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+        }
+
+        return $this->page($response, $kingdom, $this->connects->offer($kingdom->getSlug(), $body));
     }
 
     public function settings(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
@@ -127,6 +137,32 @@ final class ManagerController
         $this->queue->publishLedger($kingdom->getOrkKingdomId());
 
         return $response->withHeader('Location', '/manage/' . $kingdom->getSlug())->withStatus(302);
+    }
+
+    /**
+     * @param array<string, mixed> $connect
+     */
+    private function page(ResponseInterface $response, KingdomRecord $kingdom, array $connect): ResponseInterface
+    {
+        return $this->html->html($response, 'manage.twig', [
+            'csrf' => CsrfToken::issue(),
+            'kingdom' => $kingdom->view(),
+            'accounts' => $this->accountViews((int) $kingdom->getId()),
+            'connect' => $connect,
+        ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function accountViews(int $kingdomId): array
+    {
+        return array_map(static fn ($account) => $account->view(), $this->accounts->forKingdom($kingdomId));
+    }
+
+    private function remembered(KingdomRecord $kingdom): string
+    {
+        return Optional::ofNullable($kingdom->getInstitutionName())->orElse('');
     }
 
     private function managed(ResponseInterface $response, string $slug): mixed

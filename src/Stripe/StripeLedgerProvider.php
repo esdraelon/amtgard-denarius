@@ -27,6 +27,7 @@ final class StripeLedgerProvider implements LedgerProvider
         private readonly array $actions,
         private readonly ProviderReady $ready,
         private readonly PreviousMonthWindow $window,
+        private readonly string $publishableKey = '',
     ) {
     }
 
@@ -58,6 +59,7 @@ final class StripeLedgerProvider implements LedgerProvider
             'provider' => $this->id(),
             'clientSecret' => $clientSecret,
             'customerId' => $customerId,
+            'publishableKey' => $this->publishableKey,
             'kingdomKey' => $kingdomKey,
         ];
     }

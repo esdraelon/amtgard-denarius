@@ -79,3 +79,11 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Coverage stays unknown, so it is the paste-token fallback after the earlier providers are skipped. There is no webhook. Transaction reads use the previous calendar month through today.
 - Line coverage: 97.53% (1818/1864).
 - Infection covered MSI: 93%.
+
+## Manage connect
+
+- Branch: `manage-connect`
+- The manage page asks for the bank name and posts it to `/manage/{slug}/connect`. The registry mounts Stripe, Plaid, Teller, or a SimpleFIN setup token, in that order. "My bank is not listed" adds the current provider to the skipped list and mounts the next one.
+- A kingdom that already connected through Teller passes that enrollment id back into Teller Connect. Stripe's widget uses `STRIPE_PUBLISHABLE_KEY`.
+- Line coverage: 97.60% (1870/1916).
+- Infection covered MSI: 94%.

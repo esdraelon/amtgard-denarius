@@ -1,0 +1,12 @@
+<form id="simplefin-form">
+    <label>Setup token
+        <textarea id="simplefin-token" required></textarea>
+    </label>
+    <button type="submit">Connect SimpleFIN</button>
+</form>
+<script>
+document.getElementById('simplefin-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    denariusEnrollment({ setupToken: document.getElementById('simplefin-token').value });
+});
+</script>

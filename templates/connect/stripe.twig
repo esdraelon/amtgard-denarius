@@ -1,0 +1,21 @@
+{% if connect.config.publishableKey %}
+<button type="button" id="stripe-connect">Connect with Stripe</button>
+<p id="stripe-error"></p>
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+document.getElementById('stripe-connect').addEventListener('click', function () {
+    var stripe = Stripe({{ connect.config.publishableKey|json_encode|raw }});
+    stripe.collectFinancialConnectionsAccounts({
+        clientSecret: {{ connect.config.clientSecret|json_encode|raw }}
+    }).then(function (result) {
+        if (result.error) {
+            document.getElementById('stripe-error').textContent = result.error.message || 'Stripe could not connect.';
+            return;
+        }
+        denariusEnrollment({ customerId: {{ connect.config.customerId|json_encode|raw }} });
+    });
+});
+</script>
+{% else %}
+<p>Stripe is missing a publishable key.</p>
+{% endif %}

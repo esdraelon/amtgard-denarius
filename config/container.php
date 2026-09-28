@@ -57,6 +57,7 @@ use Amtgard\Denarius\SimpleFin\CurlSimpleFinApi;
 use Amtgard\Denarius\SimpleFin\SimpleFinHost;
 use Amtgard\Denarius\SimpleFin\SimpleFinLedgerProvider;
 use Amtgard\Denarius\Service\CachedKingdomDirectory;
+use Amtgard\Denarius\Service\BankConnect;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomPageQuery;
 use Amtgard\Denarius\Service\KingdomSettings;
@@ -182,6 +183,7 @@ return [
         StripeLedgerProvider::actions(),
         new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? '']),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
+        $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
     ),
     PlaidApi::class => fn () => new CurlPlaidApi(
         $_ENV['PLAID_API_BASE'] ?? 'https://sandbox.plaid.com',
@@ -302,8 +304,7 @@ return [
         $c->get(EnrollmentService::class),
         $c->get(KingdomRefreshQueue::class),
         $c->get(TwigHtmlRenderer::class),
-        $_ENV['TELLER_APPLICATION_ID'] ?? '',
-        $_ENV['TELLER_ENVIRONMENT'] ?? 'sandbox',
+        $c->get(BankConnect::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(

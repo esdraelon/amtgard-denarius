@@ -1,0 +1,16 @@
+<button type="button" id="teller-connect">Connect with Teller</button>
+<script src="https://cdn.teller.io/connect/connect.js"></script>
+<script>
+document.getElementById('teller-connect').addEventListener('click', function () {
+    var connect = TellerConnect.setup({
+        applicationId: {{ connect.config.applicationId|json_encode|raw }},
+        environment: {{ connect.config.environment|json_encode|raw }},
+        products: ['transactions'],
+        {% if kingdom.provider == 'teller' and kingdom.enrollmentId %}enrollmentId: {{ kingdom.enrollmentId|json_encode|raw }},{% endif %}
+        onSuccess: function (enrollment) {
+            denariusEnrollment(enrollment);
+        }
+    });
+    connect.open();
+});
+</script>

@@ -120,8 +120,7 @@ final class ControllerTest extends AmtgardTestCase
             new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
             $queue,
             $twig,
-            'app_test',
-            'sandbox',
+            new \Amtgard\Denarius\Service\BankConnect(Strategies::providers(Strategies::teller())),
         );
         $manage = $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), ['slug' => 'golden-plains']);
         $this->assertStringContainsString('manage golden-plains', (string) $manage->getBody());
