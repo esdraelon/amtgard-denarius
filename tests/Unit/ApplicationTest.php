@@ -102,7 +102,7 @@ final class ApplicationTest extends AmtgardTestCase
 
         $line = LedgerLine::builder()->postedOn('2026-01-02')->amountCents(250)->category('dining')->description('meal')->counterparty('Cafe')->status('posted')->accountName('Checking')->build();
         $other = LedgerLine::builder()->postedOn('2026-02-01')->amountCents(100)->category('fuel')->build();
-        $builder = new MonthStatementBuilder();
+        $builder = MonthStatementBuilder::standard();
         $all = $builder->build([$line, $other], DisplayMode::All, $month);
         $this->assertCount(1, $all->rows);
         $redacted = $builder->build([$line], DisplayMode::Redacted, $month);
@@ -120,7 +120,7 @@ final class ApplicationTest extends AmtgardTestCase
 
     public function testAccessClaimsActorsAndPermissions(): void
     {
-        $access = new KingdomAccess();
+        $access = KingdomAccess::standard();
         $this->assertSame(AccessResult::Allow, $access->decide(Visibility::Public, null, 3));
         $this->assertSame(AccessResult::Login, $access->decide(Visibility::Registered, null, 3));
         $viewer = new Viewer('9', 3);
@@ -234,7 +234,7 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertSame(2, count($transactions->forKingdom((int) $connected->getId())));
         $this->assertNotNull($kingdoms->findByOrkId(4)->getLastSyncedAt());
 
-        $handler = new TellerWebhookHandler(new TellerWebhookVerifier('whsec', 300), $kingdoms, $queue, $enrollment);
+        $handler = new TellerWebhookHandler(new TellerWebhookVerifier('whsec', 300), $kingdoms, Strategies::events($queue, $enrollment));
         $body = json_encode(['type' => 'transactions.processed', 'enrollment_id' => 'enr_1'], JSON_THROW_ON_ERROR);
         $now = 1_700_000_000;
         $signature = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $body, 'whsec');
@@ -258,7 +258,7 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertFalse($verifier->verify('body', 't=' . ($now - 500), $now));
         $this->assertFalse((new TellerWebhookVerifier(''))->verify('body', $signature, $now));
 
-        $page = new KingdomPageQuery($transactions, $accounts, new MonthStatementBuilder());
+        $page = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
         $statement = $page->statement($kingdoms->findByOrkId(4), new MonthWindow(2026, 9));
         $this->assertNotEmpty($statement->rows);
 
@@ -311,7 +311,7 @@ final class ApplicationTest extends AmtgardTestCase
         $refresh->publishDirectory();
         $this->assertSame('ledger:4', $messages->published[0]['key']);
 
-        $worker = new LedgerWorker($messages, new TransactionSynchronizer(
+        $sync = new TransactionSynchronizer(
             new MemoryKingdoms(),
             new MemoryAccounts(),
             new MemorySecrets(),
@@ -319,7 +319,8 @@ final class ApplicationTest extends AmtgardTestCase
             new FakeTeller(),
             new TokenCipher('k'),
             new \DateTimeImmutable('now'),
-        ), $directory, 0);
+        );
+        $worker = new LedgerWorker($messages, Strategies::jobs($directory, $sync), 0);
         $worker->handle('nope');
         $worker->handle(json_encode(['type' => 'directory']));
         $worker->handle(json_encode(['type' => 'ledger', 'orkKingdomId' => 4]));

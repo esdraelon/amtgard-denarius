@@ -69,8 +69,8 @@ final class ControllerTest extends AmtgardTestCase
         $accounts->save(\Amtgard\Denarius\Record\AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->type('depository')->published(true)->build());
         $transactions = new MemoryTransactions();
         $transactions->upsert(\Amtgard\Denarius\Record\TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('office')->description('paper')->counterparty('Shop')->status('posted')->build());
-        $pages = new KingdomPageQuery($transactions, $accounts, new MonthStatementBuilder());
-        $page = new KingdomPageController($kingdoms, $pages, new KingdomAccess(), $auth, $twig);
+        $pages = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $page = new KingdomPageController($kingdoms, $pages, KingdomAccess::standard(), $auth, $twig);
         $missing = $page->show($this->request('GET', '/missing'), new Response(), ['slug' => 'missing']);
         $this->assertSame(404, $missing->getStatusCode());
         $shown = $page->show($this->request('GET', '/golden-plains', ['month' => '2026-09']), new Response(), ['slug' => 'golden-plains']);
@@ -98,9 +98,9 @@ final class ControllerTest extends AmtgardTestCase
         }, new ArrayStore(), new MemoryRefresh());
         $principals = new MemoryPrincipals();
         $principals->save(PrincipalRecord::builder()->idpUserId('9')->email('person@example.com')->build());
-        $admin = new AdminController($auth, $permissions, $directory, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig);
+        $admin = new AdminController($auth, $permissions, $directory, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin($directory));
         $anon = new SessionAuthStore('empty');
-        $guest = (new AdminController($anon, $permissions, $directory, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig))
+        $guest = (new AdminController($anon, $permissions, $directory, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin($directory)))
             ->index($this->request('GET', '/admin'), new Response());
         $this->assertSame(302, $guest->getStatusCode());
         $index = $admin->index($this->request('GET', '/admin', ['email' => 'person']), new Response());
@@ -136,7 +136,7 @@ final class ControllerTest extends AmtgardTestCase
         $this->assertSame(302, $refreshed->getStatusCode());
         $this->assertSame(403, $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
 
-        $webhook = new WebhookController(new TellerWebhookHandler(new TellerWebhookVerifier('whsec'), $kingdoms, $queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue)));
+        $webhook = new WebhookController(new TellerWebhookHandler(new TellerWebhookVerifier('whsec'), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue))));
         $rejected = $webhook->teller($this->request('POST', '/webhooks/teller'), new Response());
         $this->assertSame(400, $rejected->getStatusCode());
 

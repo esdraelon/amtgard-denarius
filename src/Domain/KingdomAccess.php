@@ -4,28 +4,21 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain;
 
-use Optional\Optional;
+use Amtgard\Denarius\Domain\Access\VisibilityPolicyRegistry;
 
 final class KingdomAccess
 {
+    public function __construct(private readonly VisibilityPolicyRegistry $policies)
+    {
+    }
+
+    public static function standard(): self
+    {
+        return new self(VisibilityPolicyRegistry::standard());
+    }
+
     public function decide(Visibility $visibility, ?Viewer $viewer, int $kingdomId): AccessResult
     {
-        if ($visibility === Visibility::Public) {
-            return AccessResult::Allow;
-        }
-
-        if ($viewer === null) {
-            return AccessResult::Login;
-        }
-
-        if ($visibility === Visibility::Registered) {
-            return AccessResult::Allow;
-        }
-
-        $matches = Optional::ofNullable($viewer->orkKingdomId)
-            ->filter(static fn (int $id): bool => $id === $kingdomId)
-            ->isPresent();
-
-        return $matches ? AccessResult::Allow : AccessResult::Deny;
+        return $this->policies->for($visibility)->decide($viewer, $kingdomId);
     }
 }

@@ -53,27 +53,6 @@ final class KingdomPageController
 
         $month = MonthWindow::fromQuery($request->getQueryParams()['month'] ?? null, new \DateTimeImmutable('now'));
         $statement = $this->pages->statement($kingdom, $month);
-        $rows = [];
-        foreach ($statement->rows as $row) {
-            if ($row instanceof LedgerLine) {
-                $rows[] = [
-                    'kind' => 'line',
-                    'postedOn' => $row->getPostedOn(),
-                    'category' => $row->getCategory(),
-                    'description' => $row->getDescription(),
-                    'counterparty' => $row->getCounterparty(),
-                    'amount' => \Amtgard\Denarius\Domain\Money::format($row->getAmountCents()),
-                    'account' => $row->getAccountName(),
-                ];
-            } elseif ($row instanceof CategoryTotal) {
-                $rows[] = [
-                    'kind' => 'total',
-                    'category' => $row->category,
-                    'count' => $row->count,
-                    'amount' => \Amtgard\Denarius\Domain\Money::format($row->amountCents),
-                ];
-            }
-        }
 
         return $this->html->html($response, 'kingdom.twig', [
             'kingdom' => $kingdom->view(),
@@ -81,10 +60,53 @@ final class KingdomPageController
             'previous' => $month->previous()->key(),
             'next' => $month->next()->key(),
             'mode' => DisplayMode::fromStored($kingdom->getDisplayMode())->value,
-            'rows' => $rows,
+            'rows' => $this->rows($statement->rows),
             'disconnected' => $kingdom->getEnrollmentStatus() === 'disconnected',
             'syncedAt' => $kingdom->getLastSyncedAt(),
         ]);
+    }
+
+    /**
+     * @param list<LedgerLine|CategoryTotal> $rows
+     * @return list<array<string, mixed>>
+     */
+    private function rows(array $rows): array
+    {
+        $presented = [];
+        foreach ($rows as $row) {
+            $presented[] = $row instanceof CategoryTotal ? $this->total($row) : $this->line($row);
+        }
+
+        return $presented;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function line(LedgerLine $row): array
+    {
+        return [
+            'kind' => 'line',
+            'postedOn' => $row->getPostedOn(),
+            'category' => $row->getCategory(),
+            'description' => $row->getDescription(),
+            'counterparty' => $row->getCounterparty(),
+            'amount' => \Amtgard\Denarius\Domain\Money::format($row->getAmountCents()),
+            'account' => $row->getAccountName(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function total(CategoryTotal $row): array
+    {
+        return [
+            'kind' => 'total',
+            'category' => $row->category,
+            'count' => $row->count,
+            'amount' => \Amtgard\Denarius\Domain\Money::format($row->amountCents),
+        ];
     }
 
     private function viewer(): ?Viewer
