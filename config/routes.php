@@ -28,6 +28,7 @@ return function (App $app): void {
         $group->post('/admin/grant', [AdminController::class, 'grant']);
         $group->get('/manage/{slug}', [ManagerController::class, 'show']);
         $group->post('/manage/{slug}/settings', [ManagerController::class, 'settings']);
+        $group->post('/manage/{slug}/connect', [ManagerController::class, 'connect']);
         $group->post('/manage/{slug}/enrollment', [ManagerController::class, 'enrollment']);
         $group->post('/manage/{slug}/accounts', [ManagerController::class, 'accounts']);
         $group->post('/manage/{slug}/refresh', [ManagerController::class, 'refresh']);

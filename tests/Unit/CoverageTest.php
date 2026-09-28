@@ -21,6 +21,7 @@ use Amtgard\Denarius\Record\AccountRecord;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Record\TransactionRecord;
 use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\Service\BankConnect;
 use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\DailySweep;
 use Amtgard\Denarius\Service\EnrollmentService;
@@ -177,9 +178,10 @@ PHP);
         $this->assertStringContainsString('total', (string) $shown->getBody());
 
         $queue = new MemoryRefresh();
-        $manager = new ManagerController($auth, $permissions, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, 'app', 'sandbox');
+        $connects = new BankConnect(Strategies::providers(Strategies::teller()));
+        $manager = new ManagerController($auth, $permissions, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects);
         $this->assertSame(404, $manager->show((new ServerRequestFactory())->createServerRequest('GET', '/manage/missing'), new Response(), ['slug' => 'missing'])->getStatusCode());
-        $guest = new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, 'app', 'sandbox');
+        $guest = new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects);
         $this->assertSame(302, $guest->show((new ServerRequestFactory())->createServerRequest('GET', '/manage/golden-plains'), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
         $this->assertSame(400, $manager->enrollment((new ServerRequestFactory())->createServerRequest('POST', '/e')->withParsedBody(['csrf' => 'token', 'enrollment' => '{']), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
 

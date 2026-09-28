@@ -22,7 +22,43 @@
     <button type="submit">Save</button>
 </form>
 <p>Status: {{ kingdom.enrollmentStatus }}</p>
-<button type="button" id="teller-connect">Connect bank</button>
+<form method="post" action="/manage/{{ kingdom.slug }}/connect" id="find-bank">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Bank
+        <input name="institution" value="{{ connect.institution }}" required>
+    </label>
+    {% for id in connect.skipped %}
+        <input type="hidden" name="skipped[]" value="{{ id }}">
+    {% endfor %}
+    <button type="submit">Find my bank</button>
+</form>
+{% if connect.reason == 'institution' %}
+    <p>Enter the bank name.</p>
+{% elseif connect.reason == 'exhausted' %}
+    <p>No configured provider can connect this bank.</p>
+{% endif %}
+{% if connect.available %}
+    <script>
+    function denariusEnrollment(extra) {
+        var payload = Object.assign({}, extra || {}, {
+            provider: {{ connect.provider|json_encode|raw }},
+            institutionName: {{ connect.institution|json_encode|raw }}
+        });
+        document.getElementById('enrollment-json').value = JSON.stringify(payload);
+        document.getElementById('enrollment-form').submit();
+    }
+    </script>
+    {% include 'connect/' ~ connect.provider ~ '.twig' %}
+    <form method="post" action="/manage/{{ kingdom.slug }}/connect" id="skip-bank">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="institution" value="{{ connect.institution }}">
+        {% for id in connect.skipped %}
+            <input type="hidden" name="skipped[]" value="{{ id }}">
+        {% endfor %}
+        <input type="hidden" name="current" value="{{ connect.provider }}">
+        <button type="submit" name="skip" value="1">My bank is not listed</button>
+    </form>
+{% endif %}
 <form id="enrollment-form" method="post" action="/manage/{{ kingdom.slug }}/enrollment">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="enrollment" id="enrollment-json">
@@ -42,22 +78,6 @@
     <button type="submit">Refresh transactions</button>
 </form>
 {% if kingdom.enrollmentStatus == 'disconnected' %}
-    <p>Reconnect this enrollment from Teller Connect.</p>
+    <p>Reconnect this kingdom from the bank form.</p>
 {% endif %}
-<script src="https://cdn.teller.io/connect/connect.js"></script>
-<script>
-document.getElementById('teller-connect').addEventListener('click', function () {
-    var connect = TellerConnect.setup({
-        applicationId: {{ applicationId|json_encode|raw }},
-        environment: {{ environment|json_encode|raw }},
-        products: ['transactions'],
-        {% if kingdom.enrollmentId %}enrollmentId: {{ kingdom.enrollmentId|json_encode|raw }},{% endif %}
-        onSuccess: function (enrollment) {
-            document.getElementById('enrollment-json').value = JSON.stringify(enrollment);
-            document.getElementById('enrollment-form').submit();
-        }
-    });
-    connect.open();
-});
-</script>
 {% endblock %}
