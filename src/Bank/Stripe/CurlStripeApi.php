@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Stripe;
-
-use Amtgard\Denarius\Contract\StripeApi;
+namespace Amtgard\Denarius\Bank\Stripe;
 
 final class CurlStripeApi implements StripeApi
 {

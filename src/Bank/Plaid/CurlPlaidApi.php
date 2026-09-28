@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Plaid;
-
-use Amtgard\Denarius\Contract\PlaidApi;
+namespace Amtgard\Denarius\Bank\Plaid;
 
 final class CurlPlaidApi implements PlaidApi
 {

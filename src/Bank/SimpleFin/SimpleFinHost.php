@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\SimpleFin;
+namespace Amtgard\Denarius\Bank\SimpleFin;
 
 final class SimpleFinHost
 {

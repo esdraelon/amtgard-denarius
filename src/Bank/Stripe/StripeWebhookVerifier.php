@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Teller;
+namespace Amtgard\Denarius\Bank\Stripe;
 
-final class TellerWebhookVerifier
+final class StripeWebhookVerifier
 {
     public function __construct(
         private readonly string $secret,

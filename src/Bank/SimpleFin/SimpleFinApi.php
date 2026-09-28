@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Contract;
+namespace Amtgard\Denarius\Bank\SimpleFin;
 
 interface SimpleFinApi
 {

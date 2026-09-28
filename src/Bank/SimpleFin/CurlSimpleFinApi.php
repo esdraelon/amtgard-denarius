@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\SimpleFin;
-
-use Amtgard\Denarius\Contract\SimpleFinApi;
+namespace Amtgard\Denarius\Bank\SimpleFin;
 
 final class CurlSimpleFinApi implements SimpleFinApi
 {

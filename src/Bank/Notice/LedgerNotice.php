@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Bank;
+namespace Amtgard\Denarius\Bank\Notice;
 
 use Amtgard\Denarius\Record\KingdomRecord;
 

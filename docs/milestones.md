@@ -95,3 +95,17 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Verified values are written to a mode 0600 env fragment. The script does not print those values, and `provider.env` is gitignored.
 - Line coverage: 97.70% (2000/2047).
 - Infection covered MSI: 94%.
+
+## Bank connector folders
+
+- Branch: `bank-connector-folders`
+- Stripe, Plaid, Teller, and SimpleFIN sit under `Bank`, and each vendor API interface sits beside its connector. Ledger notices sit under `Bank/Notice`. Setup stays a CLI package.
+- Line coverage: 97.70% (2000/2047).
+- Infection covered MSI: 94%.
+
+## Bank connector folders
+
+- Branch: `bank-connector-folders`
+- Stripe, Plaid, Teller, and SimpleFIN sit under `Bank`, and each vendor API interface sits beside its connector. Ledger notices sit under `Bank/Notice`. Setup stays a CLI package.
+- Line coverage: 97.70% (2000/2047).
+- Infection covered MSI: 94%.

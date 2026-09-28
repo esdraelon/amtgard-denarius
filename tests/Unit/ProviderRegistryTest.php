@@ -12,8 +12,8 @@ use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Bank\MissingLedgerProvider;
 use Amtgard\Denarius\Bank\PresentCredentials;
 use Amtgard\Denarius\Bank\ProviderNotice;
-use Amtgard\Denarius\Teller\TellerLedgerProvider;
-use Amtgard\Denarius\Teller\TellerWebhookVerifier;
+use Amtgard\Denarius\Bank\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Bank\Teller\TellerWebhookVerifier;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class ProviderRegistryTest extends AmtgardTestCase
