@@ -6,8 +6,8 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Auth\DenariusAuthorizer;
-use Amtgard\Denarius\Contract\KeyValueStore;
-use Amtgard\Denarius\Contract\PolicyGateway;
+use Amtgard\Denarius\Queue\KeyValueStore;
+use Amtgard\Denarius\Auth\PolicyGateway;
 
 final class PermissionService
 {

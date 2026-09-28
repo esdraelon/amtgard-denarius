@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Queue;
 
-use Amtgard\Denarius\Contract\MessageQueue;
 use Amtgard\SetQueue\PubSubQueue;
 
 final class PubSubMessageQueue implements MessageQueue

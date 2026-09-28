@@ -7,7 +7,7 @@ namespace Amtgard\Denarius\Tests\Unit;
 use Amtgard\Denarius\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Auth\ClaimOrn;
 use Amtgard\Denarius\Auth\DenariusAuthorizer;
-use Amtgard\Denarius\Contract\MessageQueue;
+use Amtgard\Denarius\Queue\MessageQueue;
 use Amtgard\Denarius\Controller\AdminController;
 use Amtgard\Denarius\Controller\KingdomPageController;
 use Amtgard\Denarius\Controller\ManagerController;

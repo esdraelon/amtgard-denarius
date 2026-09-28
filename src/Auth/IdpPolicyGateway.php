@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Auth;
 
-use Amtgard\Denarius\Contract\PolicyGateway;
 use Amtgard\IdpClient\ClientIam\Model\ServiceFormatRequest;
 
 final class IdpPolicyGateway implements PolicyGateway

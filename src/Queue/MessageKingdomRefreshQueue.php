@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Queue;
 
-use Amtgard\Denarius\Contract\KingdomRefreshQueue;
-use Amtgard\Denarius\Contract\MessageQueue;
 use Amtgard\Denarius\Worker\LedgerWorker;
 
 final class MessageKingdomRefreshQueue implements KingdomRefreshQueue

@@ -6,7 +6,7 @@ namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Auth\CurrentActor;
 use Amtgard\Denarius\Contract\KingdomStore;
-use Amtgard\Denarius\Contract\PolicyGateway;
+use Amtgard\Denarius\Auth\PolicyGateway;
 use Amtgard\Denarius\Contract\PrincipalStore;
 use Amtgard\Denarius\Contract\RoleGrantStore;
 use Amtgard\Denarius\Http\CsrfToken;

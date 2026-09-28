@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Queue;
 
-use Amtgard\Denarius\Contract\KeyValueStore;
-
 final class RedisKeyValueStore implements KeyValueStore
 {
     public function __construct(
