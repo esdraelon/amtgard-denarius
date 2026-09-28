@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Persistence\Repository;
+namespace Amtgard\Denarius\Persistence\Repository\Principal\Impl;
 
+use Amtgard\Denarius\Persistence\Repository\Principal\PrincipalRepositoryInterface;
 use Amtgard\ActiveRecordOrm\Attribute\RepositoryOf;
 use Amtgard\ActiveRecordOrm\Entity\Repository\Repository;
 use Amtgard\ActiveRecordOrm\Interface\EntityRepositoryInterface;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Persistence\Repository;
+namespace Amtgard\Denarius\Persistence\Repository\Secret;
 
 interface SecretRepositoryInterface
 {

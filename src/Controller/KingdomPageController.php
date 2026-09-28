@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Controller;
 
-use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Domain\Access\AccessResult;
 use Amtgard\Denarius\Domain\Statement\CategoryTotal;
 use Amtgard\Denarius\Domain\Statement\DisplayMode;

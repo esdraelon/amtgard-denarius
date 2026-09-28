@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
-use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
-use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\RoleGrant\RoleGrantRepositoryInterface;
 use Amtgard\Denarius\Domain\Kingdom\KingdomSlug;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;

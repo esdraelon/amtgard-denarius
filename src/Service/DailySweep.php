@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
-use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 
 final class DailySweep
 {

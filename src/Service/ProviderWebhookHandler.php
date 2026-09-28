@@ -6,7 +6,7 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Domain\Bank\Notice\LedgerNoticeRegistry;
 use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
-use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 
 final class ProviderWebhookHandler
 {

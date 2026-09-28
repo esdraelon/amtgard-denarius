@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
-use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
-use Amtgard\Denarius\Persistence\Repository\PrincipalRepositoryInterface;
-use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Principal\PrincipalRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\RoleGrant\RoleGrantRepositoryInterface;
 use Amtgard\Denarius\Utilities\Http\CsrfToken;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
