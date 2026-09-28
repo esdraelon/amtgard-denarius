@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Worker;
 
 use Amtgard\Denarius\Contract\MessageQueue;
-use Amtgard\Denarius\Service\CachedKingdomDirectory;
-use Amtgard\Denarius\Service\TransactionSynchronizer;
+use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 
 final class LedgerWorker
 {
@@ -14,8 +13,7 @@ final class LedgerWorker
 
     public function __construct(
         private readonly MessageQueue $queue,
-        private readonly TransactionSynchronizer $synchronizer,
-        private readonly CachedKingdomDirectory $directory,
+        private readonly RefreshJobRegistry $jobs,
         private readonly int $idleMicros = 100000,
     ) {
     }
@@ -29,33 +27,53 @@ final class LedgerWorker
             $this->queue->publish(self::QUEUE, $key, $message);
         });
 
+        return $this->poll($maxIterations);
+    }
+
+    public function handle(string $message): void
+    {
+        $payload = $this->payload($message);
+        if ($payload === null) {
+            return;
+        }
+
+        $this->jobs->find($this->type($payload))->handle($payload);
+    }
+
+    private function poll(int $maxIterations): int
+    {
         $processed = 0;
         for ($i = 0; $i < $maxIterations; $i++) {
             $hit = $this->queue->callConsumers(self::QUEUE);
             $processed += $hit;
-            if ($hit === 0 && $this->idleMicros > 0) {
-                usleep($this->idleMicros);
-            }
+            $this->idle($hit);
         }
 
         return $processed;
     }
 
-    public function handle(string $message): void
+    private function idle(int $hit): void
+    {
+        if ($hit === 0 && $this->idleMicros > 0) {
+            usleep($this->idleMicros);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function payload(string $message): ?array
     {
         $payload = json_decode($message, true);
-        if (!is_array($payload)) {
-            return;
-        }
 
-        $type = (string) ($payload['type'] ?? '');
-        if ($type === 'directory') {
-            $this->directory->refresh();
-            return;
-        }
+        return is_array($payload) ? $payload : null;
+    }
 
-        if ($type === 'ledger') {
-            $this->synchronizer->sync((int) ($payload['orkKingdomId'] ?? 0));
-        }
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function type(array $payload): string
+    {
+        return (string) ($payload['type'] ?? '');
     }
 }

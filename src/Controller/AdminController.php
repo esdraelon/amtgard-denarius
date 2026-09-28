@@ -11,7 +11,7 @@ use Amtgard\Denarius\Contract\PrincipalStore;
 use Amtgard\Denarius\Contract\RoleGrantStore;
 use Amtgard\Denarius\Http\CsrfToken;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
-use Amtgard\Denarius\Ork\OrkKingdom;
+use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\Denarius\Service\RoleAdmin;
@@ -30,6 +30,7 @@ final class AdminController
         private readonly PolicyGateway $policies,
         private readonly RoleGrantStore $grants,
         private readonly TwigHtmlRenderer $html,
+        private readonly AdminCommandRegistry $commands,
     ) {
     }
 
@@ -56,33 +57,29 @@ final class AdminController
             return $denied;
         }
         $body = (array) $request->getParsedBody();
-        if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-            return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+        $rejected = $this->rejectedToken($response, $body);
+        if ($rejected !== null) {
+            return $rejected;
         }
 
         $actor = (string) $this->auth->get()->profile->id;
         CurrentActor::set($actor);
         $admin = new RoleAdmin($this->policies, $this->permissions, $this->kingdoms, $this->grants, $actor);
-        $target = trim((string) ($body['idp_user_id'] ?? ''));
-        $action = (string) ($body['action'] ?? '');
-        if ($action === 'grant-admin') {
-            $admin->grantAdmin($target);
-        } elseif ($action === 'revoke-admin') {
-            $admin->revokeAdmin($target);
-        } elseif ($action === 'grant-manager') {
-            $orkId = (int) ($body['ork_kingdom_id'] ?? 0);
-            $name = trim((string) ($body['kingdom_name'] ?? ''));
-            foreach ($this->directory->list() as $kingdom) {
-                if ($kingdom->id === $orkId) {
-                    $name = $kingdom->name;
-                }
-            }
-            $admin->grantManager($target, new OrkKingdom($orkId, $name));
-        } elseif ($action === 'revoke-manager') {
-            $admin->revokeManager($target, (int) $body['ork_kingdom_id']);
-        }
+        $this->commands->find((string) ($body['action'] ?? ''))->execute($admin, $body);
 
         return $response->withHeader('Location', '/admin')->withStatus(302);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function rejectedToken(ResponseInterface $response, array $body): ?ResponseInterface
+    {
+        if (CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
+            return null;
+        }
+
+        return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
     }
 
     private function guard(ResponseInterface $response): ?ResponseInterface

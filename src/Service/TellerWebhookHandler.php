@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Contract\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Teller\Event\EnrollmentEventRegistry;
 use Amtgard\Denarius\Teller\TellerWebhookVerifier;
 
 final class TellerWebhookHandler
@@ -13,8 +13,7 @@ final class TellerWebhookHandler
     public function __construct(
         private readonly TellerWebhookVerifier $verifier,
         private readonly KingdomStore $kingdoms,
-        private readonly KingdomRefreshQueue $queue,
-        private readonly EnrollmentService $enrollments,
+        private readonly EnrollmentEventRegistry $events,
     ) {
     }
 
@@ -24,13 +23,12 @@ final class TellerWebhookHandler
             return false;
         }
 
-        $payload = json_decode($body, true);
-        if (!is_array($payload)) {
+        $payload = $this->payload($body);
+        if ($payload === null) {
             return false;
         }
 
-        $type = (string) ($payload['type'] ?? '');
-        $enrollmentId = (string) ($payload['payload']['enrollment_id'] ?? $payload['enrollment_id'] ?? '');
+        $enrollmentId = $this->enrollmentId($payload);
         if ($enrollmentId === '') {
             return true;
         }
@@ -40,15 +38,36 @@ final class TellerWebhookHandler
             return true;
         }
 
-        if ($type === 'enrollment.disconnected') {
-            $this->enrollments->markDisconnected($kingdom);
-            return true;
-        }
-
-        if ($type === 'transactions.processed') {
-            $this->queue->publishLedger($kingdom->getOrkKingdomId());
-        }
+        $this->events->find($this->type($payload))->apply($kingdom);
 
         return true;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function payload(string $body): ?array
+    {
+        $payload = json_decode($body, true);
+
+        return is_array($payload) ? $payload : null;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function type(array $payload): string
+    {
+        return (string) ($payload['type'] ?? '');
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function enrollmentId(array $payload): string
+    {
+        $nested = is_array($payload['payload'] ?? null) ? $payload['payload'] : [];
+
+        return (string) ($nested['enrollment_id'] ?? $payload['enrollment_id'] ?? '');
     }
 }

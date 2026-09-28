@@ -24,6 +24,8 @@ use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
 use Amtgard\Denarius\Domain\KingdomAccess;
 use Amtgard\Denarius\Domain\MonthStatementBuilder;
+use Amtgard\Denarius\Domain\Presentation\StatementPresenterRegistry;
+use Amtgard\Denarius\Domain\Access\VisibilityPolicyRegistry;
 use Amtgard\Denarius\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Ork\HttpOrkKingdomClient;
@@ -44,7 +46,18 @@ use Amtgard\Denarius\Service\KingdomPageQuery;
 use Amtgard\Denarius\Service\KingdomSettings;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\Denarius\Service\PrincipalSync;
+use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
+use Amtgard\Denarius\Service\Admin\GrantAdminCommand;
+use Amtgard\Denarius\Service\Admin\GrantManagerCommand;
+use Amtgard\Denarius\Service\Admin\RevokeAdminCommand;
+use Amtgard\Denarius\Service\Admin\RevokeManagerCommand;
 use Amtgard\Denarius\Service\TellerWebhookHandler;
+use Amtgard\Denarius\Teller\Event\EnrollmentDisconnectedEvent;
+use Amtgard\Denarius\Teller\Event\EnrollmentEventRegistry;
+use Amtgard\Denarius\Teller\Event\TransactionsProcessedEvent;
+use Amtgard\Denarius\Worker\Job\DirectoryRefreshJob;
+use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
+use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
 use Amtgard\Denarius\Session\RedisSessionHandler;
 use Amtgard\Denarius\Teller\CurlTellerApi;
@@ -147,15 +160,19 @@ return [
     TellerWebhookHandler::class => fn (ContainerInterface $c) => new TellerWebhookHandler(
         $c->get(TellerWebhookVerifier::class),
         $c->get(KingdomStore::class),
-        $c->get(KingdomRefreshQueue::class),
-        $c->get(EnrollmentService::class),
+        new EnrollmentEventRegistry([
+            new TransactionsProcessedEvent($c->get(KingdomRefreshQueue::class)),
+            new EnrollmentDisconnectedEvent($c->get(EnrollmentService::class)),
+        ]),
     ),
     KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
         $c->get(TransactionStore::class),
         $c->get(AccountStore::class),
-        new MonthStatementBuilder(),
+        new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
     ),
-    KingdomAccess::class => fn () => new KingdomAccess(),
+    StatementPresenterRegistry::class => fn () => StatementPresenterRegistry::standard(),
+    VisibilityPolicyRegistry::class => fn () => VisibilityPolicyRegistry::standard(),
+    KingdomAccess::class => fn (VisibilityPolicyRegistry $policies) => new KingdomAccess($policies),
     KingdomSettings::class => fn (KingdomStore $kingdoms) => new KingdomSettings($kingdoms),
     PrincipalSync::class => fn (PrincipalStore $principals) => new PrincipalSync($principals),
     SyncPrincipalMiddleware::class => fn (ContainerInterface $c) => new SyncPrincipalMiddleware(
@@ -192,6 +209,12 @@ return [
         $c->get(PolicyGateway::class),
         $c->get(RoleGrantStore::class),
         $c->get(TwigHtmlRenderer::class),
+        new AdminCommandRegistry([
+            new GrantAdminCommand(),
+            new RevokeAdminCommand(),
+            new GrantManagerCommand($c->get(CachedKingdomDirectory::class)),
+            new RevokeManagerCommand(),
+        ]),
     ),
     ManagerController::class => fn (ContainerInterface $c) => new ManagerController(
         $c->get(SessionAuthStore::class),
@@ -208,8 +231,10 @@ return [
     WebhookController::class => fn (TellerWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(
         $c->get(MessageQueue::class),
-        $c->get(TransactionSynchronizer::class),
-        $c->get(CachedKingdomDirectory::class),
+        new RefreshJobRegistry([
+            new DirectoryRefreshJob($c->get(CachedKingdomDirectory::class)),
+            new LedgerRefreshJob($c->get(TransactionSynchronizer::class)),
+        ]),
     ),
     RedisSessionHandler::class => function () {
         $redis = new Redis();

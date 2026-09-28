@@ -14,8 +14,24 @@ final class TellerWebhookVerifier
 
     public function verify(string $body, ?string $header, int $now): bool
     {
-        if ($header === null || $header === '' || $this->secret === '') {
+        $parsed = $this->header($header);
+        if ($parsed === null || $this->secret === '') {
             return false;
+        }
+        if (!$this->fresh($parsed['timestamp'], $now)) {
+            return false;
+        }
+
+        return $this->signed($parsed['timestamp'], $body, $parsed['signatures']);
+    }
+
+    /**
+     * @return array{timestamp: string, signatures: list<string>}|null
+     */
+    private function header(?string $header): ?array
+    {
+        if ($header === null || $header === '') {
+            return null;
         }
 
         $timestamp = null;
@@ -30,14 +46,22 @@ final class TellerWebhookVerifier
         }
 
         if ($timestamp === null || !ctype_digit($timestamp) || $signatures === []) {
-            return false;
+            return null;
         }
 
-        $age = abs($now - (int) $timestamp);
-        if ($age > $this->toleranceSeconds) {
-            return false;
-        }
+        return ['timestamp' => $timestamp, 'signatures' => $signatures];
+    }
 
+    private function fresh(string $timestamp, int $now): bool
+    {
+        return abs($now - (int) $timestamp) <= $this->toleranceSeconds;
+    }
+
+    /**
+     * @param list<string> $signatures
+     */
+    private function signed(string $timestamp, string $body, array $signatures): bool
+    {
         $expected = hash_hmac('sha256', $timestamp . '.' . $body, $this->secret);
         foreach ($signatures as $signature) {
             if (hash_equals($expected, $signature)) {

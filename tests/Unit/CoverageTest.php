@@ -154,7 +154,7 @@ PHP);
         }, new ArrayStore(), new MemoryRefresh());
         $kingdoms = new MemoryKingdoms();
         $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('summarized')->enrollmentStatus('connected')->build());
-        $admin = new AdminController($auth, $permissions, $directory, new MemoryPrincipals(), $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig);
+        $admin = new AdminController($auth, $permissions, $directory, new MemoryPrincipals(), $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin($directory));
         $_SESSION['_csrf'] = 'token';
         $request = static fn (array $body) => (new ServerRequestFactory())->createServerRequest('POST', '/admin/grant')->withParsedBody($body);
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-admin']), new Response())->getStatusCode());
@@ -162,7 +162,7 @@ PHP);
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'revoke-manager', 'ork_kingdom_id' => '4']), new Response())->getStatusCode());
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'unknown']), new Response())->getStatusCode());
         $member = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        $forbidden = (new AdminController($auth, $member, $directory, new MemoryPrincipals(), $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig))
+        $forbidden = (new AdminController($auth, $member, $directory, new MemoryPrincipals(), $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin($directory)))
             ->index((new ServerRequestFactory())->createServerRequest('GET', '/admin'), new Response());
         $this->assertSame(403, $forbidden->getStatusCode());
 
@@ -172,7 +172,7 @@ PHP);
         $transactions = new MemoryTransactions();
         $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->build());
         $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('h')->tellerAccountId('hidden')->postedOn('2026-09-02')->amountCents(10)->category('fuel')->build());
-        $page = new KingdomPageController($kingdoms, new KingdomPageQuery($transactions, $accounts, new MonthStatementBuilder()), new KingdomAccess(), $auth, $twig);
+        $page = new KingdomPageController($kingdoms, new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard()), KingdomAccess::standard(), $auth, $twig);
         $shown = $page->show((new ServerRequestFactory())->createServerRequest('GET', '/golden-plains')->withQueryParams(['month' => '2026-09']), new Response(), ['slug' => 'golden-plains']);
         $this->assertStringContainsString('summarized', (string) $shown->getBody());
         $this->assertStringContainsString('total', (string) $shown->getBody());
@@ -210,18 +210,18 @@ PHP);
             }
         };
         $sync = new TransactionSynchronizer($kingdoms, $accounts, new MemorySecrets(), $transactions, new FakeTeller(), new TokenCipher('k'), new \DateTimeImmutable('2026-09-01'));
-        $worker = new LedgerWorker($messages, $sync, $directory, 1);
+        $worker = new LedgerWorker($messages, Strategies::jobs($directory, $sync), 1);
         $this->assertSame(0, $worker->run(1));
         $this->assertCount(1, $messages->published);
         $worker->handle('{"type":"other"}');
         $worker->handle('not-json');
 
-        $handler = new TellerWebhookHandler(new TellerWebhookVerifier('whsec'), $kingdoms, $queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue));
+        $handler = new TellerWebhookHandler(new TellerWebhookVerifier('whsec'), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue)));
         $body = json_encode(['type' => 'enrollment.updated', 'enrollment_id' => 'enr_1']);
         $now = 1_700_000_000;
         $signature = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $body, 'whsec');
         $kingdoms->save(KingdomRecord::builder()->id($kingdom->getId())->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->enrollmentId('enr_1')->enrollmentStatus('connected')->build());
         $this->assertTrue($handler->handle((string) $body, $signature, $now));
-        $this->assertInstanceOf(MonthWindow::class, MonthWindow::current());
+        $this->assertSame('2026-09', MonthWindow::current(new \DateTimeImmutable('2026-09-15'))->key());
     }
 }

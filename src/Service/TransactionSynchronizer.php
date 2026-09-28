@@ -72,32 +72,52 @@ final class TransactionSynchronizer
             if ($page === []) {
                 return;
             }
-            $lastId = null;
-            foreach ($page as $row) {
-                $id = (string) ($row['id'] ?? '');
-                if ($id === '' || isset($seen[$id])) {
-                    continue;
-                }
-                $seen[$id] = true;
-                $lastId = $id;
-                $details = is_array($row['details'] ?? null) ? $row['details'] : [];
-                $counterparty = is_array($details['counterparty'] ?? null) ? $details['counterparty'] : [];
-                $this->transactions->upsert(TransactionRecord::builder()
-                    ->kingdomId((int) $kingdom->getId())
-                    ->tellerTransactionId($id)
-                    ->tellerAccountId($accountId)
-                    ->postedOn((string) ($row['date'] ?? ''))
-                    ->amountCents(Money::centsFromDecimal((string) ($row['amount'] ?? '0')))
-                    ->category((string) ($details['category'] ?? 'general'))
-                    ->description((string) ($row['description'] ?? ''))
-                    ->counterparty((string) ($counterparty['name'] ?? ''))
-                    ->status((string) ($row['status'] ?? ''))
-                    ->build());
-            }
+            $lastId = $this->storePage($kingdom, $accountId, $page, $seen);
             if ($lastId === null || $lastId === $fromId) {
                 return;
             }
             $fromId = $lastId;
         } while (true);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $page
+     * @param array<string, true> $seen
+     */
+    private function storePage(KingdomRecord $kingdom, string $accountId, array $page, array &$seen): ?string
+    {
+        $lastId = null;
+        foreach ($page as $row) {
+            $id = (string) ($row['id'] ?? '');
+            if ($id === '' || isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
+            $lastId = $id;
+            $this->transactions->upsert($this->record($kingdom, $accountId, $id, $row));
+        }
+
+        return $lastId;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function record(KingdomRecord $kingdom, string $accountId, string $id, array $row): TransactionRecord
+    {
+        $details = is_array($row['details'] ?? null) ? $row['details'] : [];
+        $counterparty = is_array($details['counterparty'] ?? null) ? $details['counterparty'] : [];
+
+        return TransactionRecord::builder()
+            ->kingdomId((int) $kingdom->getId())
+            ->tellerTransactionId($id)
+            ->tellerAccountId($accountId)
+            ->postedOn((string) ($row['date'] ?? ''))
+            ->amountCents(Money::centsFromDecimal((string) ($row['amount'] ?? '0')))
+            ->category((string) ($details['category'] ?? 'general'))
+            ->description((string) ($row['description'] ?? ''))
+            ->counterparty((string) ($counterparty['name'] ?? ''))
+            ->status((string) ($row['status'] ?? ''))
+            ->build();
     }
 }
