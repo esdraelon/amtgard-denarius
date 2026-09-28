@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
-use Amtgard\Denarius\Domain\DisplayMode;
-use Amtgard\Denarius\Domain\Visibility;
+use Amtgard\Denarius\Domain\Statement\DisplayMode;
+use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 
 final class KingdomSettings

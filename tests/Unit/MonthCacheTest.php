@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Domain\CategoryTotal;
-use Amtgard\Denarius\Domain\LedgerLine;
-use Amtgard\Denarius\Domain\MonthStatement;
-use Amtgard\Denarius\Domain\MonthWindow;
+use Amtgard\Denarius\Domain\Statement\CategoryTotal;
+use Amtgard\Denarius\Domain\Statement\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\MonthStatement;
+use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Month\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
@@ -27,7 +27,7 @@ final class MonthCacheTest extends AmtgardTestCase
             {
                 $this->calls++;
                 return new MonthStatement(
-                    \Amtgard\Denarius\Domain\DisplayMode::All,
+                    \Amtgard\Denarius\Domain\Statement\DisplayMode::All,
                     $month,
                     [LedgerLine::builder()->postedOn('2026-09-02')->amountCents(250)->category('office')->description('paper')->counterparty('Shop')->build()],
                 );
@@ -52,7 +52,7 @@ final class MonthCacheTest extends AmtgardTestCase
             public function statement(KingdomRecord $kingdom, MonthWindow $month): MonthStatement
             {
                 return new MonthStatement(
-                    \Amtgard\Denarius\Domain\DisplayMode::Summarized,
+                    \Amtgard\Denarius\Domain\Statement\DisplayMode::Summarized,
                     $month,
                     [new CategoryTotal('office', 2, 250)],
                 );

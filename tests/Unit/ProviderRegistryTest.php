@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Bank\AlwaysReady;
-use Amtgard\Denarius\Bank\ConnectedEnrollment;
-use Amtgard\Denarius\Bank\InstitutionSupport;
-use Amtgard\Denarius\Bank\LedgerProvider;
-use Amtgard\Denarius\Bank\LedgerProviderRegistry;
-use Amtgard\Denarius\Bank\MissingLedgerProvider;
-use Amtgard\Denarius\Bank\PresentCredentials;
-use Amtgard\Denarius\Bank\ProviderNotice;
-use Amtgard\Denarius\Bank\Teller\TellerLedgerProvider;
-use Amtgard\Denarius\Bank\Teller\TellerWebhookVerifier;
+use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\AlwaysReady;
+use Amtgard\Denarius\Domain\Bank\Enrollment\ConnectedEnrollment;
+use Amtgard\Denarius\Domain\Bank\Providers\Support\InstitutionSupport;
+use Amtgard\Denarius\Domain\Bank\Providers\LedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Providers\Impl\MissingLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\PresentCredentials;
+use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderNotice;
+use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerWebhookVerifier;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class ProviderRegistryTest extends AmtgardTestCase

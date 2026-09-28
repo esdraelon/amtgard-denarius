@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Bank\AlwaysReady;
-use Amtgard\Denarius\Bank\ConfiguredLedgerProviders;
-use Amtgard\Denarius\Bank\PresentCredentials;
-use Amtgard\Denarius\Bank\PreviousMonthWindow;
-use Amtgard\Denarius\Bank\ProviderAdmission;
-use Amtgard\Denarius\Bank\Plaid\PlaidApi;
+use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\AlwaysReady;
+use Amtgard\Denarius\Domain\Bank\Providers\Registry\ConfiguredLedgerProviders;
+use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\PresentCredentials;
+use Amtgard\Denarius\Domain\Bank\Providers\Support\PreviousMonthWindow;
+use Amtgard\Denarius\Domain\Bank\Providers\Registry\ProviderAdmission;
+use Amtgard\Denarius\Domain\Bank\Providers\Plaid\PlaidApi;
 use Amtgard\Denarius\Controller\WebhookController;
-use Amtgard\Denarius\Bank\Plaid\CurlPlaidApi;
-use Amtgard\Denarius\Bank\Plaid\PlaidLedgerProvider;
-use Amtgard\Denarius\Bank\Plaid\PlaidWebhookVerifier;
+use Amtgard\Denarius\Domain\Bank\Providers\Plaid\Impl\CurlPlaidApi;
+use Amtgard\Denarius\Domain\Bank\Providers\Plaid\PlaidLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Providers\Plaid\PlaidWebhookVerifier;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\EnrollmentService;

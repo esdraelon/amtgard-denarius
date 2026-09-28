@@ -8,7 +8,7 @@ use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
 use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
-use Amtgard\Denarius\Domain\KingdomSlug;
+use Amtgard\Denarius\Domain\Kingdom\KingdomSlug;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
 
