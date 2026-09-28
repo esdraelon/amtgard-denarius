@@ -15,15 +15,15 @@ use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerApi;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
-use Amtgard\Denarius\Service\Admin\GrantAdminCommand;
-use Amtgard\Denarius\Service\Admin\GrantManagerCommand;
-use Amtgard\Denarius\Service\Admin\RevokeAdminCommand;
-use Amtgard\Denarius\Service\Admin\RevokeManagerCommand;
-use Amtgard\Denarius\Service\EnrollmentService;
-use Amtgard\Denarius\Service\TransactionSynchronizer;
+use Amtgard\Denarius\Service\Admin\Impl\GrantAdminCommand;
+use Amtgard\Denarius\Service\Admin\Impl\GrantManagerCommand;
+use Amtgard\Denarius\Service\Admin\Impl\RevokeAdminCommand;
+use Amtgard\Denarius\Service\Admin\Impl\RevokeManagerCommand;
+use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerWebhookVerifier;
-use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
+use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 
 final class Strategies

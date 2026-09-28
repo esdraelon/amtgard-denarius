@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Admin;
 
+use Amtgard\Denarius\Service\Admin\Impl\IgnoredAdminCommand;
+
 final class AdminCommandRegistry
 {
     /** @var array<string, AdminCommand> */

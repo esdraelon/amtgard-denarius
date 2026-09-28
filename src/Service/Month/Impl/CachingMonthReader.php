@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Service\Month;
+namespace Amtgard\Denarius\Service\Month\Impl;
 
+use Amtgard\Denarius\Service\Month\MonthCacheKeys;
+use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
-use Amtgard\Denarius\Domain\Statement\CategoryTotal;
-use Amtgard\Denarius\Domain\Statement\DisplayMode;
-use Amtgard\Denarius\Domain\Statement\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\Line\CategoryTotal;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;

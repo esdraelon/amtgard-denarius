@@ -14,9 +14,9 @@ use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderTransaction;
 use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerApi;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
-use Amtgard\Denarius\Service\EnrollmentService;
-use Amtgard\Denarius\Service\ProviderWebhookHandler;
-use Amtgard\Denarius\Service\TransactionSynchronizer;
+use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
+use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerLedgerProvider;
 use Amtgard\PHPUnit\AmtgardTestCase;
 

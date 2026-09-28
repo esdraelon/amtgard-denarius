@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Utilities\Http\JsonBody;
-use Amtgard\Denarius\Service\ProviderWebhookHandler;
+use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 

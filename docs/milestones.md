@@ -152,3 +152,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Each repository port has its own folder. The interface stays at the top of that folder, and the Active Record class sits in `Impl`.
 - Line coverage: 97.68% (1933/1979).
 - Infection covered MSI: 95%.
+
+## Service modules
+
+- Branch: `service-modules`
+- Services are grouped into enrollment, ledger sync, kingdom pages, access, admin, and month. Admin commands, the cached month reader, and refresh jobs sit under `Impl`. Statement lines and display mode sit in their own modules so the statement folder stays small.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Worker\Job;
+namespace Amtgard\Denarius\Worker\Job\Impl;
+
+use Amtgard\Denarius\Worker\Job\RefreshJob;
 
 final class IgnoredRefreshJob implements RefreshJob
 {

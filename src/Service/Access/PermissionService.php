@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Service;
+namespace Amtgard\Denarius\Service\Access;
 
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;

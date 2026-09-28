@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Worker\Job;
 
+use Amtgard\Denarius\Worker\Job\Impl\IgnoredRefreshJob;
+
 final class RefreshJobRegistry
 {
     /** @var array<string, RefreshJob> */

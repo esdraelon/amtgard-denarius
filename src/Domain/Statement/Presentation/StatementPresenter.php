@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Statement\Presentation;
 
-use Amtgard\Denarius\Domain\Statement\DisplayMode;
-use Amtgard\Denarius\Domain\Statement\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 
 interface StatementPresenter
 {
@@ -13,7 +13,7 @@ interface StatementPresenter
 
     /**
      * @param list<LedgerLine> $lines
-     * @return list<LedgerLine|\Amtgard\Denarius\Domain\Statement\CategoryTotal>
+     * @return list<LedgerLine|\Amtgard\Denarius\Domain\Statement\Line\CategoryTotal>
      */
     public function present(array $lines): array;
 }

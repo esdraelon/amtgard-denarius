@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Service;
+namespace Amtgard\Denarius\Service\Enrollment;
 
 use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
 use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;

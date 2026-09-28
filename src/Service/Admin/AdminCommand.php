@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Admin;
 
-use Amtgard\Denarius\Service\RoleAdmin;
+use Amtgard\Denarius\Service\Admin\RoleAdmin;
 
 interface AdminCommand
 {

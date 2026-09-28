@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Service;
+namespace Amtgard\Denarius\Service\Kingdom;
 
 use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
-use Amtgard\Denarius\Domain\Statement\DisplayMode;
-use Amtgard\Denarius\Domain\Statement\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;

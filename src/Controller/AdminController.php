@@ -12,8 +12,8 @@ use Amtgard\Denarius\Persistence\Repository\RoleGrant\RoleGrantRepositoryInterfa
 use Amtgard\Denarius\Utilities\Http\CsrfToken;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
-use Amtgard\Denarius\Service\PermissionService;
-use Amtgard\Denarius\Service\RoleAdmin;
+use Amtgard\Denarius\Service\Access\PermissionService;
+use Amtgard\Denarius\Service\Admin\RoleAdmin;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
