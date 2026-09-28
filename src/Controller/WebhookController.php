@@ -26,6 +26,11 @@ final class WebhookController
         return $this->accept('stripe', $request, $response);
     }
 
+    public function plaid(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        return $this->accept('plaid', $request, $response);
+    }
+
     private function accept(string $providerId, ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         $signature = $request->getHeaderLine($this->handler->signatureHeader($providerId));
