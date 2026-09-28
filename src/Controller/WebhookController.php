@@ -5,22 +5,23 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Http\JsonBody;
-use Amtgard\Denarius\Service\TellerWebhookHandler;
+use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class WebhookController
 {
     public function __construct(
-        private readonly TellerWebhookHandler $handler,
+        private readonly ProviderWebhookHandler $handler,
     ) {
     }
 
     public function teller(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
+        $signature = $request->getHeaderLine($this->handler->signatureHeader());
         $ok = $this->handler->handle(
             (string) $request->getBody(),
-            $request->getHeaderLine('Teller-Signature') ?: null,
+            $signature !== '' ? $signature : null,
             time(),
         );
 

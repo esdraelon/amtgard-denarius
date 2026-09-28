@@ -32,3 +32,11 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - The shared Redis container stays up across a blue-green install. Session flush uses Redis DB 1 and does not clear month keys. `INSTALL_REBUILD_SESSIONS=1` is the opt-in wipe.
 - Line coverage: 96.50% (1132/1173).
 - Infection covered MSI: 89%.
+
+## Ledger provider
+
+- Branch: `ledger-provider`
+- Enrollment, sync, and webhooks talk to a `LedgerProvider`. Teller is one adapter behind that port.
+- A different bank is a container binding. Denarius notice actions stay `refresh` and `disconnect`.
+- Line coverage: 96.82% (1189/1228).
+- Infection covered MSI: 90%.

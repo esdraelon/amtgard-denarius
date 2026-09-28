@@ -26,8 +26,7 @@ use Amtgard\Denarius\Service\KingdomPageQuery;
 use Amtgard\Denarius\Service\KingdomSettings;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\Denarius\Service\PrincipalSync;
-use Amtgard\Denarius\Service\TellerWebhookHandler;
-use Amtgard\Denarius\Teller\TellerWebhookVerifier;
+use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\IdpClient\OAuth\TokenSet;
 use Amtgard\IdpClient\Resource\AuthenticatedSession;
 use Amtgard\IdpClient\Resource\OrkProfile;
@@ -118,7 +117,7 @@ final class ControllerTest extends AmtgardTestCase
             $kingdoms,
             $accounts,
             new KingdomSettings($kingdoms),
-            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue, Strategies::months()),
+            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::teller(), new TokenCipher('k'), $queue, Strategies::months()),
             $queue,
             $twig,
             'app_test',
@@ -136,7 +135,7 @@ final class ControllerTest extends AmtgardTestCase
         $this->assertSame(302, $refreshed->getStatusCode());
         $this->assertSame(403, $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
 
-        $webhook = new WebhookController(new TellerWebhookHandler(new TellerWebhookVerifier('whsec'), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, new FakeTeller(), new TokenCipher('k'), $queue, Strategies::months()))));
+        $webhook = new WebhookController(new ProviderWebhookHandler(Strategies::teller(), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::teller(), new TokenCipher('k'), $queue, Strategies::months()))));
         $rejected = $webhook->teller($this->request('POST', '/webhooks/teller'), new Response());
         $this->assertSame(400, $rejected->getStatusCode());
 

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
+use Amtgard\Denarius\Bank\LedgerProvider;
 use Amtgard\Denarius\Contract\AccountStore;
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\KingdomStore;
 use Amtgard\Denarius\Contract\SecretStore;
-use Amtgard\Denarius\Contract\TellerApi;
 use Amtgard\Denarius\Record\AccountRecord;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Security\TokenCipher;
@@ -20,7 +20,7 @@ final class EnrollmentService
         private readonly KingdomStore $kingdoms,
         private readonly SecretStore $secrets,
         private readonly AccountStore $accounts,
-        private readonly TellerApi $teller,
+        private readonly LedgerProvider $provider,
         private readonly TokenCipher $cipher,
         private readonly KingdomRefreshQueue $queue,
         private readonly MonthInvalidator $months,
@@ -32,17 +32,11 @@ final class EnrollmentService
      */
     public function connect(KingdomRecord $kingdom, array $enrollment): KingdomRecord
     {
-        $token = (string) ($enrollment['accessToken'] ?? '');
-        $enrollmentId = (string) ($enrollment['enrollment']['id'] ?? $enrollment['id'] ?? '');
-        if ($token === '' || $enrollmentId === '') {
-            throw new \InvalidArgumentException('Teller enrollment is missing an access token or id.');
-        }
+        $connected = $this->provider->enrollment($enrollment);
+        $this->secrets->saveCiphertext((int) $kingdom->getId(), $this->cipher->encrypt($connected->accessToken));
 
-        $institution = (string) ($enrollment['enrollment']['institution']['name'] ?? '');
-        $this->secrets->saveCiphertext((int) $kingdom->getId(), $this->cipher->encrypt($token));
-
-        $saved = $this->kingdoms->save($this->copy($kingdom, $enrollmentId, $institution, 'connected'));
-        $this->importAccounts($saved, $token);
+        $saved = $this->kingdoms->save($this->copy($kingdom, $connected->enrollmentId, $connected->institutionName, 'connected'));
+        $this->importAccounts($saved, $connected->accessToken);
         $this->months->forget((int) $saved->getId());
         $this->queue->publishLedger($saved->getOrkKingdomId());
 
@@ -86,20 +80,15 @@ final class EnrollmentService
             $existing[$account->getTellerAccountId()] = $account;
         }
 
-        foreach ($this->teller->accounts($token) as $row) {
-            $tellerId = (string) ($row['id'] ?? '');
-            if ($tellerId === '') {
-                continue;
-            }
-            $previous = $existing[$tellerId] ?? null;
-            $lastFour = $row['last_four'] ?? null;
+        foreach ($this->provider->accounts($token) as $account) {
+            $previous = $existing[$account->id] ?? null;
             $this->accounts->save(AccountRecord::builder()
                 ->id($previous?->getId())
                 ->kingdomId((int) $kingdom->getId())
-                ->tellerAccountId($tellerId)
-                ->name((string) ($row['name'] ?? 'Account'))
-                ->type((string) ($row['type'] ?? 'depository'))
-                ->lastFour(is_string($lastFour) && $lastFour !== '' ? $lastFour : null)
+                ->tellerAccountId($account->id)
+                ->name($account->name)
+                ->type($account->type)
+                ->lastFour($account->lastFour)
                 ->published($previous?->getPublished() ?? true)
                 ->build());
         }

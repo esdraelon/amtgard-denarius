@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Teller\Event;
+namespace Amtgard\Denarius\Bank;
 
 use Amtgard\Denarius\Record\KingdomRecord;
 
-interface EnrollmentEvent
+interface LedgerNotice
 {
-    public function type(): string;
+    public function action(): string;
 
     public function apply(KingdomRecord $kingdom): void;
 }

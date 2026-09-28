@@ -6,6 +6,10 @@ use Amtgard\Denarius\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Auth\CurrentActor;
 use Amtgard\Denarius\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Auth\IdpPolicyGateway;
+use Amtgard\Denarius\Bank\DisconnectLedgerNotice;
+use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
+use Amtgard\Denarius\Bank\LedgerProvider;
+use Amtgard\Denarius\Bank\RefreshLedgerNotice;
 use Amtgard\Denarius\Contract\AccountStore;
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\KingdomStore;
@@ -54,10 +58,8 @@ use Amtgard\Denarius\Service\Admin\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\RevokeManagerCommand;
-use Amtgard\Denarius\Service\TellerWebhookHandler;
-use Amtgard\Denarius\Teller\Event\EnrollmentDisconnectedEvent;
-use Amtgard\Denarius\Teller\Event\EnrollmentEventRegistry;
-use Amtgard\Denarius\Teller\Event\TransactionsProcessedEvent;
+use Amtgard\Denarius\Service\ProviderWebhookHandler;
+use Amtgard\Denarius\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Worker\Job\DirectoryRefreshJob;
 use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
@@ -143,11 +145,16 @@ return [
         $_ENV['TELLER_CERT_PATH'] ?? '',
         $_ENV['TELLER_KEY_PATH'] ?? '',
     ),
+    LedgerProvider::class => fn (ContainerInterface $c) => new TellerLedgerProvider(
+        $c->get(TellerApi::class),
+        $c->get(TellerWebhookVerifier::class),
+        TellerLedgerProvider::actions(),
+    ),
     EnrollmentService::class => fn (ContainerInterface $c) => new EnrollmentService(
         $c->get(KingdomStore::class),
         $c->get(SecretStore::class),
         $c->get(AccountStore::class),
-        $c->get(TellerApi::class),
+        $c->get(LedgerProvider::class),
         $c->get(TokenCipher::class),
         $c->get(KingdomRefreshQueue::class),
         $c->get(MonthInvalidator::class),
@@ -157,18 +164,18 @@ return [
         $c->get(AccountStore::class),
         $c->get(SecretStore::class),
         $c->get(TransactionStore::class),
-        $c->get(TellerApi::class),
+        $c->get(LedgerProvider::class),
         $c->get(TokenCipher::class),
         new DateTimeImmutable('now'),
         $c->get(MonthInvalidator::class),
     ),
     TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier($_ENV['TELLER_WEBHOOK_SECRET'] ?? ''),
-    TellerWebhookHandler::class => fn (ContainerInterface $c) => new TellerWebhookHandler(
-        $c->get(TellerWebhookVerifier::class),
+    ProviderWebhookHandler::class => fn (ContainerInterface $c) => new ProviderWebhookHandler(
+        $c->get(LedgerProvider::class),
         $c->get(KingdomStore::class),
-        new EnrollmentEventRegistry([
-            new TransactionsProcessedEvent($c->get(KingdomRefreshQueue::class)),
-            new EnrollmentDisconnectedEvent($c->get(EnrollmentService::class)),
+        new LedgerNoticeRegistry([
+            new RefreshLedgerNotice($c->get(KingdomRefreshQueue::class)),
+            new DisconnectLedgerNotice($c->get(EnrollmentService::class)),
         ]),
     ),
     KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
@@ -239,7 +246,7 @@ return [
         $_ENV['TELLER_APPLICATION_ID'] ?? '',
         $_ENV['TELLER_ENVIRONMENT'] ?? 'sandbox',
     ),
-    WebhookController::class => fn (TellerWebhookHandler $handler) => new WebhookController($handler),
+    WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(
         $c->get(MessageQueue::class),
         new RefreshJobRegistry([

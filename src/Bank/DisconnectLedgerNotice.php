@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Teller\Event;
+namespace Amtgard\Denarius\Bank;
 
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Service\EnrollmentService;
 
-final class EnrollmentDisconnectedEvent implements EnrollmentEvent
+final class DisconnectLedgerNotice implements LedgerNotice
 {
     public function __construct(private readonly EnrollmentService $enrollments)
     {
     }
 
-    public function type(): string
+    public function action(): string
     {
-        return 'enrollment.disconnected';
+        return ProviderNotice::DISCONNECT;
     }
 
     public function apply(KingdomRecord $kingdom): void
