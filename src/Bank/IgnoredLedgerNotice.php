@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Teller\Event;
+namespace Amtgard\Denarius\Bank;
 
 use Amtgard\Denarius\Record\KingdomRecord;
 
-final class IgnoredEnrollmentEvent implements EnrollmentEvent
+final class IgnoredLedgerNotice implements LedgerNotice
 {
-    public function type(): string
+    public function action(): string
     {
         return '';
     }

@@ -53,7 +53,7 @@ use Amtgard\Denarius\Service\KingdomSettings;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\Denarius\Service\PrincipalSync;
 use Amtgard\Denarius\Service\RoleAdmin;
-use Amtgard\Denarius\Service\TellerWebhookHandler;
+use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
 use Amtgard\Denarius\Session\RedisSessionHandler;
 use Amtgard\Denarius\Teller\CurlTellerApi;
@@ -196,7 +196,7 @@ final class ApplicationTest extends AmtgardTestCase
         $secrets = new MemorySecrets();
         $accounts = new MemoryAccounts();
         $queue = new MemoryRefresh();
-        $teller = new FakeTeller();
+        $teller = Strategies::teller();
         $cipher = new TokenCipher('app-key');
         $cache = new ArrayStore();
         $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $teller, $cipher, $queue, Strategies::months($cache));
@@ -238,7 +238,7 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertSame(2, count($transactions->forKingdom((int) $connected->getId())));
         $this->assertNotNull($kingdoms->findByOrkId(4)->getLastSyncedAt());
 
-        $handler = new TellerWebhookHandler(new TellerWebhookVerifier('whsec', 300), $kingdoms, Strategies::events($queue, $enrollment));
+        $handler = new ProviderWebhookHandler(Strategies::teller(verifier: new TellerWebhookVerifier('whsec', 300)), $kingdoms, Strategies::events($queue, $enrollment));
         $body = json_encode(['type' => 'transactions.processed', 'enrollment_id' => 'enr_1'], JSON_THROW_ON_ERROR);
         $now = 1_700_000_000;
         $signature = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $body, 'whsec');
@@ -320,7 +320,7 @@ final class ApplicationTest extends AmtgardTestCase
             new MemoryAccounts(),
             new MemorySecrets(),
             new MemoryTransactions(),
-            new FakeTeller(),
+            Strategies::teller(),
             new TokenCipher('k'),
             new \DateTimeImmutable('now'),
             Strategies::months(),

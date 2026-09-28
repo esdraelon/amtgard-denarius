@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Teller\Event;
+namespace Amtgard\Denarius\Bank;
 
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
 use Amtgard\Denarius\Record\KingdomRecord;
 
-final class TransactionsProcessedEvent implements EnrollmentEvent
+final class RefreshLedgerNotice implements LedgerNotice
 {
     public function __construct(private readonly KingdomRefreshQueue $queue)
     {
     }
 
-    public function type(): string
+    public function action(): string
     {
-        return 'transactions.processed';
+        return ProviderNotice::REFRESH;
     }
 
     public function apply(KingdomRecord $kingdom): void

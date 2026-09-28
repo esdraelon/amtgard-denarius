@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Bank\DisconnectLedgerNotice;
+use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
+use Amtgard\Denarius\Bank\LedgerProvider;
+use Amtgard\Denarius\Bank\RefreshLedgerNotice;
 use Amtgard\Denarius\Contract\KeyValueStore;
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
+use Amtgard\Denarius\Contract\TellerApi;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\Admin\GrantAdminCommand;
@@ -15,9 +20,8 @@ use Amtgard\Denarius\Service\Admin\RevokeManagerCommand;
 use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
-use Amtgard\Denarius\Teller\Event\EnrollmentDisconnectedEvent;
-use Amtgard\Denarius\Teller\Event\EnrollmentEventRegistry;
-use Amtgard\Denarius\Teller\Event\TransactionsProcessedEvent;
+use Amtgard\Denarius\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Teller\TellerWebhookVerifier;
 use Amtgard\Denarius\Worker\Job\DirectoryRefreshJob;
 use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
@@ -34,12 +38,21 @@ final class Strategies
         ]);
     }
 
-    public static function events(KingdomRefreshQueue $queue, EnrollmentService $enrollments): EnrollmentEventRegistry
+    public static function events(KingdomRefreshQueue $queue, EnrollmentService $enrollments): LedgerNoticeRegistry
     {
-        return new EnrollmentEventRegistry([
-            new TransactionsProcessedEvent($queue),
-            new EnrollmentDisconnectedEvent($enrollments),
+        return new LedgerNoticeRegistry([
+            new RefreshLedgerNotice($queue),
+            new DisconnectLedgerNotice($enrollments),
         ]);
+    }
+
+    public static function teller(?TellerApi $api = null, ?TellerWebhookVerifier $verifier = null): LedgerProvider
+    {
+        return new TellerLedgerProvider(
+            $api ?? new FakeTeller(),
+            $verifier ?? new TellerWebhookVerifier('whsec', 300),
+            TellerLedgerProvider::actions(),
+        );
     }
 
     public static function months(?KeyValueStore $store = null): MonthInvalidator
