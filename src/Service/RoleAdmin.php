@@ -9,7 +9,6 @@ use Amtgard\Denarius\Contract\KingdomStore;
 use Amtgard\Denarius\Auth\PolicyGateway;
 use Amtgard\Denarius\Contract\RoleGrantStore;
 use Amtgard\Denarius\Domain\KingdomSlug;
-use Amtgard\Denarius\Ork\OrkKingdom;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Record\RoleGrantRecord;
 
@@ -34,29 +33,29 @@ final class RoleAdmin
         $this->change($targetIdpUserId, 'revoke', ClaimOrn::admin(), ClaimOrn::ADMIN, null);
     }
 
-    public function grantManager(string $targetIdpUserId, OrkKingdom $kingdom): KingdomRecord
+    public function grantManager(string $targetIdpUserId, int $orkKingdomId, string $name): KingdomRecord
     {
         $this->change(
             $targetIdpUserId,
             'grant',
-            ClaimOrn::manage($kingdom->id),
+            ClaimOrn::manage($orkKingdomId),
             ClaimOrn::MANAGE,
-            $kingdom->id,
+            $orkKingdomId,
         );
 
-        $existing = $this->kingdoms->findByOrkId($kingdom->id);
+        $existing = $this->kingdoms->findByOrkId($orkKingdomId);
         if ($existing !== null) {
             return $existing;
         }
 
-        $slug = KingdomSlug::fromName($kingdom->name);
+        $slug = KingdomSlug::fromName($name);
         if ($slug === '' || KingdomSlug::isReserved($slug)) {
             throw new \InvalidArgumentException('Kingdom name does not produce a usable public slug.');
         }
 
         return $this->kingdoms->save(KingdomRecord::builder()
-            ->orkKingdomId($kingdom->id)
-            ->name($kingdom->name)
+            ->orkKingdomId($orkKingdomId)
+            ->name($name)
             ->slug($slug)
             ->build());
     }

@@ -20,7 +20,6 @@ use Amtgard\Denarius\Contract\AccountStore;
 use Amtgard\Denarius\Queue\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\KingdomStore;
 use Amtgard\Denarius\Queue\MessageQueue;
-use Amtgard\Denarius\Contract\OrkKingdomClient;
 use Amtgard\Denarius\Auth\PolicyGateway;
 use Amtgard\Denarius\Contract\PrincipalStore;
 use Amtgard\Denarius\Contract\RoleGrantStore;
@@ -41,8 +40,6 @@ use Amtgard\Denarius\Domain\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\VisibilityPolicyRegistry;
 use Amtgard\Denarius\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
-use Amtgard\Denarius\Ork\HttpOrkKingdomClient;
-use Amtgard\Denarius\Ork\OrkKingdomParser;
 use Amtgard\Denarius\Persistence\AaroAccountStore;
 use Amtgard\Denarius\Persistence\AaroKingdomStore;
 use Amtgard\Denarius\Persistence\AaroPrincipalStore;
@@ -56,7 +53,6 @@ use Amtgard\Denarius\Security\TokenCipher;
 use Amtgard\Denarius\Bank\SimpleFin\CurlSimpleFinApi;
 use Amtgard\Denarius\Bank\SimpleFin\SimpleFinHost;
 use Amtgard\Denarius\Bank\SimpleFin\SimpleFinLedgerProvider;
-use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\BankConnect;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomPageQuery;
@@ -79,7 +75,6 @@ use Amtgard\Denarius\Bank\Stripe\CurlStripeApi;
 use Amtgard\Denarius\Bank\Stripe\StripeLedgerProvider;
 use Amtgard\Denarius\Bank\Stripe\StripeWebhookVerifier;
 use Amtgard\Denarius\Bank\Teller\TellerLedgerProvider;
-use Amtgard\Denarius\Worker\Job\DirectoryRefreshJob;
 use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
@@ -141,17 +136,6 @@ return [
     },
     MessageQueue::class => fn (PubSubQueue $queue) => new PubSubMessageQueue($queue),
     KingdomRefreshQueue::class => fn (MessageQueue $queue) => new MessageKingdomRefreshQueue($queue),
-    OrkKingdomClient::class => fn () => new HttpOrkKingdomClient(
-        $_ENV['ORK_API_BASE_URL'] ?? 'https://ork.amtgard.com/orkservice/Json/index.php',
-        $_ENV['ORK_API_USER_AGENT'] ?? '',
-        $_ENV['ORK_API_REFERER'] ?? '',
-        new OrkKingdomParser(),
-    ),
-    CachedKingdomDirectory::class => fn (ContainerInterface $c) => new CachedKingdomDirectory(
-        $c->get(OrkKingdomClient::class),
-        $c->get(RedisKeyValueStore::class),
-        $c->get(KingdomRefreshQueue::class),
-    ),
     PermissionService::class => fn (ContainerInterface $c) => new PermissionService(
         $c->get(PolicyGateway::class),
         $c->get(RedisKeyValueStore::class),
@@ -282,7 +266,6 @@ return [
     AdminController::class => fn (ContainerInterface $c) => new AdminController(
         $c->get(SessionAuthStore::class),
         $c->get(PermissionService::class),
-        $c->get(CachedKingdomDirectory::class),
         $c->get(PrincipalStore::class),
         $c->get(KingdomStore::class),
         $c->get(PolicyGateway::class),
@@ -291,7 +274,7 @@ return [
         new AdminCommandRegistry([
             new GrantAdminCommand(),
             new RevokeAdminCommand(),
-            new GrantManagerCommand($c->get(CachedKingdomDirectory::class)),
+            new GrantManagerCommand(),
             new RevokeManagerCommand(),
         ]),
     ),
@@ -310,7 +293,6 @@ return [
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(
         $c->get(MessageQueue::class),
         new RefreshJobRegistry([
-            new DirectoryRefreshJob($c->get(CachedKingdomDirectory::class)),
             new LedgerRefreshJob($c->get(TransactionSynchronizer::class)),
         ]),
     ),

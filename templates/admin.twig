@@ -19,11 +19,7 @@
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <input type="hidden" name="idp_user_id" value="{{ principal.idpUserId }}">
             <label>Kingdom
-                <select name="ork_kingdom_id">
-                    {% for kingdom in kingdoms %}
-                        <option value="{{ kingdom.id }}">{{ kingdom.name }}</option>
-                    {% endfor %}
-                </select>
+                <select name="ork_kingdom_id" class="ork-kingdom"></select>
             </label>
             <input type="hidden" name="kingdom_name" value="">
             <button name="action" value="grant-manager" type="submit">Grant kingdom manager</button>
@@ -31,4 +27,38 @@
         </form>
     </section>
 {% endfor %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+jQuery(function ($) {
+    var endpoint = 'https://ork.amtgard.com/orkservice/Json/index.php?call=Kingdom/GetKingdoms';
+    $.getJSON(endpoint).done(function (payload) {
+        var status = payload.Status && payload.Status.Status;
+        if (status !== 0 && status !== '0') {
+            return;
+        }
+        var rows = payload.Kingdoms || payload.Kingdom || [];
+        if (!Array.isArray(rows)) {
+            return;
+        }
+        rows.forEach(function (row) {
+            if (!row || typeof row !== 'object') {
+                return;
+            }
+            var id = row.KingdomId || row.KingdomID || row.id;
+            var name = row.KingdomName || row.Name || row.name;
+            if (id === undefined || typeof name !== 'string' || name.trim() === '') {
+                return;
+            }
+            $('select.ork-kingdom').append($('<option>').val(String(id)).text(name.trim()));
+        });
+    });
+    $(document).on('submit', 'form', function () {
+        var select = $(this).find('select.ork-kingdom');
+        if (select.length === 0) {
+            return;
+        }
+        $(this).find('input[name="kingdom_name"]').val(select.find('option:selected').text());
+    });
+});
+</script>
 {% endblock %}

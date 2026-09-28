@@ -33,9 +33,6 @@ use Amtgard\Denarius\Domain\Visibility;
 use Amtgard\Denarius\Http\BuildInfo;
 use Amtgard\Denarius\Http\CsrfToken;
 use Amtgard\Denarius\Http\JsonBody;
-use Amtgard\Denarius\Ork\HttpOrkKingdomClient;
-use Amtgard\Denarius\Ork\OrkKingdom;
-use Amtgard\Denarius\Ork\OrkKingdomParser;
 use Amtgard\Denarius\Queue\MessageKingdomRefreshQueue;
 use Amtgard\Denarius\Queue\PubSubMessageQueue;
 use Amtgard\Denarius\Queue\RedisKeyValueStore;
@@ -45,7 +42,6 @@ use Amtgard\Denarius\Record\PrincipalRecord;
 use Amtgard\Denarius\Record\RoleGrantRecord;
 use Amtgard\Denarius\Record\TransactionRecord;
 use Amtgard\Denarius\Security\TokenCipher;
-use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\DailySweep;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomPageQuery;
@@ -181,12 +177,12 @@ final class ApplicationTest extends AmtgardTestCase
         $admin = new RoleAdmin($policies, $permissions, $kingdoms, $grants, '3');
         $admin->grantAdmin('9');
         $admin->revokeAdmin('9');
-        $saved = $admin->grantManager('9', new OrkKingdom(4, 'Golden Plains'));
-        $again = $admin->grantManager('9', new OrkKingdom(4, 'Golden Plains'));
+        $saved = $admin->grantManager('9', 4, 'Golden Plains');
+        $again = $admin->grantManager('9', 4, 'Golden Plains');
         $this->assertSame($saved->getId(), $again->getId());
         $admin->revokeManager('9', 4);
         $this->assertCount(5, $grants->rows);
-        $this->assertThrows(\InvalidArgumentException::class, fn () => $admin->grantManager('9', new OrkKingdom(1, 'admin')));
+        $this->assertThrows(\InvalidArgumentException::class, fn () => $admin->grantManager('9', 1, 'admin'));
 
         $settings = new KingdomSettings($kingdoms);
         $updated = $settings->update($saved, Visibility::Public, DisplayMode::All);
@@ -280,40 +276,9 @@ final class ApplicationTest extends AmtgardTestCase
 
     public function testDirectoryQueueWorkerAndHttpClients(): void
     {
-        $cache = new ArrayStore();
-        $queue = new MemoryRefresh();
-        $client = new class implements \Amtgard\Denarius\Contract\OrkKingdomClient {
-            public int $calls = 0;
-            public function listKingdoms(): array
-            {
-                $this->calls++;
-                return [new OrkKingdom(1, 'Empty')];
-            }
-        };
-        $directory = new CachedKingdomDirectory($client, $cache, $queue, 10);
-        $this->assertSame('Empty', $directory->list()[0]->name);
-        $this->assertSame(['directory'], $queue->directory);
-        $directory->list();
-        $this->assertSame(1, $client->calls);
-        $cache->set('denarius:ork:kingdoms', 'not-json', 10);
-        $directory->list();
-        $directory->refresh();
-        $this->assertGreaterThan(1, $client->calls);
-
-        $parser = new OrkKingdomParser();
-        $this->assertSame([], $parser->parse(['Status' => ['Status' => 1]]));
-        $this->assertSame([], $parser->parse(['Status' => ['Status' => 0], 'Kingdoms' => 'nope']));
-        $parsed = $parser->parse(['Status' => ['Status' => '0'], 'Kingdom' => [
-            ['KingdomId' => '2', 'Name' => ' Wetlands '],
-            ['id' => 'x', 'name' => 'Skip'],
-            'nope',
-        ]]);
-        $this->assertSame('Wetlands', $parsed[0]->name);
-
         $messages = new MemoryMessages();
         $refresh = new MessageKingdomRefreshQueue($messages);
         $refresh->publishLedger(4);
-        $refresh->publishDirectory();
         $this->assertSame('ledger:4', $messages->published[0]['key']);
 
         $sync = new TransactionSynchronizer(
@@ -326,9 +291,8 @@ final class ApplicationTest extends AmtgardTestCase
             new \DateTimeImmutable('now'),
             Strategies::months(),
         );
-        $worker = new LedgerWorker($messages, Strategies::jobs($directory, $sync), 0);
+        $worker = new LedgerWorker($messages, Strategies::jobs($sync), 0);
         $worker->handle('nope');
-        $worker->handle(json_encode(['type' => 'directory']));
         $worker->handle(json_encode(['type' => 'ledger', 'orkKingdomId' => 4]));
         $worker->handle(json_encode(['type' => 'other']));
         $this->assertSame(0, $worker->run(1));
@@ -364,15 +328,6 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertSame('payload', $sessions->read('id'));
         $this->assertTrue($sessions->destroy('id'));
         $this->assertSame(0, $sessions->gc(1));
-
-        $http = new HttpOrkKingdomClient('https://ork.example/index.php', 'agent', 'https://denarius.amtgard.com', new OrkKingdomParser(), function (string $url, string $agent, string $referer): string {
-            $this->assertStringContainsString('Kingdom/GetKingdoms', $url);
-            $this->assertSame('agent', $agent);
-            $this->assertSame('https://denarius.amtgard.com', $referer);
-            return json_encode(['Status' => ['Status' => 0], 'Kingdoms' => [['KingdomID' => 3, 'KingdomName' => 'Talons']]]);
-        });
-        $this->assertSame(3, $http->listKingdoms()[0]->id);
-        $this->assertThrows(\RuntimeException::class, fn () => (new HttpOrkKingdomClient('https://x', '', '', new OrkKingdomParser()))->listKingdoms());
 
         $teller = new CurlTellerApi('https://api.teller.io', '', '', function (string $url): string {
             if (str_contains($url, 'transactions')) {
@@ -676,14 +631,9 @@ final class MemoryPrincipals implements PrincipalStore
 final class MemoryRefresh implements KingdomRefreshQueue
 {
     public array $ledger = [];
-    public array $directory = [];
     public function publishLedger(int $orkKingdomId): void
     {
         $this->ledger[] = $orkKingdomId;
-    }
-    public function publishDirectory(): void
-    {
-        $this->directory[] = 'directory';
     }
 }
 

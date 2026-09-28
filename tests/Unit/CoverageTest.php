@@ -15,14 +15,11 @@ use Amtgard\Denarius\Domain\KingdomAccess;
 use Amtgard\Denarius\Domain\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\MonthWindow;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
-use Amtgard\Denarius\Ork\HttpOrkKingdomClient;
-use Amtgard\Denarius\Ork\OrkKingdomParser;
 use Amtgard\Denarius\Record\AccountRecord;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Record\TransactionRecord;
 use Amtgard\Denarius\Security\TokenCipher;
 use Amtgard\Denarius\Service\BankConnect;
-use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\DailySweep;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomPageQuery;
@@ -126,13 +123,6 @@ PHP);
         $key = tempnam(sys_get_temp_dir(), 'key');
         $this->assertSame('a', (new CurlTellerApi(self::$base, (string) $cert, (string) $key))->accounts('token')[0]['id']);
 
-        $parser = new OrkKingdomParser();
-        $ork = new HttpOrkKingdomClient(self::$base . '/ork?x=1', 'denarius-test', 'https://denarius.amtgard.com', $parser);
-        $this->assertSame('Golden Plains', $ork->listKingdoms()[0]->name);
-        $this->assertThrows(\RuntimeException::class, fn () => (new HttpOrkKingdomClient(self::$base, '', 'referer', $parser))->listKingdoms());
-        $this->assertThrows(\RuntimeException::class, fn () => (new HttpOrkKingdomClient(self::$base . '/fail', 'agent', 'referer', $parser))->listKingdoms());
-        $this->assertSame([], (new HttpOrkKingdomClient(self::$base . '/text', 'agent', 'referer', $parser))->listKingdoms());
-
         $twig = new TwigHtmlRenderer(new Environment(new ArrayLoader([
             'admin.twig' => 'admin',
             'message.twig' => '{{ title }}',
@@ -146,15 +136,9 @@ PHP);
         ))->toSessionArray();
         $auth = new SessionAuthStore('test_session');
         $permissions = new PermissionService(new FakePolicies([ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        $directory = new CachedKingdomDirectory(new class implements \Amtgard\Denarius\Contract\OrkKingdomClient {
-            public function listKingdoms(): array
-            {
-                return [];
-            }
-        }, new ArrayStore(), new MemoryRefresh());
         $kingdoms = new MemoryKingdoms();
         $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('summarized')->enrollmentStatus('connected')->build());
-        $admin = new AdminController($auth, $permissions, $directory, new MemoryPrincipals(), $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin($directory));
+        $admin = new AdminController($auth, $permissions, new MemoryPrincipals(), $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin());
         $_SESSION['_csrf'] = 'token';
         $request = static fn (array $body) => (new ServerRequestFactory())->createServerRequest('POST', '/admin/grant')->withParsedBody($body);
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-admin']), new Response())->getStatusCode());
@@ -162,7 +146,7 @@ PHP);
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'revoke-manager', 'ork_kingdom_id' => '4']), new Response())->getStatusCode());
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'unknown']), new Response())->getStatusCode());
         $member = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        $forbidden = (new AdminController($auth, $member, $directory, new MemoryPrincipals(), $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin($directory)))
+        $forbidden = (new AdminController($auth, $member, new MemoryPrincipals(), $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin()))
             ->index((new ServerRequestFactory())->createServerRequest('GET', '/admin'), new Response());
         $this->assertSame(403, $forbidden->getStatusCode());
 
@@ -211,7 +195,7 @@ PHP);
             }
         };
         $sync = new TransactionSynchronizer($kingdoms, $accounts, new MemorySecrets(), $transactions, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new \DateTimeImmutable('2026-09-01'), Strategies::months());
-        $worker = new LedgerWorker($messages, Strategies::jobs($directory, $sync), 1);
+        $worker = new LedgerWorker($messages, Strategies::jobs($sync), 1);
         $this->assertSame(0, $worker->run(1));
         $this->assertCount(1, $messages->published);
         $worker->handle('{"type":"other"}');

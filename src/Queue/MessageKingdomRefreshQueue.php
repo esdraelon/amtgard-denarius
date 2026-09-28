@@ -21,13 +21,4 @@ final class MessageKingdomRefreshQueue implements KingdomRefreshQueue
             json_encode(['type' => 'ledger', 'orkKingdomId' => $orkKingdomId], JSON_THROW_ON_ERROR),
         );
     }
-
-    public function publishDirectory(): void
-    {
-        $this->queue->publish(
-            LedgerWorker::QUEUE,
-            'directory',
-            json_encode(['type' => 'directory'], JSON_THROW_ON_ERROR),
-        );
-    }
 }
