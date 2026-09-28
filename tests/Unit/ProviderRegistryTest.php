@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\AlwaysReady;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AlwaysReady;
 use Amtgard\Denarius\Domain\Bank\Enrollment\ConnectedEnrollment;
-use Amtgard\Denarius\Domain\Bank\Providers\Support\InstitutionSupport;
-use Amtgard\Denarius\Domain\Bank\Providers\LedgerProvider;
-use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
-use Amtgard\Denarius\Domain\Bank\Providers\Impl\MissingLedgerProvider;
-use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\PresentCredentials;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Support\InstitutionSupport;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\LedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Impl\MissingLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\PresentCredentials;
 use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderNotice;
-use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerLedgerProvider;
-use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerWebhookVerifier;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerWebhookVerifier;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class ProviderRegistryTest extends AmtgardTestCase

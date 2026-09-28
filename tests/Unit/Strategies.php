@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\AlwaysReady;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AlwaysReady;
 use Amtgard\Denarius\Domain\Bank\Notice\Impl\DisconnectLedgerNotice;
 use Amtgard\Denarius\Domain\Bank\Notice\LedgerNoticeRegistry;
-use Amtgard\Denarius\Domain\Bank\Providers\LedgerProvider;
-use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\LedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
 use Amtgard\Denarius\Domain\Bank\Notice\Impl\RefreshLedgerNotice;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
-use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerApi;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\Admin\Impl\GrantAdminCommand;
@@ -21,8 +21,8 @@ use Amtgard\Denarius\Service\Admin\Impl\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeManagerCommand;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
-use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerLedgerProvider;
-use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerWebhookVerifier;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerWebhookVerifier;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 
