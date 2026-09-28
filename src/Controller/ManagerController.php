@@ -6,7 +6,7 @@ namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Auth\CurrentActor;
 use Amtgard\Denarius\Contract\AccountStore;
-use Amtgard\Denarius\Contract\KingdomRefreshQueue;
+use Amtgard\Denarius\Queue\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\KingdomStore;
 use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\Visibility;

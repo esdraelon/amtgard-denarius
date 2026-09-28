@@ -6,7 +6,7 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Contract\AccountStore;
-use Amtgard\Denarius\Contract\KingdomRefreshQueue;
+use Amtgard\Denarius\Queue\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\KingdomStore;
 use Amtgard\Denarius\Contract\SecretStore;
 use Amtgard\Denarius\Record\AccountRecord;

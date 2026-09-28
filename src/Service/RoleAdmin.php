@@ -6,7 +6,7 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Auth\ClaimOrn;
 use Amtgard\Denarius\Contract\KingdomStore;
-use Amtgard\Denarius\Contract\PolicyGateway;
+use Amtgard\Denarius\Auth\PolicyGateway;
 use Amtgard\Denarius\Contract\RoleGrantStore;
 use Amtgard\Denarius\Domain\KingdomSlug;
 use Amtgard\Denarius\Ork\OrkKingdom;

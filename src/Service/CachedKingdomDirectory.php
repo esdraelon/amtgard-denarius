@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Contract\KeyValueStore;
-use Amtgard\Denarius\Contract\KingdomRefreshQueue;
+use Amtgard\Denarius\Queue\KeyValueStore;
+use Amtgard\Denarius\Queue\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\OrkKingdomClient;
 use Amtgard\Denarius\Ork\OrkKingdom;
 

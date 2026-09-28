@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Contract\KingdomRefreshQueue;
+use Amtgard\Denarius\Queue\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\KingdomStore;
 
 final class DailySweep

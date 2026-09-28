@@ -103,9 +103,9 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Line coverage: 97.70% (2000/2047).
 - Infection covered MSI: 94%.
 
-## Bank connector folders
+## Colocated ports
 
-- Branch: `bank-connector-folders`
-- Stripe, Plaid, Teller, and SimpleFIN sit under `Bank`, and each vendor API interface sits beside its connector. Ledger notices sit under `Bank/Notice`. Setup stays a CLI package.
+- Branch: `colocated-ports`
+- `PolicyGateway` sits beside `IdpPolicyGateway`. `MessageQueue`, `KingdomRefreshQueue`, and `KeyValueStore` sit beside their queue adapters. `IdpPolicyGateway` remains the `idp-php-client` adapter.
 - Line coverage: 97.70% (2000/2047).
 - Infection covered MSI: 94%.
