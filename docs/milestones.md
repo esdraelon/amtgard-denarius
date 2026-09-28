@@ -16,7 +16,14 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Line coverage: 96.46% (1062/1101).
 - Infection covered MSI: 89%.
 
+## Redacted rows
+
+- Branch: `redacted-rows`
+- A redacted month keeps the date, amount, category, status, and account name.
+- Description and counterparty are omitted.
+- Line coverage: 96.47% (1065/1104).
+- Infection covered MSI: 89%.
+
 ## Next
 
-- Redacted rows keep the date and the amount, and omit the description and the counterparty.
 - Transactions stay in MySQL. Redis serves month views and remains up across a blue-green install.

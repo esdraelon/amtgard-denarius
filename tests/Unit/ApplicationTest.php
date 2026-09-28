@@ -107,7 +107,9 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertCount(1, $all->rows);
         $redacted = $builder->build([$line], DisplayMode::Redacted, $month);
         $this->assertSame('', $redacted->rows[0]->getDescription());
-        $this->assertSame(0, $redacted->rows[0]->getAmountCents());
+        $this->assertSame('', $redacted->rows[0]->getCounterparty());
+        $this->assertSame(250, $redacted->rows[0]->getAmountCents());
+        $this->assertSame('2026-01-02', $redacted->rows[0]->getPostedOn());
         $summary = $builder->build([
             $line,
             LedgerLine::builder()->postedOn('2026-01-03')->amountCents(50)->category('dining')->build(),
