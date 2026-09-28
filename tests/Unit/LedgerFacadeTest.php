@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
-use Amtgard\Denarius\Bank\AlwaysReady;
-use Amtgard\Denarius\Bank\ConnectedEnrollment;
-use Amtgard\Denarius\Bank\InstitutionSupport;
-use Amtgard\Denarius\Bank\LedgerProvider;
-use Amtgard\Denarius\Bank\ProviderAccount;
-use Amtgard\Denarius\Bank\ProviderNotice;
-use Amtgard\Denarius\Bank\ProviderTransaction;
-use Amtgard\Denarius\Bank\Teller\TellerApi;
+use Amtgard\Denarius\Domain\Bank\Providers\Readiness\Impl\AlwaysReady;
+use Amtgard\Denarius\Domain\Bank\Enrollment\ConnectedEnrollment;
+use Amtgard\Denarius\Domain\Bank\Providers\Support\InstitutionSupport;
+use Amtgard\Denarius\Domain\Bank\Providers\LedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderAccount;
+use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderNotice;
+use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderTransaction;
+use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerApi;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
-use Amtgard\Denarius\Bank\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerLedgerProvider;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class LedgerFacadeTest extends AmtgardTestCase
@@ -113,7 +113,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
 
     public function testTellerAdapterMapsSparseRowsAndUnknownNotices(): void
     {
-        $provider = new TellerLedgerProvider(new SparseTeller(), new \Amtgard\Denarius\Bank\Teller\TellerWebhookVerifier('whsec', 300), TellerLedgerProvider::actions(), new AlwaysReady(), 'app_test', 'sandbox');
+        $provider = new TellerLedgerProvider(new SparseTeller(), new \Amtgard\Denarius\Domain\Bank\Providers\Teller\TellerWebhookVerifier('whsec', 300), TellerLedgerProvider::actions(), new AlwaysReady(), 'app_test', 'sandbox');
         $this->assertSame('Teller-Signature', $provider->signatureHeader());
 
         $accounts = $provider->accounts('token');

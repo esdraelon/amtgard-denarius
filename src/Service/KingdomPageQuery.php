@@ -6,11 +6,11 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
-use Amtgard\Denarius\Domain\DisplayMode;
-use Amtgard\Denarius\Domain\LedgerLine;
-use Amtgard\Denarius\Domain\MonthStatement;
-use Amtgard\Denarius\Domain\MonthStatementBuilder;
-use Amtgard\Denarius\Domain\MonthWindow;
+use Amtgard\Denarius\Domain\Statement\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\MonthStatement;
+use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
+use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Month\MonthReader;
 

@@ -138,3 +138,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Auth, HTTP, queue, security, session, and setup sit under `Utilities`. They stay siblings: the only cross-use is HTTP middleware reading the current actor, and that actor is also used outside HTTP. Queue and setup ports sit above an `Impl` folder. Setup is split into client, guide, I/O, field, and env.
 - Line coverage: 97.68% (1933/1979).
 - Infection covered MSI: 95%.
+
+## Domain bank
+
+- Branch: `domain-bank`
+- Bank moves under Domain. Stripe, Plaid, Teller, and SimpleFIN sit under Providers. Enrollment, notices, readiness, the provider registry, and shared support are separate modules. Statements and access are grouped the same way, with each port above an `Impl` folder.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.

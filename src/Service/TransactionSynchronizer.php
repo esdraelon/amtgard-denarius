@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Bank\LedgerProvider;
-use Amtgard\Denarius\Bank\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Providers\LedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
 use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\SecretRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
-use Amtgard\Denarius\Domain\Money;
+use Amtgard\Denarius\Domain\Statement\Money;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
@@ -88,7 +88,7 @@ final class TransactionSynchronizer
     }
 
     /**
-     * @param list<\Amtgard\Denarius\Bank\ProviderTransaction> $page
+     * @param list<\Amtgard\Denarius\Domain\Bank\Enrollment\ProviderTransaction> $page
      * @param array<string, true> $seen
      */
     private function storePage(KingdomRecord $kingdom, string $accountId, array $page, array &$seen): ?string
@@ -114,7 +114,7 @@ final class TransactionSynchronizer
             ->orElse($this->providers->default()->id());
     }
 
-    private function record(KingdomRecord $kingdom, string $accountId, \Amtgard\Denarius\Bank\ProviderTransaction $row): TransactionRecord
+    private function record(KingdomRecord $kingdom, string $accountId, \Amtgard\Denarius\Domain\Bank\Enrollment\ProviderTransaction $row): TransactionRecord
     {
         return TransactionRecord::builder()
             ->kingdomId((int) $kingdom->getId())

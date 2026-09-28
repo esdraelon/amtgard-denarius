@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service\Month;
 
 use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
-use Amtgard\Denarius\Domain\CategoryTotal;
-use Amtgard\Denarius\Domain\DisplayMode;
-use Amtgard\Denarius\Domain\LedgerLine;
-use Amtgard\Denarius\Domain\MonthStatement;
-use Amtgard\Denarius\Domain\MonthWindow;
+use Amtgard\Denarius\Domain\Statement\CategoryTotal;
+use Amtgard\Denarius\Domain\Statement\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\MonthStatement;
+use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 
 final class CachingMonthReader implements MonthReader

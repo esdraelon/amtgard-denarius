@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Bank\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
 use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;

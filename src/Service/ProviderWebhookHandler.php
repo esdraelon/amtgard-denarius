@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Bank\Notice\LedgerNoticeRegistry;
-use Amtgard\Denarius\Bank\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Notice\LedgerNoticeRegistry;
+use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 
 final class ProviderWebhookHandler

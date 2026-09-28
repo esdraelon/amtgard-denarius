@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
-use Amtgard\Denarius\Domain\AccessResult;
-use Amtgard\Denarius\Domain\CategoryTotal;
-use Amtgard\Denarius\Domain\DisplayMode;
-use Amtgard\Denarius\Domain\KingdomAccess;
-use Amtgard\Denarius\Domain\LedgerLine;
-use Amtgard\Denarius\Domain\MonthWindow;
-use Amtgard\Denarius\Domain\Viewer;
-use Amtgard\Denarius\Domain\Visibility;
+use Amtgard\Denarius\Domain\Access\AccessResult;
+use Amtgard\Denarius\Domain\Statement\CategoryTotal;
+use Amtgard\Denarius\Domain\Statement\DisplayMode;
+use Amtgard\Denarius\Domain\Access\KingdomAccess;
+use Amtgard\Denarius\Domain\Statement\LedgerLine;
+use Amtgard\Denarius\Domain\Statement\MonthWindow;
+use Amtgard\Denarius\Domain\Access\Viewer;
+use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\IdpClient\Session\SessionAuthStore;
@@ -91,7 +91,7 @@ final class KingdomPageController
             'category' => $row->getCategory(),
             'description' => $row->getDescription(),
             'counterparty' => $row->getCounterparty(),
-            'amount' => \Amtgard\Denarius\Domain\Money::format($row->getAmountCents()),
+            'amount' => \Amtgard\Denarius\Domain\Statement\Money::format($row->getAmountCents()),
             'account' => $row->getAccountName(),
         ];
     }
@@ -105,7 +105,7 @@ final class KingdomPageController
             'kind' => 'total',
             'category' => $row->category,
             'count' => $row->count,
-            'amount' => \Amtgard\Denarius\Domain\Money::format($row->amountCents),
+            'amount' => \Amtgard\Denarius\Domain\Statement\Money::format($row->amountCents),
         ];
     }
 
