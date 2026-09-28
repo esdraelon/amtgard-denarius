@@ -28,7 +28,10 @@ final class RedactedPresenter implements StatementPresenter
     {
         return LedgerLine::builder()
             ->postedOn($line->getPostedOn())
+            ->amountCents($line->getAmountCents())
             ->category($line->getCategory())
+            ->status($line->getStatus())
+            ->accountName($line->getAccountName())
             ->build();
     }
 }
