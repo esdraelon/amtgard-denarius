@@ -18,8 +18,9 @@ final class WebhookController
 
     public function teller(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $signature = $request->getHeaderLine($this->handler->signatureHeader());
+        $signature = $request->getHeaderLine($this->handler->signatureHeader('teller'));
         $ok = $this->handler->handle(
+            'teller',
             (string) $request->getBody(),
             $signature !== '' ? $signature : null,
             time(),

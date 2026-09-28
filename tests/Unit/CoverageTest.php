@@ -177,9 +177,9 @@ PHP);
         $this->assertStringContainsString('total', (string) $shown->getBody());
 
         $queue = new MemoryRefresh();
-        $manager = new ManagerController($auth, $permissions, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::teller(), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, 'app', 'sandbox');
+        $manager = new ManagerController($auth, $permissions, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, 'app', 'sandbox');
         $this->assertSame(404, $manager->show((new ServerRequestFactory())->createServerRequest('GET', '/manage/missing'), new Response(), ['slug' => 'missing'])->getStatusCode());
-        $guest = new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::teller(), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, 'app', 'sandbox');
+        $guest = new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, 'app', 'sandbox');
         $this->assertSame(302, $guest->show((new ServerRequestFactory())->createServerRequest('GET', '/manage/golden-plains'), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
         $this->assertSame(400, $manager->enrollment((new ServerRequestFactory())->createServerRequest('POST', '/e')->withParsedBody(['csrf' => 'token', 'enrollment' => '{']), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
 
@@ -208,19 +208,19 @@ PHP);
                 return 0;
             }
         };
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, new MemorySecrets(), $transactions, Strategies::teller(), new TokenCipher('k'), new \DateTimeImmutable('2026-09-01'), Strategies::months());
+        $sync = new TransactionSynchronizer($kingdoms, $accounts, new MemorySecrets(), $transactions, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new \DateTimeImmutable('2026-09-01'), Strategies::months());
         $worker = new LedgerWorker($messages, Strategies::jobs($directory, $sync), 1);
         $this->assertSame(0, $worker->run(1));
         $this->assertCount(1, $messages->published);
         $worker->handle('{"type":"other"}');
         $worker->handle('not-json');
 
-        $handler = new ProviderWebhookHandler(Strategies::teller(), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::teller(), new TokenCipher('k'), $queue, Strategies::months())));
+        $handler = new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months())));
         $body = json_encode(['type' => 'enrollment.updated', 'enrollment_id' => 'enr_1']);
         $now = 1_700_000_000;
         $signature = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $body, 'whsec');
-        $kingdoms->save(KingdomRecord::builder()->id($kingdom->getId())->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->enrollmentId('enr_1')->enrollmentStatus('connected')->build());
-        $this->assertTrue($handler->handle((string) $body, $signature, $now));
+        $kingdoms->save(KingdomRecord::builder()->id($kingdom->getId())->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->enrollmentId('enr_1')->provider('teller')->enrollmentStatus('connected')->build());
+        $this->assertTrue($handler->handle('teller', (string) $body, $signature, $now));
         $this->assertSame('2026-09', MonthWindow::current(new \DateTimeImmutable('2026-09-15'))->key());
     }
 }

@@ -48,3 +48,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Teller reports unknown coverage when its application id is present, and no coverage when the id or the institution name is blank.
 - Line coverage: 96.93% (1233/1272).
 - Infection covered MSI: 91%.
+
+## Kingdom provider
+
+- Branch: `kingdom-provider`
+- A kingdom stores the provider chosen when it connects. Sync and webhooks look the kingdom up by that provider and enrollment id, so a later fallback does not move an existing link.
+- Line coverage: 97.00% (1263/1302).
+- Infection covered MSI: 90%.

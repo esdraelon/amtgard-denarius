@@ -10,6 +10,7 @@ final readonly class ConnectedEnrollment
         public string $accessToken,
         public string $enrollmentId,
         public string $institutionName,
+        public string $provider = '',
     ) {
     }
 }

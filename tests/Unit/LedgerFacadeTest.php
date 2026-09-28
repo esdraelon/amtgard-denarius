@@ -84,7 +84,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
             ->name('Wetlands')
             ->slug('wetlands')
             ->build());
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $provider, $cipher, $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($provider), $cipher, $queue, Strategies::months());
         $connected = $enrollment->connect($kingdom, ['opaque' => true]);
         $this->assertSame('ext-1', $connected->getEnrollmentId());
         $this->assertSame('Other Bank', $connected->getInstitutionName());
@@ -96,7 +96,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
             $accounts,
             $secrets,
             $transactions,
-            $provider,
+            Strategies::providers($provider),
             $cipher,
             new \DateTimeImmutable('2026-09-01'),
             Strategies::months(),
@@ -104,10 +104,10 @@ final class LedgerFacadeTest extends AmtgardTestCase
         $this->assertTrue($sync->sync(8));
         $this->assertCount(1, $transactions->forKingdom((int) $connected->getId()));
 
-        $handler = new ProviderWebhookHandler($provider, $kingdoms, Strategies::events($queue, $enrollment));
-        $this->assertSame('X-Bank-Signature', $handler->signatureHeader());
+        $handler = new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment));
+        $this->assertSame('X-Bank-Signature', $handler->signatureHeader('other'));
         $before = count($queue->ledger);
-        $this->assertTrue($handler->handle('{}', null, 1));
+        $this->assertTrue($handler->handle('other', '{}', null, 1));
         $this->assertSame($before + 1, count($queue->ledger));
     }
 
@@ -132,19 +132,19 @@ final class LedgerFacadeTest extends AmtgardTestCase
         $secrets = new MemorySecrets();
         $stored = new MemoryAccounts();
         $queue = new MemoryRefresh();
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $stored, $provider, new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $stored, Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months());
         $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(3)->name('Celestial')->slug('celestial')->build());
         $connected = $enrollment->connect($kingdom, ['accessToken' => 'token', 'id' => 'enr_sparse']);
-        $handler = new ProviderWebhookHandler($provider, $kingdoms, Strategies::events($queue, $enrollment));
+        $handler = new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment));
         $now = 1_700_000_000;
         $ignored = json_encode(['type' => 'account.updated', 'enrollment_id' => 'enr_sparse'], JSON_THROW_ON_ERROR);
         $signature = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $ignored, 'whsec');
-        $this->assertTrue($handler->handle($ignored, $signature, $now));
+        $this->assertTrue($handler->handle('teller', $ignored, $signature, $now));
         $this->assertSame('connected', $kingdoms->findByEnrollmentId('enr_sparse')->getEnrollmentStatus());
 
         $scalar = '1';
         $scalarSig = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $scalar, 'whsec');
-        $this->assertFalse($handler->handle($scalar, $scalarSig, $now));
+        $this->assertFalse($handler->handle('teller', $scalar, $scalarSig, $now));
         $this->assertSame('enr_sparse', $connected->getEnrollmentId());
     }
 }

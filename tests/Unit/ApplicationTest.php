@@ -199,7 +199,7 @@ final class ApplicationTest extends AmtgardTestCase
         $teller = Strategies::teller();
         $cipher = new TokenCipher('app-key');
         $cache = new ArrayStore();
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $teller, $cipher, $queue, Strategies::months($cache));
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache));
         $connected = $enrollment->connect($updated, [
             'accessToken' => 'token-1',
             'enrollment' => ['id' => 'enr_1', 'institution' => ['name' => 'Bank']],
@@ -219,7 +219,7 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertThrows(\RuntimeException::class, fn () => $cipher->decrypt(base64_encode('short')));
 
         $transactions = new MemoryTransactions();
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, $secrets, $transactions, $teller, $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
+        $sync = new TransactionSynchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
         $enrollment->setPublished($kingdoms->findByOrkId(4), ['acc_1' => true]);
         $kingdoms->save(KingdomRecord::builder()
             ->id($connected->getId())
@@ -231,6 +231,7 @@ final class ApplicationTest extends AmtgardTestCase
             ->enrollmentId('enr_1')
             ->institutionName('Bank')
             ->enrollmentStatus('connected')
+            ->provider('teller')
             ->build());
         $this->assertTrue($sync->sync(4));
         $this->assertGreaterThan(0, (int) $cache->get('denarius:month-gen:1'));
@@ -238,23 +239,23 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertSame(2, count($transactions->forKingdom((int) $connected->getId())));
         $this->assertNotNull($kingdoms->findByOrkId(4)->getLastSyncedAt());
 
-        $handler = new ProviderWebhookHandler(Strategies::teller(verifier: new TellerWebhookVerifier('whsec', 300)), $kingdoms, Strategies::events($queue, $enrollment));
+        $handler = new ProviderWebhookHandler(Strategies::providers(Strategies::teller(verifier: new TellerWebhookVerifier('whsec', 300))), $kingdoms, Strategies::events($queue, $enrollment));
         $body = json_encode(['type' => 'transactions.processed', 'enrollment_id' => 'enr_1'], JSON_THROW_ON_ERROR);
         $now = 1_700_000_000;
         $signature = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $body, 'whsec');
-        $this->assertTrue($handler->handle($body, $signature, $now));
-        $this->assertFalse($handler->handle($body, 't=1,v1=nope', $now));
-        $this->assertFalse($handler->handle('{', $signature, $now));
+        $this->assertTrue($handler->handle('teller', $body, $signature, $now));
+        $this->assertFalse($handler->handle('teller', $body, 't=1,v1=nope', $now));
+        $this->assertFalse($handler->handle('teller', '{', $signature, $now));
         $empty = json_encode(['type' => 'transactions.processed'], JSON_THROW_ON_ERROR);
         $emptySig = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $empty, 'whsec');
-        $this->assertTrue($handler->handle($empty, $emptySig, $now));
+        $this->assertTrue($handler->handle('teller', $empty, $emptySig, $now));
         $disconnect = json_encode(['type' => 'enrollment.disconnected', 'payload' => ['enrollment_id' => 'enr_1']]);
         $disconnectSig = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $disconnect, 'whsec');
-        $this->assertTrue($handler->handle($disconnect, $disconnectSig, $now));
+        $this->assertTrue($handler->handle('teller', $disconnect, $disconnectSig, $now));
         $this->assertSame('disconnected', $kingdoms->findByEnrollmentId('enr_1')->getEnrollmentStatus());
         $unknown = json_encode(['type' => 'transactions.processed', 'enrollment_id' => 'missing']);
         $unknownSig = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $unknown, 'whsec');
-        $this->assertTrue($handler->handle($unknown, $unknownSig, $now));
+        $this->assertTrue($handler->handle('teller', $unknown, $unknownSig, $now));
 
         $verifier = new TellerWebhookVerifier('whsec', 300);
         $this->assertFalse($verifier->verify('body', null, $now));
@@ -320,7 +321,7 @@ final class ApplicationTest extends AmtgardTestCase
             new MemoryAccounts(),
             new MemorySecrets(),
             new MemoryTransactions(),
-            Strategies::teller(),
+            Strategies::providers(Strategies::teller()),
             new TokenCipher('k'),
             new \DateTimeImmutable('now'),
             Strategies::months(),
@@ -537,6 +538,15 @@ final class MemoryKingdoms implements KingdomStore
         }
         return null;
     }
+    public function findByProviderEnrollment(string $provider, string $enrollmentId): ?KingdomRecord
+    {
+        foreach ($this->rows as $row) {
+            if ($row->getProvider() === $provider && $row->getEnrollmentId() === $enrollmentId) {
+                return $row;
+            }
+        }
+        return null;
+    }
     public function save(KingdomRecord $kingdom): KingdomRecord
     {
         $id = $kingdom->getId() ?? $this->next++;
@@ -549,6 +559,7 @@ final class MemoryKingdoms implements KingdomStore
             ->displayMode($kingdom->getDisplayMode())
             ->enrollmentId($kingdom->getEnrollmentId())
             ->institutionName($kingdom->getInstitutionName())
+            ->provider($kingdom->getProvider())
             ->enrollmentStatus($kingdom->getEnrollmentStatus())
             ->lastSyncedAt($kingdom->getLastSyncedAt())
             ->build();

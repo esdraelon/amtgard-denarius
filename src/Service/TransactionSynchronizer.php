@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Bank\LedgerProvider;
+use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Contract\AccountStore;
 use Amtgard\Denarius\Contract\KingdomStore;
 use Amtgard\Denarius\Contract\SecretStore;
@@ -14,6 +15,7 @@ use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Record\TransactionRecord;
 use Amtgard\Denarius\Security\TokenCipher;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
+use Optional\Optional;
 
 final class TransactionSynchronizer
 {
@@ -22,7 +24,7 @@ final class TransactionSynchronizer
         private readonly AccountStore $accounts,
         private readonly SecretStore $secrets,
         private readonly TransactionStore $transactions,
-        private readonly LedgerProvider $provider,
+        private readonly LedgerProviderRegistry $providers,
         private readonly TokenCipher $cipher,
         private readonly \DateTimeImmutable $now,
         private readonly MonthInvalidator $months,
@@ -42,11 +44,12 @@ final class TransactionSynchronizer
         }
 
         $token = $this->cipher->decrypt($ciphertext);
+        $provider = $this->providers->find($this->providerId($kingdom));
         foreach ($this->accounts->forKingdom($kingdom->getId()) as $account) {
             if (!$account->getPublished()) {
                 continue;
             }
-            $this->pullAccount($kingdom, $token, $account->getTellerAccountId(), $account->getName());
+            $this->pullAccount($provider, $kingdom, $token, $account->getTellerAccountId(), $account->getName());
         }
 
         $this->kingdoms->save(KingdomRecord::builder()
@@ -58,6 +61,7 @@ final class TransactionSynchronizer
             ->displayMode($kingdom->getDisplayMode())
             ->enrollmentId($kingdom->getEnrollmentId())
             ->institutionName($kingdom->getInstitutionName())
+            ->provider($kingdom->getProvider())
             ->enrollmentStatus($kingdom->getEnrollmentStatus())
             ->lastSyncedAt($this->now->format('c'))
             ->build());
@@ -66,12 +70,12 @@ final class TransactionSynchronizer
         return true;
     }
 
-    private function pullAccount(KingdomRecord $kingdom, string $token, string $accountId, string $accountName): void
+    private function pullAccount(LedgerProvider $provider, KingdomRecord $kingdom, string $token, string $accountId, string $accountName): void
     {
         $fromId = null;
         $seen = [];
         do {
-            $page = $this->provider->transactions($token, $accountId, $fromId);
+            $page = $provider->transactions($token, $accountId, $fromId);
             if ($page === []) {
                 return;
             }
@@ -100,6 +104,14 @@ final class TransactionSynchronizer
         }
 
         return $lastId;
+    }
+
+    private function providerId(KingdomRecord $kingdom): string
+    {
+        $stored = $kingdom->getProvider();
+
+        return Optional::ofNullable($stored === null || $stored === '' ? null : $stored)
+            ->orElse($this->providers->default()->id());
     }
 
     private function record(KingdomRecord $kingdom, string $accountId, \Amtgard\Denarius\Bank\ProviderTransaction $row): TransactionRecord

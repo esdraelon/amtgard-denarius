@@ -5,40 +5,41 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
-use Amtgard\Denarius\Bank\LedgerProvider;
+use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Contract\KingdomStore;
 
 final class ProviderWebhookHandler
 {
     public function __construct(
-        private readonly LedgerProvider $provider,
+        private readonly LedgerProviderRegistry $providers,
         private readonly KingdomStore $kingdoms,
         private readonly LedgerNoticeRegistry $notices,
     ) {
     }
 
-    public function signatureHeader(): string
+    public function signatureHeader(string $providerId): string
     {
-        return $this->provider->signatureHeader();
+        return $this->providers->find($providerId)->signatureHeader();
     }
 
-    public function handle(string $body, ?string $signature, int $now): bool
+    public function handle(string $providerId, string $body, ?string $signature, int $now): bool
     {
-        $notice = $this->provider->notice($body, $signature, $now);
+        $provider = $this->providers->find($providerId);
+        $notice = $provider->notice($body, $signature, $now);
         if (!$notice->accepted) {
             return false;
         }
 
-        return $this->dispatch($notice->enrollmentId, $notice->action);
+        return $this->dispatch($provider->id(), $notice->enrollmentId, $notice->action);
     }
 
-    private function dispatch(string $enrollmentId, string $action): bool
+    private function dispatch(string $providerId, string $enrollmentId, string $action): bool
     {
         if ($enrollmentId === '') {
             return true;
         }
 
-        $kingdom = $this->kingdoms->findByEnrollmentId($enrollmentId);
+        $kingdom = $this->kingdoms->findByProviderEnrollment($providerId, $enrollmentId);
         if ($kingdom === null) {
             return true;
         }

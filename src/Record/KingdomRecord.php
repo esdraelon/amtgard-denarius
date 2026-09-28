@@ -21,6 +21,7 @@ final class KingdomRecord
         private string $displayMode = 'summarized',
         private ?string $enrollmentId = null,
         private ?string $institutionName = null,
+        private ?string $provider = null,
         private string $enrollmentStatus = 'none',
         private ?string $lastSyncedAt = null,
     ) {
@@ -40,6 +41,7 @@ final class KingdomRecord
             'displayMode' => $this->getDisplayMode(),
             'enrollmentId' => $this->getEnrollmentId(),
             'institutionName' => $this->getInstitutionName(),
+            'provider' => $this->getProvider(),
             'enrollmentStatus' => $this->getEnrollmentStatus(),
             'lastSyncedAt' => $this->getLastSyncedAt(),
         ];

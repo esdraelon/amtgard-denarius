@@ -28,6 +28,19 @@ final class AaroKingdomStore implements KingdomStore
         return $this->record($this->kingdoms()->fetchBy('enrollment_id', $enrollmentId));
     }
 
+    public function findByProviderEnrollment(string $provider, string $enrollmentId): ?KingdomRecord
+    {
+        $repo = $this->kingdoms();
+        $repo->clear();
+        $repo->provider = $provider;
+        $repo->enrollment_id = $enrollmentId;
+        if ($repo->find() === 0 || !$repo->next()) {
+            return null;
+        }
+
+        return $this->record($repo->getCurrent());
+    }
+
     public function save(KingdomRecord $kingdom): KingdomRecord
     {
         $repo = $this->kingdoms();
@@ -42,6 +55,7 @@ final class AaroKingdomStore implements KingdomStore
         $entity->setDisplayMode($kingdom->getDisplayMode());
         $entity->setEnrollmentId($kingdom->getEnrollmentId());
         $entity->setInstitutionName($kingdom->getInstitutionName());
+        $entity->setProvider($kingdom->getProvider());
         $entity->setEnrollmentStatus($kingdom->getEnrollmentStatus());
         $entity->setLastSyncedAt($kingdom->getLastSyncedAt());
         $saved = $repo->persist($entity);
@@ -88,6 +102,7 @@ final class AaroKingdomStore implements KingdomStore
             ->displayMode((string) $entity->getDisplayMode())
             ->enrollmentId($entity->getEnrollmentId())
             ->institutionName($entity->getInstitutionName())
+            ->provider($entity->getProvider())
             ->enrollmentStatus((string) ($entity->getEnrollmentStatus() ?? 'none'))
             ->lastSyncedAt($entity->getLastSyncedAt())
             ->build();

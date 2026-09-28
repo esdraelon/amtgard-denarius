@@ -27,6 +27,7 @@ final class KingdomSettings
             ->displayMode($displayMode->value)
             ->enrollmentId($kingdom->getEnrollmentId())
             ->institutionName($kingdom->getInstitutionName())
+            ->provider($kingdom->getProvider())
             ->enrollmentStatus($kingdom->getEnrollmentStatus())
             ->lastSyncedAt($kingdom->getLastSyncedAt())
             ->build());

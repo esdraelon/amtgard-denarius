@@ -8,6 +8,7 @@ use Amtgard\Denarius\Bank\AlwaysReady;
 use Amtgard\Denarius\Bank\DisconnectLedgerNotice;
 use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
 use Amtgard\Denarius\Bank\LedgerProvider;
+use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Bank\RefreshLedgerNotice;
 use Amtgard\Denarius\Contract\KeyValueStore;
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
@@ -45,6 +46,11 @@ final class Strategies
             new RefreshLedgerNotice($queue),
             new DisconnectLedgerNotice($enrollments),
         ]);
+    }
+
+    public static function providers(LedgerProvider $provider): LedgerProviderRegistry
+    {
+        return new LedgerProviderRegistry([$provider]);
     }
 
     public static function teller(?TellerApi $api = null, ?TellerWebhookVerifier $verifier = null): LedgerProvider
