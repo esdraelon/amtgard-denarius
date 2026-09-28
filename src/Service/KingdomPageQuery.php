@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
-use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
 use Amtgard\Denarius\Domain\Statement\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;

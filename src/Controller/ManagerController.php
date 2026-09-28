@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
-use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
-use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Domain\Statement\DisplayMode;
 use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Utilities\Http\CsrfToken;

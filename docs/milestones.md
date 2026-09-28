@@ -145,3 +145,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Bank moves under Domain. Stripe, Plaid, Teller, and SimpleFIN sit under Providers. Enrollment, notices, readiness, the provider registry, and shared support are separate modules. Statements and access are grouped the same way, with each port above an `Impl` folder.
 - Line coverage: 97.68% (1933/1979).
 - Infection covered MSI: 95%.
+
+## Repository implementations
+
+- Branch: `repository-impl`
+- Each repository port has its own folder. The interface stays at the top of that folder, and the Active Record class sits in `Impl`.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.

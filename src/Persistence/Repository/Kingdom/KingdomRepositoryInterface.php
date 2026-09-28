@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Persistence\Repository;
+namespace Amtgard\Denarius\Persistence\Repository\Kingdom;
 
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 

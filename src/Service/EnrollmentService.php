@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
-use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
-use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
-use Amtgard\Denarius\Persistence\Repository\SecretRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;

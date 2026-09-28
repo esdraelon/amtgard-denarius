@@ -6,10 +6,10 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Domain\Bank\Providers\LedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Providers\Registry\LedgerProviderRegistry;
-use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
-use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
-use Amtgard\Denarius\Persistence\Repository\SecretRepositoryInterface;
-use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
 use Amtgard\Denarius\Domain\Statement\Money;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;

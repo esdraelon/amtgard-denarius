@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Persistence\Repository\PrincipalRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Principal\PrincipalRepositoryInterface;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
 
 final class PrincipalSync
