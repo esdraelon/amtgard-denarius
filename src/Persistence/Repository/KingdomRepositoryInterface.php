@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Contract;
+namespace Amtgard\Denarius\Persistence\Repository;
 
 use Amtgard\Denarius\Record\KingdomRecord;
 
-interface KingdomStore
+interface KingdomRepositoryInterface
 {
     public function findBySlug(string $slug): ?KingdomRecord;
 

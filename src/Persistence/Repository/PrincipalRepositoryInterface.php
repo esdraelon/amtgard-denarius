@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Contract;
+namespace Amtgard\Denarius\Persistence\Repository;
 
 use Amtgard\Denarius\Record\PrincipalRecord;
 
-interface PrincipalStore
+interface PrincipalRepositoryInterface
 {
     public function findByIdpUserId(string $idpUserId): ?PrincipalRecord;
 

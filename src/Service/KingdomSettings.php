@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\Visibility;
 use Amtgard\Denarius\Record\KingdomRecord;
@@ -12,7 +12,7 @@ use Amtgard\Denarius\Record\KingdomRecord;
 final class KingdomSettings
 {
     public function __construct(
-        private readonly KingdomStore $kingdoms,
+        private readonly KingdomRepositoryInterface $kingdoms,
     ) {
     }
 

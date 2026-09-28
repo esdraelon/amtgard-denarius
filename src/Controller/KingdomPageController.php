@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Controller;
 
-use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Domain\AccessResult;
 use Amtgard\Denarius\Domain\CategoryTotal;
 use Amtgard\Denarius\Domain\DisplayMode;
@@ -22,7 +22,7 @@ use Psr\Http\Message\ServerRequestInterface;
 final class KingdomPageController
 {
     public function __construct(
-        private readonly KingdomStore $kingdoms,
+        private readonly KingdomRepositoryInterface $kingdoms,
         private readonly MonthReader $pages,
         private readonly KingdomAccess $access,
         private readonly SessionAuthStore $auth,

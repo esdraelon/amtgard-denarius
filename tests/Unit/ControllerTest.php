@@ -6,8 +6,6 @@ namespace Amtgard\Denarius\Tests\Unit;
 
 use Amtgard\Denarius\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Auth\DenariusAuthorizer;
-use Amtgard\Denarius\Contract\AccountStore;
-use Amtgard\Denarius\Contract\KingdomStore;
 use Amtgard\Denarius\Controller\AdminController;
 use Amtgard\Denarius\Controller\HomeController;
 use Amtgard\Denarius\Controller\KingdomPageController;

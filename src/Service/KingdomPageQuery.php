@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Contract\AccountStore;
-use Amtgard\Denarius\Contract\TransactionStore;
+use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
 use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\LedgerLine;
 use Amtgard\Denarius\Domain\MonthStatement;
@@ -17,8 +17,8 @@ use Amtgard\Denarius\Service\Month\MonthReader;
 final class KingdomPageQuery implements MonthReader
 {
     public function __construct(
-        private readonly TransactionStore $transactions,
-        private readonly AccountStore $accounts,
+        private readonly TransactionRepositoryInterface $transactions,
+        private readonly AccountRepositoryInterface $accounts,
         private readonly MonthStatementBuilder $builder,
     ) {
     }

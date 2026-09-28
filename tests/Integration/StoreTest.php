@@ -7,12 +7,7 @@ namespace Amtgard\Denarius\Tests\Integration;
 use Amtgard\ActiveRecordOrm\Configuration\Repository\DatabaseConfiguration;
 use Amtgard\ActiveRecordOrm\Configuration\Repository\MysqlPdoProvider;
 use Amtgard\Denarius\Auth\CurrentActor;
-use Amtgard\Denarius\Persistence\AaroAccountStore;
-use Amtgard\Denarius\Persistence\AaroKingdomStore;
-use Amtgard\Denarius\Persistence\AaroPrincipalStore;
-use Amtgard\Denarius\Persistence\AaroRoleGrantStore;
-use Amtgard\Denarius\Persistence\AaroSecretStore;
-use Amtgard\Denarius\Persistence\AaroTransactionStore;
+use Amtgard\Denarius\Persistence\Orm;
 use Amtgard\Denarius\Persistence\Repository\AccountRepository;
 use Amtgard\Denarius\Persistence\Repository\KingdomRepository;
 use Amtgard\Denarius\Persistence\Repository\PrincipalRepository;
@@ -76,7 +71,7 @@ final class StoreTest extends AmtgardTestCase
         $this->assertSame(\Amtgard\Denarius\Persistence\Entity\RoleGrantEntity::class, RoleGrantRepository::getEntityClass());
 
         $pdo = self::$pdo;
-        $kingdoms = new AaroKingdomStore($pdo);
+        $kingdoms = Orm::repository(KingdomRepository::class);
         $saved = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('all')->enrollmentId('enr')->institutionName('Bank')->provider('teller')->enrollmentStatus('connected')->build());
         $this->assertNotNull($saved->getId());
         $this->assertSame('golden-plains', $kingdoms->findBySlug('golden-plains')->getSlug());
@@ -89,32 +84,32 @@ final class StoreTest extends AmtgardTestCase
         $audit = $pdo->query('SELECT COUNT(*) FROM kingdoms_audit')->fetchColumn();
         $this->assertGreaterThan(0, (int) $audit);
 
-        $principals = new AaroPrincipalStore($pdo);
+        $principals = Orm::repository(PrincipalRepository::class);
         $principal = $principals->save(PrincipalRecord::builder()->idpUserId('9')->email('person@example.com')->orkKingdomId(4)->orkKingdomName('Golden Plains')->build());
         $this->assertSame('person@example.com', $principals->findByIdpUserId('9')->getEmail());
         $this->assertCount(1, $principals->searchByEmail('person@'));
         $principals->save(PrincipalRecord::builder()->id($principal->getId())->idpUserId('9')->email('other@example.com')->build());
 
-        $accounts = new AaroAccountStore($pdo);
+        $accounts = Orm::repository(AccountRepository::class);
         $account = $accounts->save(AccountRecord::builder()->kingdomId((int) $saved->getId())->tellerAccountId('acc')->name('Checking')->type('depository')->lastFour('1234')->published(true)->build());
         $this->assertTrue($accounts->forKingdom((int) $saved->getId())[0]->getPublished());
         $accounts->save(AccountRecord::builder()->id($account->getId())->kingdomId((int) $saved->getId())->tellerAccountId('acc')->name('Checking')->type('depository')->published(false)->build());
         $this->assertGreaterThan(0, (int) $pdo->query('SELECT COUNT(*) FROM published_accounts_audit')->fetchColumn());
 
-        $secrets = new AaroSecretStore($pdo);
+        $secrets = Orm::repository(SecretRepository::class);
         $this->assertNull($secrets->findCiphertext((int) $saved->getId()));
         $secrets->saveCiphertext((int) $saved->getId(), 'cipher');
         $secrets->saveCiphertext((int) $saved->getId(), 'cipher-2');
         $this->assertSame('cipher-2', $secrets->findCiphertext((int) $saved->getId()));
 
-        $transactions = new AaroTransactionStore($pdo);
+        $transactions = Orm::repository(TransactionRepository::class);
         $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-100)->category('office')->description('paper')->counterparty('Shop')->status('posted')->build());
         $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn')->tellerAccountId('acc')->postedOn('2026-09-03')->amountCents(-200)->category('fuel')->description('gas')->counterparty('Station')->status('posted')->build());
         $rows = $transactions->forKingdom((int) $saved->getId());
         $this->assertCount(1, $rows);
         $this->assertSame(-200, $rows[0]->getAmountCents());
 
-        $grants = new AaroRoleGrantStore($pdo);
+        $grants = Orm::repository(RoleGrantRepository::class);
         $grants->append(RoleGrantRecord::builder()->actorIdpUserId('15')->targetIdpUserId('9')->action('grant')->resource('Denarius/Admin')->createdAt('2026-09-01T00:00:00+00:00')->build());
         $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM role_grants')->fetchColumn());
     }

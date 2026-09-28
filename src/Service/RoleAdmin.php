@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Auth\ClaimOrn;
-use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Auth\PolicyGateway;
-use Amtgard\Denarius\Contract\RoleGrantStore;
+use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
 use Amtgard\Denarius\Domain\KingdomSlug;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Record\RoleGrantRecord;
@@ -17,8 +17,8 @@ final class RoleAdmin
     public function __construct(
         private readonly PolicyGateway $policies,
         private readonly PermissionService $permissions,
-        private readonly KingdomStore $kingdoms,
-        private readonly RoleGrantStore $grants,
+        private readonly KingdomRepositoryInterface $kingdoms,
+        private readonly RoleGrantRepositoryInterface $grants,
         private readonly string $actorIdpUserId,
     ) {
     }

@@ -6,10 +6,10 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Bank\LedgerProvider;
 use Amtgard\Denarius\Bank\LedgerProviderRegistry;
-use Amtgard\Denarius\Contract\AccountStore;
-use Amtgard\Denarius\Contract\KingdomStore;
-use Amtgard\Denarius\Contract\SecretStore;
-use Amtgard\Denarius\Contract\TransactionStore;
+use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\SecretRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
 use Amtgard\Denarius\Domain\Money;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Record\TransactionRecord;
@@ -20,10 +20,10 @@ use Optional\Optional;
 final class TransactionSynchronizer
 {
     public function __construct(
-        private readonly KingdomStore $kingdoms,
-        private readonly AccountStore $accounts,
-        private readonly SecretStore $secrets,
-        private readonly TransactionStore $transactions,
+        private readonly KingdomRepositoryInterface $kingdoms,
+        private readonly AccountRepositoryInterface $accounts,
+        private readonly SecretRepositoryInterface $secrets,
+        private readonly TransactionRepositoryInterface $transactions,
         private readonly LedgerProviderRegistry $providers,
         private readonly TokenCipher $cipher,
         private readonly \DateTimeImmutable $now,

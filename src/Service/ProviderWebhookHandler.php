@@ -6,13 +6,13 @@ namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Bank\Notice\LedgerNoticeRegistry;
 use Amtgard\Denarius\Bank\LedgerProviderRegistry;
-use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 
 final class ProviderWebhookHandler
 {
     public function __construct(
         private readonly LedgerProviderRegistry $providers,
-        private readonly KingdomStore $kingdoms,
+        private readonly KingdomRepositoryInterface $kingdoms,
         private readonly LedgerNoticeRegistry $notices,
     ) {
     }

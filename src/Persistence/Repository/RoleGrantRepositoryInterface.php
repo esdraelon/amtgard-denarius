@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Contract;
+namespace Amtgard\Denarius\Persistence\Repository;
 
 use Amtgard\Denarius\Record\RoleGrantRecord;
 
-interface RoleGrantStore
+interface RoleGrantRepositoryInterface
 {
     public function append(RoleGrantRecord $grant): void;
 }

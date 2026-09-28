@@ -6,6 +6,7 @@ use Amtgard\Denarius\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Auth\CurrentActor;
 use Amtgard\Denarius\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Auth\IdpPolicyGateway;
+use Amtgard\Denarius\Auth\PolicyGateway;
 use Amtgard\Denarius\Bank\AlwaysReady;
 use Amtgard\Denarius\Bank\ConfiguredLedgerProviders;
 use Amtgard\Denarius\Bank\Notice\DisconnectLedgerNotice;
@@ -16,19 +17,22 @@ use Amtgard\Denarius\Bank\PresentCredentials;
 use Amtgard\Denarius\Bank\PreviousMonthWindow;
 use Amtgard\Denarius\Bank\ProviderAdmission;
 use Amtgard\Denarius\Bank\Notice\RefreshLedgerNotice;
-use Amtgard\Denarius\Contract\AccountStore;
-use Amtgard\Denarius\Queue\KingdomRefreshQueue;
-use Amtgard\Denarius\Contract\KingdomStore;
-use Amtgard\Denarius\Queue\MessageQueue;
-use Amtgard\Denarius\Auth\PolicyGateway;
-use Amtgard\Denarius\Contract\PrincipalStore;
-use Amtgard\Denarius\Contract\RoleGrantStore;
-use Amtgard\Denarius\Bank\Plaid\PlaidApi;
-use Amtgard\Denarius\Contract\SecretStore;
+use Amtgard\Denarius\Persistence\Orm;
+use Amtgard\Denarius\Persistence\Repository\AccountRepository;
+use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepository;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\PrincipalRepository;
+use Amtgard\Denarius\Persistence\Repository\PrincipalRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\RoleGrantRepository;
+use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\SecretRepository;
+use Amtgard\Denarius\Persistence\Repository\SecretRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\TransactionRepository;
+use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
 use Amtgard\Denarius\Bank\SimpleFin\SimpleFinApi;
 use Amtgard\Denarius\Bank\Stripe\StripeApi;
 use Amtgard\Denarius\Bank\Teller\TellerApi;
-use Amtgard\Denarius\Contract\TransactionStore;
 use Amtgard\Denarius\Controller\AdminController;
 use Amtgard\Denarius\Controller\HomeController;
 use Amtgard\Denarius\Controller\KingdomPageController;
@@ -40,13 +44,9 @@ use Amtgard\Denarius\Domain\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\VisibilityPolicyRegistry;
 use Amtgard\Denarius\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
-use Amtgard\Denarius\Persistence\AaroAccountStore;
-use Amtgard\Denarius\Persistence\AaroKingdomStore;
-use Amtgard\Denarius\Persistence\AaroPrincipalStore;
-use Amtgard\Denarius\Persistence\AaroRoleGrantStore;
-use Amtgard\Denarius\Persistence\AaroSecretStore;
-use Amtgard\Denarius\Persistence\AaroTransactionStore;
+use Amtgard\Denarius\Queue\KingdomRefreshQueue;
 use Amtgard\Denarius\Queue\MessageKingdomRefreshQueue;
+use Amtgard\Denarius\Queue\MessageQueue;
 use Amtgard\Denarius\Queue\PubSubMessageQueue;
 use Amtgard\Denarius\Queue\RedisKeyValueStore;
 use Amtgard\Denarius\Security\TokenCipher;
@@ -68,6 +68,7 @@ use Amtgard\Denarius\Service\Admin\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\RevokeManagerCommand;
 use Amtgard\Denarius\Bank\Plaid\CurlPlaidApi;
+use Amtgard\Denarius\Bank\Plaid\PlaidApi;
 use Amtgard\Denarius\Bank\Plaid\PlaidLedgerProvider;
 use Amtgard\Denarius\Bank\Plaid\PlaidWebhookVerifier;
 use Amtgard\Denarius\Service\ProviderWebhookHandler;
@@ -75,9 +76,9 @@ use Amtgard\Denarius\Bank\Stripe\CurlStripeApi;
 use Amtgard\Denarius\Bank\Stripe\StripeLedgerProvider;
 use Amtgard\Denarius\Bank\Stripe\StripeWebhookVerifier;
 use Amtgard\Denarius\Bank\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Service\TransactionSynchronizer;
 use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
-use Amtgard\Denarius\Service\TransactionSynchronizer;
 use Amtgard\Denarius\Session\RedisSessionHandler;
 use Amtgard\Denarius\Bank\Teller\CurlTellerApi;
 use Amtgard\Denarius\Bank\Teller\TellerWebhookVerifier;
@@ -97,16 +98,12 @@ use Twig\Environment as TwigEnvironment;
 use Twig\Loader\FilesystemLoader;
 
 return [
-    PDO::class => function () {
-        $config = Amtgard\ActiveRecordOrm\Configuration\Repository\DatabaseConfiguration::fromEnvironment();
-        return Amtgard\ActiveRecordOrm\Configuration\Repository\MysqlPdoProvider::fromConfiguration($config)->getPdo();
-    },
-    KingdomStore::class => fn (PDO $pdo) => new AaroKingdomStore($pdo),
-    PrincipalStore::class => fn (PDO $pdo) => new AaroPrincipalStore($pdo),
-    AccountStore::class => fn (PDO $pdo) => new AaroAccountStore($pdo),
-    SecretStore::class => fn (PDO $pdo) => new AaroSecretStore($pdo),
-    TransactionStore::class => fn (PDO $pdo) => new AaroTransactionStore($pdo),
-    RoleGrantStore::class => fn (PDO $pdo) => new AaroRoleGrantStore($pdo),
+    KingdomRepositoryInterface::class => fn () => Orm::repository(KingdomRepository::class),
+    PrincipalRepositoryInterface::class => fn () => Orm::repository(PrincipalRepository::class),
+    AccountRepositoryInterface::class => fn () => Orm::repository(AccountRepository::class),
+    SecretRepositoryInterface::class => fn () => Orm::repository(SecretRepository::class),
+    TransactionRepositoryInterface::class => fn () => Orm::repository(TransactionRepository::class),
+    RoleGrantRepositoryInterface::class => fn () => Orm::repository(RoleGrantRepository::class),
     SessionAuthStore::class => fn () => new SessionAuthStore(),
     IdpClient::class => fn () => IdpClientFactory::fromEnvVars(),
     PolicyGateway::class => fn (IdpClient $idp) => new IdpPolicyGateway($idp->clientIam()),
@@ -196,19 +193,19 @@ return [
         new PreviousMonthWindow(new DateTimeImmutable('now')),
     ),
     EnrollmentService::class => fn (ContainerInterface $c) => new EnrollmentService(
-        $c->get(KingdomStore::class),
-        $c->get(SecretStore::class),
-        $c->get(AccountStore::class),
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(SecretRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
         $c->get(LedgerProviderRegistry::class),
         $c->get(TokenCipher::class),
         $c->get(KingdomRefreshQueue::class),
         $c->get(MonthInvalidator::class),
     ),
     TransactionSynchronizer::class => fn (ContainerInterface $c) => new TransactionSynchronizer(
-        $c->get(KingdomStore::class),
-        $c->get(AccountStore::class),
-        $c->get(SecretStore::class),
-        $c->get(TransactionStore::class),
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
+        $c->get(SecretRepositoryInterface::class),
+        $c->get(TransactionRepositoryInterface::class),
         $c->get(LedgerProviderRegistry::class),
         $c->get(TokenCipher::class),
         new DateTimeImmutable('now'),
@@ -217,15 +214,15 @@ return [
     TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier($_ENV['TELLER_WEBHOOK_SECRET'] ?? ''),
     ProviderWebhookHandler::class => fn (ContainerInterface $c) => new ProviderWebhookHandler(
         $c->get(LedgerProviderRegistry::class),
-        $c->get(KingdomStore::class),
+        $c->get(KingdomRepositoryInterface::class),
         new LedgerNoticeRegistry([
             new RefreshLedgerNotice($c->get(KingdomRefreshQueue::class)),
             new DisconnectLedgerNotice($c->get(EnrollmentService::class)),
         ]),
     ),
     KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
-        $c->get(TransactionStore::class),
-        $c->get(AccountStore::class),
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
         new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
     ),
     MonthInvalidator::class => fn (RedisKeyValueStore $store) => new MonthInvalidator($store),
@@ -236,8 +233,8 @@ return [
     StatementPresenterRegistry::class => fn () => StatementPresenterRegistry::standard(),
     VisibilityPolicyRegistry::class => fn () => VisibilityPolicyRegistry::standard(),
     KingdomAccess::class => fn (VisibilityPolicyRegistry $policies) => new KingdomAccess($policies),
-    KingdomSettings::class => fn (KingdomStore $kingdoms) => new KingdomSettings($kingdoms),
-    PrincipalSync::class => fn (PrincipalStore $principals) => new PrincipalSync($principals),
+    KingdomSettings::class => fn (KingdomRepositoryInterface $kingdoms) => new KingdomSettings($kingdoms),
+    PrincipalSync::class => fn (PrincipalRepositoryInterface $principals) => new PrincipalSync($principals),
     SyncPrincipalMiddleware::class => fn (ContainerInterface $c) => new SyncPrincipalMiddleware(
         $c->get(SessionAuthStore::class),
         $c->get(PrincipalSync::class),
@@ -257,7 +254,7 @@ return [
         dirname(__DIR__),
     ),
     KingdomPageController::class => fn (ContainerInterface $c) => new KingdomPageController(
-        $c->get(KingdomStore::class),
+        $c->get(KingdomRepositoryInterface::class),
         $c->get(MonthReader::class),
         $c->get(KingdomAccess::class),
         $c->get(SessionAuthStore::class),
@@ -266,10 +263,10 @@ return [
     AdminController::class => fn (ContainerInterface $c) => new AdminController(
         $c->get(SessionAuthStore::class),
         $c->get(PermissionService::class),
-        $c->get(PrincipalStore::class),
-        $c->get(KingdomStore::class),
+        $c->get(PrincipalRepositoryInterface::class),
+        $c->get(KingdomRepositoryInterface::class),
         $c->get(PolicyGateway::class),
-        $c->get(RoleGrantStore::class),
+        $c->get(RoleGrantRepositoryInterface::class),
         $c->get(TwigHtmlRenderer::class),
         new AdminCommandRegistry([
             new GrantAdminCommand(),
@@ -281,8 +278,8 @@ return [
     ManagerController::class => fn (ContainerInterface $c) => new ManagerController(
         $c->get(SessionAuthStore::class),
         $c->get(PermissionService::class),
-        $c->get(KingdomStore::class),
-        $c->get(AccountStore::class),
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
         $c->get(KingdomSettings::class),
         $c->get(EnrollmentService::class),
         $c->get(KingdomRefreshQueue::class),
