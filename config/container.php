@@ -6,6 +6,7 @@ use Amtgard\Denarius\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Auth\CurrentActor;
 use Amtgard\Denarius\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Auth\IdpPolicyGateway;
+use Amtgard\Denarius\Bank\AlwaysReady;
 use Amtgard\Denarius\Bank\ConfiguredLedgerProviders;
 use Amtgard\Denarius\Bank\DisconnectLedgerNotice;
 use Amtgard\Denarius\Bank\LedgerNoticeRegistry;
@@ -25,6 +26,7 @@ use Amtgard\Denarius\Contract\PrincipalStore;
 use Amtgard\Denarius\Contract\RoleGrantStore;
 use Amtgard\Denarius\Contract\PlaidApi;
 use Amtgard\Denarius\Contract\SecretStore;
+use Amtgard\Denarius\Contract\SimpleFinApi;
 use Amtgard\Denarius\Contract\StripeApi;
 use Amtgard\Denarius\Contract\TellerApi;
 use Amtgard\Denarius\Contract\TransactionStore;
@@ -51,6 +53,9 @@ use Amtgard\Denarius\Queue\MessageKingdomRefreshQueue;
 use Amtgard\Denarius\Queue\PubSubMessageQueue;
 use Amtgard\Denarius\Queue\RedisKeyValueStore;
 use Amtgard\Denarius\Security\TokenCipher;
+use Amtgard\Denarius\SimpleFin\CurlSimpleFinApi;
+use Amtgard\Denarius\SimpleFin\SimpleFinHost;
+use Amtgard\Denarius\SimpleFin\SimpleFinLedgerProvider;
 use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomPageQuery;
@@ -196,7 +201,14 @@ return [
         new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? ''])),
         new ProviderAdmission($c->get(PlaidLedgerProvider::class), new PresentCredentials([$_ENV['PLAID_CLIENT_ID'] ?? '', $_ENV['PLAID_SECRET'] ?? ''])),
         new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? ''])),
+        new ProviderAdmission($c->get(SimpleFinLedgerProvider::class), new AlwaysReady()),
     ]))->registry(),
+    SimpleFinApi::class => fn () => new CurlSimpleFinApi(new SimpleFinHost(['simplefin.org'])),
+    SimpleFinLedgerProvider::class => fn (ContainerInterface $c) => new SimpleFinLedgerProvider(
+        $c->get(SimpleFinApi::class),
+        new AlwaysReady(),
+        new PreviousMonthWindow(new DateTimeImmutable('now')),
+    ),
     EnrollmentService::class => fn (ContainerInterface $c) => new EnrollmentService(
         $c->get(KingdomStore::class),
         $c->get(SecretStore::class),

@@ -71,3 +71,11 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `Plaid-Verification` is an ES256 JWT. The body hash and a five-minute issued-at window have to match. Transaction sync is drained inside the adapter for the previous calendar month through today.
 - Line coverage: 97.50% (1674/1717).
 - Infection covered MSI: 93%.
+
+## SimpleFIN adapter
+
+- Branch: `simplefin-adapter`
+- SimpleFIN is always admitted, after Stripe, Plaid, and Teller. It has no platform secret. A setup token is base64 of a claim URL on a SimpleFIN host. The claim runs once and the access URL is the stored secret.
+- Coverage stays unknown, so it is the paste-token fallback after the earlier providers are skipped. There is no webhook. Transaction reads use the previous calendar month through today.
+- Line coverage: 97.53% (1818/1864).
+- Infection covered MSI: 93%.
