@@ -109,3 +109,11 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `PolicyGateway` sits beside `IdpPolicyGateway`. `MessageQueue`, `KingdomRefreshQueue`, and `KeyValueStore` sit beside their queue adapters. `IdpPolicyGateway` remains the `idp-php-client` adapter.
 - Line coverage: 97.70% (2000/2047).
 - Infection covered MSI: 94%.
+
+## Browser kingdom list
+
+- Branch: `browser-kingdom-list`
+- The admin page loads `Kingdom/GetKingdoms` in the browser and posts the ORK id and name. Denarius no longer calls ORK, caches the directory, or refreshes it from the worker.
+- Stored `ork_kingdom_id` values stay. They identify a kingdom in Denarius.
+- Line coverage: 97.77% (1926/1970).
+- Infection covered MSI: 95%.

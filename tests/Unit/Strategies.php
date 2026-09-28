@@ -19,23 +19,21 @@ use Amtgard\Denarius\Service\Admin\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\RevokeManagerCommand;
-use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\TransactionSynchronizer;
 use Amtgard\Denarius\Bank\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Bank\Teller\TellerWebhookVerifier;
-use Amtgard\Denarius\Worker\Job\DirectoryRefreshJob;
 use Amtgard\Denarius\Worker\Job\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 
 final class Strategies
 {
-    public static function admin(CachedKingdomDirectory $directory): AdminCommandRegistry
+    public static function admin(): AdminCommandRegistry
     {
         return new AdminCommandRegistry([
             new GrantAdminCommand(),
             new RevokeAdminCommand(),
-            new GrantManagerCommand($directory),
+            new GrantManagerCommand(),
             new RevokeManagerCommand(),
         ]);
     }
@@ -70,10 +68,9 @@ final class Strategies
         return new MonthInvalidator($store ?? new ArrayStore());
     }
 
-    public static function jobs(CachedKingdomDirectory $directory, TransactionSynchronizer $synchronizer): RefreshJobRegistry
+    public static function jobs(TransactionSynchronizer $synchronizer): RefreshJobRegistry
     {
         return new RefreshJobRegistry([
-            new DirectoryRefreshJob($directory),
             new LedgerRefreshJob($synchronizer),
         ]);
     }

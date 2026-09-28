@@ -7,6 +7,4 @@ namespace Amtgard\Denarius\Queue;
 interface KingdomRefreshQueue
 {
     public function publishLedger(int $orkKingdomId): void;
-
-    public function publishDirectory(): void;
 }

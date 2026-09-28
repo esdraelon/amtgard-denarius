@@ -12,7 +12,6 @@ use Amtgard\Denarius\Contract\RoleGrantStore;
 use Amtgard\Denarius\Http\CsrfToken;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
-use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\PermissionService;
 use Amtgard\Denarius\Service\RoleAdmin;
 use Amtgard\IdpClient\Session\SessionAuthStore;
@@ -24,7 +23,6 @@ final class AdminController
     public function __construct(
         private readonly SessionAuthStore $auth,
         private readonly PermissionService $permissions,
-        private readonly CachedKingdomDirectory $directory,
         private readonly PrincipalStore $principals,
         private readonly KingdomStore $kingdoms,
         private readonly PolicyGateway $policies,
@@ -44,7 +42,6 @@ final class AdminController
 
         return $this->html->html($response, 'admin.twig', [
             'csrf' => CsrfToken::issue(),
-            'kingdoms' => $this->directory->list(),
             'email' => $term,
             'principals' => array_map(static fn ($principal) => $principal->view(), $term === '' ? [] : $this->principals->searchByEmail($term)),
         ]);

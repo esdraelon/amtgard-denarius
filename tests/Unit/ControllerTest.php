@@ -20,7 +20,6 @@ use Amtgard\Denarius\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Record\PrincipalRecord;
 use Amtgard\Denarius\Security\TokenCipher;
-use Amtgard\Denarius\Service\CachedKingdomDirectory;
 use Amtgard\Denarius\Service\EnrollmentService;
 use Amtgard\Denarius\Service\KingdomPageQuery;
 use Amtgard\Denarius\Service\KingdomSettings;
@@ -89,23 +88,17 @@ final class ControllerTest extends AmtgardTestCase
         $this->assertSame(403, $denied->getStatusCode());
 
         $permissions = new PermissionService(new FakePolicies([\Amtgard\Denarius\Auth\ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        $directory = new CachedKingdomDirectory(new class implements \Amtgard\Denarius\Contract\OrkKingdomClient {
-            public function listKingdoms(): array
-            {
-                return [new \Amtgard\Denarius\Ork\OrkKingdom(4, 'Golden Plains')];
-            }
-        }, new ArrayStore(), new MemoryRefresh());
         $principals = new MemoryPrincipals();
         $principals->save(PrincipalRecord::builder()->idpUserId('9')->email('person@example.com')->build());
-        $admin = new AdminController($auth, $permissions, $directory, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin($directory));
+        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin());
         $anon = new SessionAuthStore('empty');
-        $guest = (new AdminController($anon, $permissions, $directory, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin($directory)))
+        $guest = (new AdminController($anon, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin()))
             ->index($this->request('GET', '/admin'), new Response());
         $this->assertSame(302, $guest->getStatusCode());
         $index = $admin->index($this->request('GET', '/admin', ['email' => 'person']), new Response());
         $this->assertStringContainsString('admin 1', (string) $index->getBody());
         $_SESSION['_csrf'] = 'token';
-        $granted = $admin->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-manager', 'ork_kingdom_id' => '4', 'kingdom_name' => '']), new Response());
+        $granted = $admin->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-manager', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains']), new Response());
         $this->assertSame(302, $granted->getStatusCode());
         $bad = $admin->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'nope']), new Response());
         $this->assertSame(403, $bad->getStatusCode());
