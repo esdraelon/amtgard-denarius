@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Auth\CurrentActor;
-use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Auth\PolicyGateway;
-use Amtgard\Denarius\Contract\PrincipalStore;
-use Amtgard\Denarius\Contract\RoleGrantStore;
+use Amtgard\Denarius\Persistence\Repository\PrincipalRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
 use Amtgard\Denarius\Http\CsrfToken;
 use Amtgard\Denarius\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
@@ -23,10 +23,10 @@ final class AdminController
     public function __construct(
         private readonly SessionAuthStore $auth,
         private readonly PermissionService $permissions,
-        private readonly PrincipalStore $principals,
-        private readonly KingdomStore $kingdoms,
+        private readonly PrincipalRepositoryInterface $principals,
+        private readonly KingdomRepositoryInterface $kingdoms,
         private readonly PolicyGateway $policies,
-        private readonly RoleGrantStore $grants,
+        private readonly RoleGrantRepositoryInterface $grants,
         private readonly TwigHtmlRenderer $html,
         private readonly AdminCommandRegistry $commands,
     ) {

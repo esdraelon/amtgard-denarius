@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Bank\LedgerProviderRegistry;
-use Amtgard\Denarius\Contract\AccountStore;
+use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
 use Amtgard\Denarius\Queue\KingdomRefreshQueue;
-use Amtgard\Denarius\Contract\KingdomStore;
-use Amtgard\Denarius\Contract\SecretStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\SecretRepositoryInterface;
 use Amtgard\Denarius\Record\AccountRecord;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Security\TokenCipher;
@@ -18,9 +18,9 @@ use Optional\Optional;
 final class EnrollmentService
 {
     public function __construct(
-        private readonly KingdomStore $kingdoms,
-        private readonly SecretStore $secrets,
-        private readonly AccountStore $accounts,
+        private readonly KingdomRepositoryInterface $kingdoms,
+        private readonly SecretRepositoryInterface $secrets,
+        private readonly AccountRepositoryInterface $accounts,
         private readonly LedgerProviderRegistry $providers,
         private readonly TokenCipher $cipher,
         private readonly KingdomRefreshQueue $queue,

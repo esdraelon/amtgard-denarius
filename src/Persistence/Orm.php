@@ -51,4 +51,15 @@ final class Orm
 
         return $manager;
     }
+
+    public static function repository(string $class): object
+    {
+        self::configure(true);
+        $repository = EntityManager::getManager()->getRepository($class);
+        if (!$repository instanceof $class) {
+            throw new \RuntimeException($class . ' was not created.');
+        }
+
+        return $repository;
+    }
 }

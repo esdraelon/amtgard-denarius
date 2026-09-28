@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service;
 
 use Amtgard\Denarius\Queue\KingdomRefreshQueue;
-use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 
 final class DailySweep
 {
     public function __construct(
-        private readonly KingdomStore $kingdoms,
+        private readonly KingdomRepositoryInterface $kingdoms,
         private readonly KingdomRefreshQueue $queue,
     ) {
     }

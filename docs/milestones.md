@@ -117,3 +117,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Stored `ork_kingdom_id` values stay. They identify a kingdom in Denarius.
 - Line coverage: 97.77% (1926/1970).
 - Infection covered MSI: 95%.
+
+## Repository names
+
+- Branch: `repository-names`
+- Kingdom, account, principal, secret, transaction, and role-grant access lives on the Active Record repositories. Each port sits beside its repository. The Aaro store wrappers and the `Contract` store interfaces are gone.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.

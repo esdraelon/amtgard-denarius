@@ -9,17 +9,17 @@ use Amtgard\Denarius\Auth\ClaimOrn;
 use Amtgard\Denarius\Auth\CurrentActor;
 use Amtgard\Denarius\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Auth\IdpPolicyGateway;
-use Amtgard\Denarius\Contract\AccountStore;
+use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
 use Amtgard\Denarius\Queue\KeyValueStore;
 use Amtgard\Denarius\Queue\KingdomRefreshQueue;
-use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Queue\MessageQueue;
 use Amtgard\Denarius\Auth\PolicyGateway;
-use Amtgard\Denarius\Contract\PrincipalStore;
-use Amtgard\Denarius\Contract\RoleGrantStore;
-use Amtgard\Denarius\Contract\SecretStore;
+use Amtgard\Denarius\Persistence\Repository\PrincipalRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\RoleGrantRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\SecretRepositoryInterface;
 use Amtgard\Denarius\Bank\Teller\TellerApi;
-use Amtgard\Denarius\Contract\TransactionStore;
+use Amtgard\Denarius\Persistence\Repository\TransactionRepositoryInterface;
 use Amtgard\Denarius\Domain\AccessResult;
 use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\KingdomAccess;
@@ -461,7 +461,7 @@ final class FakePolicies implements PolicyGateway
     }
 }
 
-final class MemoryKingdoms implements KingdomStore
+final class MemoryKingdoms implements KingdomRepositoryInterface
 {
     /** @var array<int, KingdomRecord> */
     public array $rows = [];
@@ -527,7 +527,7 @@ final class MemoryKingdoms implements KingdomStore
     }
 }
 
-final class MemoryGrants implements RoleGrantStore
+final class MemoryGrants implements RoleGrantRepositoryInterface
 {
     public array $rows = [];
     public function append(RoleGrantRecord $grant): void
@@ -536,7 +536,7 @@ final class MemoryGrants implements RoleGrantStore
     }
 }
 
-final class MemorySecrets implements SecretStore
+final class MemorySecrets implements SecretRepositoryInterface
 {
     public array $rows = [];
     public function findCiphertext(int $kingdomId): ?string
@@ -549,7 +549,7 @@ final class MemorySecrets implements SecretStore
     }
 }
 
-final class MemoryAccounts implements AccountStore
+final class MemoryAccounts implements AccountRepositoryInterface
 {
     /** @var array<int, list<AccountRecord>> */
     public array $rows = [];
@@ -585,7 +585,7 @@ final class MemoryAccounts implements AccountStore
     }
 }
 
-final class MemoryTransactions implements TransactionStore
+final class MemoryTransactions implements TransactionRepositoryInterface
 {
     /** @var array<int, list<TransactionRecord>> */
     public array $rows = [];
@@ -601,7 +601,7 @@ final class MemoryTransactions implements TransactionStore
     }
 }
 
-final class MemoryPrincipals implements PrincipalStore
+final class MemoryPrincipals implements PrincipalRepositoryInterface
 {
     /** @var array<string, PrincipalRecord> */
     public array $rows = [];

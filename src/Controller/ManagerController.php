@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Controller;
 
 use Amtgard\Denarius\Auth\CurrentActor;
-use Amtgard\Denarius\Contract\AccountStore;
+use Amtgard\Denarius\Persistence\Repository\AccountRepositoryInterface;
 use Amtgard\Denarius\Queue\KingdomRefreshQueue;
-use Amtgard\Denarius\Contract\KingdomStore;
+use Amtgard\Denarius\Persistence\Repository\KingdomRepositoryInterface;
 use Amtgard\Denarius\Domain\DisplayMode;
 use Amtgard\Denarius\Domain\Visibility;
 use Amtgard\Denarius\Http\CsrfToken;
@@ -27,8 +27,8 @@ final class ManagerController
     public function __construct(
         private readonly SessionAuthStore $auth,
         private readonly PermissionService $permissions,
-        private readonly KingdomStore $kingdoms,
-        private readonly AccountStore $accounts,
+        private readonly KingdomRepositoryInterface $kingdoms,
+        private readonly AccountRepositoryInterface $accounts,
         private readonly KingdomSettings $settings,
         private readonly EnrollmentService $enrollments,
         private readonly KingdomRefreshQueue $queue,

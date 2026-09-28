@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Contract;
+namespace Amtgard\Denarius\Persistence\Repository;
 
 use Amtgard\Denarius\Record\TransactionRecord;
 
-interface TransactionStore
+interface TransactionRepositoryInterface
 {
     public function upsert(TransactionRecord $transaction): void;
 

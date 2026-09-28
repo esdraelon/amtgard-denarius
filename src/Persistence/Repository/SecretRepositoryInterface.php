@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Amtgard\Denarius\Contract;
+namespace Amtgard\Denarius\Persistence\Repository;
 
-interface SecretStore
+interface SecretRepositoryInterface
 {
     public function findCiphertext(int $kingdomId): ?string;
 

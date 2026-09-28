@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Contract\PrincipalStore;
+use Amtgard\Denarius\Persistence\Repository\PrincipalRepositoryInterface;
 use Amtgard\Denarius\Record\PrincipalRecord;
 
 final class PrincipalSync
 {
     public function __construct(
-        private readonly PrincipalStore $principals,
+        private readonly PrincipalRepositoryInterface $principals,
     ) {
     }
 
