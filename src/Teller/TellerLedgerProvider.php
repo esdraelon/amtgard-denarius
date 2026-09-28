@@ -65,7 +65,7 @@ final class TellerLedgerProvider implements LedgerProvider
             throw new \InvalidArgumentException('Teller enrollment is missing an access token or id.');
         }
 
-        return new ConnectedEnrollment($token, $enrollmentId, $this->institution($payload));
+        return new ConnectedEnrollment($token, $enrollmentId, $this->institution($payload), $this->id());
     }
 
     public function accounts(string $accessToken): array

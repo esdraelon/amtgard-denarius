@@ -77,13 +77,15 @@ final class StoreTest extends AmtgardTestCase
 
         $pdo = self::$pdo;
         $kingdoms = new AaroKingdomStore($pdo);
-        $saved = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('all')->enrollmentId('enr')->institutionName('Bank')->enrollmentStatus('connected')->build());
+        $saved = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('all')->enrollmentId('enr')->institutionName('Bank')->provider('teller')->enrollmentStatus('connected')->build());
         $this->assertNotNull($saved->getId());
         $this->assertSame('golden-plains', $kingdoms->findBySlug('golden-plains')->getSlug());
         $this->assertSame(4, $kingdoms->findByOrkId(4)->getOrkKingdomId());
         $this->assertSame('enr', $kingdoms->findByEnrollmentId('enr')->getEnrollmentId());
+        $this->assertSame('teller', $kingdoms->findByProviderEnrollment('teller', 'enr')->getProvider());
+        $this->assertNull($kingdoms->findByProviderEnrollment('stripe', 'enr'));
         $this->assertCount(1, $kingdoms->connected());
-        $kingdoms->save(KingdomRecord::builder()->id($saved->getId())->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('registered')->displayMode('summarized')->enrollmentId('enr')->institutionName('Bank')->enrollmentStatus('connected')->lastSyncedAt('2026-09-01')->build());
+        $kingdoms->save(KingdomRecord::builder()->id($saved->getId())->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('registered')->displayMode('summarized')->enrollmentId('enr')->institutionName('Bank')->provider('teller')->enrollmentStatus('connected')->lastSyncedAt('2026-09-01')->build());
         $audit = $pdo->query('SELECT COUNT(*) FROM kingdoms_audit')->fetchColumn();
         $this->assertGreaterThan(0, (int) $audit);
 

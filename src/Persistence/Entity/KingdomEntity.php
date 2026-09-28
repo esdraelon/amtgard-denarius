@@ -44,6 +44,9 @@ class KingdomEntity extends RepositoryEntity
     #[Field('institution_name')]
     private ?string $institutionName = null;
 
+    #[Field('provider')]
+    private ?string $provider = null;
+
     #[Field('enrollment_status')]
     private ?string $enrollmentStatus = null;
 

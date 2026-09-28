@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service;
 
-use Amtgard\Denarius\Bank\LedgerProvider;
+use Amtgard\Denarius\Bank\LedgerProviderRegistry;
 use Amtgard\Denarius\Contract\AccountStore;
 use Amtgard\Denarius\Contract\KingdomRefreshQueue;
 use Amtgard\Denarius\Contract\KingdomStore;
@@ -13,6 +13,7 @@ use Amtgard\Denarius\Record\AccountRecord;
 use Amtgard\Denarius\Record\KingdomRecord;
 use Amtgard\Denarius\Security\TokenCipher;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
+use Optional\Optional;
 
 final class EnrollmentService
 {
@@ -20,7 +21,7 @@ final class EnrollmentService
         private readonly KingdomStore $kingdoms,
         private readonly SecretStore $secrets,
         private readonly AccountStore $accounts,
-        private readonly LedgerProvider $provider,
+        private readonly LedgerProviderRegistry $providers,
         private readonly TokenCipher $cipher,
         private readonly KingdomRefreshQueue $queue,
         private readonly MonthInvalidator $months,
@@ -32,10 +33,17 @@ final class EnrollmentService
      */
     public function connect(KingdomRecord $kingdom, array $enrollment): KingdomRecord
     {
-        $connected = $this->provider->enrollment($enrollment);
+        $provider = $this->providers->find($this->requested($enrollment));
+        $connected = $provider->enrollment($enrollment);
         $this->secrets->saveCiphertext((int) $kingdom->getId(), $this->cipher->encrypt($connected->accessToken));
 
-        $saved = $this->kingdoms->save($this->copy($kingdom, $connected->enrollmentId, $connected->institutionName, 'connected'));
+        $saved = $this->kingdoms->save($this->copy(
+            $kingdom,
+            $connected->enrollmentId,
+            $connected->institutionName,
+            $this->storedProvider($connected->provider, $provider->id()),
+            'connected',
+        ));
         $this->importAccounts($saved, $connected->accessToken);
         $this->months->forget((int) $saved->getId());
         $this->queue->publishLedger($saved->getOrkKingdomId());
@@ -69,6 +77,7 @@ final class EnrollmentService
             $kingdom,
             (string) $kingdom->getEnrollmentId(),
             (string) $kingdom->getInstitutionName(),
+            (string) $kingdom->getProvider(),
             'disconnected',
         ));
     }
@@ -80,7 +89,7 @@ final class EnrollmentService
             $existing[$account->getTellerAccountId()] = $account;
         }
 
-        foreach ($this->provider->accounts($token) as $account) {
+        foreach ($this->providers->find((string) $kingdom->getProvider())->accounts($token) as $account) {
             $previous = $existing[$account->id] ?? null;
             $this->accounts->save(AccountRecord::builder()
                 ->id($previous?->getId())
@@ -94,7 +103,7 @@ final class EnrollmentService
         }
     }
 
-    private function copy(KingdomRecord $kingdom, string $enrollmentId, string $institution, string $status): KingdomRecord
+    private function copy(KingdomRecord $kingdom, string $enrollmentId, string $institution, string $provider, string $status): KingdomRecord
     {
         return KingdomRecord::builder()
             ->id($kingdom->getId())
@@ -105,8 +114,24 @@ final class EnrollmentService
             ->displayMode($kingdom->getDisplayMode())
             ->enrollmentId($enrollmentId !== '' ? $enrollmentId : null)
             ->institutionName($institution !== '' ? $institution : null)
+            ->provider($provider !== '' ? $provider : null)
             ->enrollmentStatus($status)
             ->lastSyncedAt($kingdom->getLastSyncedAt())
             ->build();
+    }
+
+    /**
+     * @param array<string, mixed> $enrollment
+     */
+    private function requested(array $enrollment): string
+    {
+        $given = trim((string) ($enrollment['provider'] ?? ''));
+
+        return Optional::ofNullable($given === '' ? null : $given)->orElse($this->providers->default()->id());
+    }
+
+    private function storedProvider(string $connected, string $selected): string
+    {
+        return Optional::ofNullable($connected === '' ? null : $connected)->orElse($selected);
     }
 }

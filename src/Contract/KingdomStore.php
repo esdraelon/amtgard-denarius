@@ -14,6 +14,8 @@ interface KingdomStore
 
     public function findByEnrollmentId(string $enrollmentId): ?KingdomRecord;
 
+    public function findByProviderEnrollment(string $provider, string $enrollmentId): ?KingdomRecord;
+
     public function save(KingdomRecord $kingdom): KingdomRecord;
 
     /**
