@@ -1,0 +1,4 @@
+services:
+  sessions:
+    ports:
+      - "36390:6379"

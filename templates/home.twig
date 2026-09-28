@@ -1,0 +1,11 @@
+{% extends "base.twig" %}
+{% block title %}Denarius{% endblock %}
+{% block body %}
+<h1>Kingdom bank statements</h1>
+<p>Amtgard kingdom treasuries published for accountability. Version {{ version }}.</p>
+{% if authenticated %}
+    <p><a href="/logout">Log out</a> <a href="/admin">Admin</a></p>
+{% else %}
+    <p><a href="/login">Log in with Amtgard ID</a></p>
+{% endif %}
+{% endblock %}

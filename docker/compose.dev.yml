@@ -1,0 +1,64 @@
+name: amtgard-denarius
+
+services:
+  denariusapp:
+    image: amtgard-denarius-dev
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "41193:9003"
+    volumes:
+      - .:/var/www/denarius.amtgard.com
+    environment:
+      - ENVIRONMENT=DEV
+    container_name: amtgard-denarius
+    hostname: amtgard-denarius
+    depends_on:
+      - amtgarddenariusdb
+
+  test:
+    profiles: ["test"]
+    image: amtgard-denarius-dev
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    working_dir: /var/www/denarius.amtgard.com
+    volumes:
+      - .:/var/www/denarius.amtgard.com
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=DEV
+      - XDEBUG_MODE=off
+    entrypoint: ["bash", "-lc"]
+    command: ["composer test"]
+    depends_on:
+      - amtgarddenariusdb
+    networks:
+      - amtgard-denarius-net
+
+  amtgarddenariusdb:
+    image: mariadb:11
+    restart: always
+    environment:
+      MARIADB_DATABASE: denarius
+      MARIADB_USER: denarius
+      MARIADB_PASSWORD: secret
+      MARIADB_ROOT_PASSWORD: root
+    ports:
+      - "36316:3306"
+    volumes:
+      - data-db:/var/lib/mysql
+    container_name: amtgard-denarius-db
+    hostname: amtgard-denarius-db
+    networks:
+      - amtgard-denarius-net
+
+volumes:
+  data-db:
+    name: amtgard-denarius_data-db
+
+networks:
+  amtgard-denarius-net:
+    name: amtgard-denarius-net

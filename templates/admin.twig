@@ -1,0 +1,34 @@
+{% extends "base.twig" %}
+{% block title %}Denarius admin{% endblock %}
+{% block body %}
+<h1>Roles</h1>
+<form method="get" action="/admin">
+    <label>Email <input name="email" value="{{ email }}"></label>
+    <button type="submit">Search</button>
+</form>
+{% for principal in principals %}
+    <section>
+        <h2>{{ principal.email }} ({{ principal.idpUserId }})</h2>
+        <form method="post" action="/admin/grant">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="idp_user_id" value="{{ principal.idpUserId }}">
+            <button name="action" value="grant-admin" type="submit">Grant admin</button>
+            <button name="action" value="revoke-admin" type="submit">Revoke admin</button>
+        </form>
+        <form method="post" action="/admin/grant">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="idp_user_id" value="{{ principal.idpUserId }}">
+            <label>Kingdom
+                <select name="ork_kingdom_id">
+                    {% for kingdom in kingdoms %}
+                        <option value="{{ kingdom.id }}">{{ kingdom.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <input type="hidden" name="kingdom_name" value="">
+            <button name="action" value="grant-manager" type="submit">Grant kingdom manager</button>
+            <button name="action" value="revoke-manager" type="submit">Revoke kingdom manager</button>
+        </form>
+    </section>
+{% endfor %}
+{% endblock %}

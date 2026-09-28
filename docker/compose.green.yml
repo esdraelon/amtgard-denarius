@@ -1,0 +1,12 @@
+services:
+  denariusapp:
+    ports:
+      - "37181:80"
+    container_name: amtgard-denarius-green
+    hostname: amtgard-denarius-green
+    volumes:
+      - amtgard-denarius-green-logs:/var/www/denarius.amtgard.com/logs
+
+volumes:
+  amtgard-denarius-green-logs:
+    name: amtgard-denarius-green-logs

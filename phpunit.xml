@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         failOnDeprecation="false"
+         failOnPhpunitDeprecation="false">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_DEBUG" value="true"/>
+        <env name="APP_KEY" value="test-only-app-key-not-for-production"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="36316"/>
+        <env name="DB_NAME" value="denarius"/>
+        <env name="DB_USER" value="denarius"/>
+        <env name="DB_PASS" value="secret"/>
+        <env name="IDP_BASE_URL" value="https://idp.amtgard.com"/>
+        <env name="IDP_CLIENT_ID" value="test-client"/>
+        <env name="IDP_CLIENT_SECRET" value="test-secret"/>
+        <env name="IDP_REDIRECT_URI" value="http://localhost:37180/oauth/callback"/>
+        <env name="IDP_IAM_SERVICE" value="Denarius"/>
+        <env name="IDP_IAM_SERVICE_FORMAT" value="Configuration,Kingdom"/>
+        <env name="DENARIUS_BOOTSTRAP_ADMIN_IDP_USER_IDS" value="7"/>
+        <env name="ORK_API_USER_AGENT" value="denarius-test"/>
+        <env name="ORK_API_REFERER" value="https://denarius.amtgard.com"/>
+        <env name="TELLER_APPLICATION_ID" value="app_test"/>
+        <env name="TELLER_ENVIRONMENT" value="sandbox"/>
+        <env name="TELLER_WEBHOOK_SECRET" value="whsec_test"/>
+        <env name="TELLER_CERT_PATH" value=""/>
+        <env name="TELLER_KEY_PATH" value=""/>
+    </php>
+</phpunit>
