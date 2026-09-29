@@ -236,3 +236,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `TracedHttpMethodsTest` drives controller and HTTP utility paths with memory fakes and asserts every `TracedMethodCatalog` entry under `src/Controller` and `src/Utilities/Http` via `MethodLogAssert` (38 methods).
 - Line coverage: 98.23% (2885/2937).
 - Infection covered MSI: 94%.
+
+## Log test auth
+
+- Branch: `log-test-auth`
+- `TracedAuthMethodsTest` asserts every `TracedMethodCatalog` entry under `src/Utilities/Auth`, `src/Domain/Access`, and `src/Service/Access` via `MethodLogAssert` (42 methods). `TracedMethodCatalog` maps trace sites to the enclosing class when a file defines more than one type (e.g. `ClaimOrn.php`).
+- Line coverage: 98.26% (2886/2937).
+- Infection covered MSI: not re-run locally (Infection initial PHPUnit run exited 143 with PCOV); prior stack tip was 94%.
