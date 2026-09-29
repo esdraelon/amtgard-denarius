@@ -50,6 +50,21 @@ final class TracedMethodCatalogTest extends AmtgardTestCase
         );
     }
 
+    public function testClaimOrnFileListsBothTypes(): void
+    {
+        $path = dirname(__DIR__, 3) . '/src/Utilities/Auth/ClaimOrn.php';
+        $methods = $this->catalog->methodsInFile($path);
+        $this->assertSame(
+            [
+                'Amtgard\\Denarius\\Utilities\\Auth\\ClaimOrn::admin',
+                'Amtgard\\Denarius\\Utilities\\Auth\\ClaimOrn::manage',
+                'Amtgard\\Denarius\\Utilities\\Auth\\ClaimOrn::parse',
+                'Amtgard\\Denarius\\Utilities\\Auth\\ParsedClaim::__construct',
+            ],
+            $methods,
+        );
+    }
+
     public function testAllIncludesKnownMethodsAndIsSorted(): void
     {
         $all = $this->catalog->all();

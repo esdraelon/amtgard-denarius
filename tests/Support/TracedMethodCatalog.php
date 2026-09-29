@@ -51,12 +51,11 @@ final class TracedMethodCatalog
         }
 
         $namespace = $this->namespaceFrom($content);
-        $typeName = $this->typeNameFrom($content);
-        if ($typeName === null) {
+        $typeStarts = $this->typeStartsByLine($content);
+        if ($typeStarts === []) {
             return [];
         }
 
-        $qualifiedType = $namespace !== '' ? $namespace . '\\' . $typeName : $typeName;
         $functionStarts = $this->functionStartsByLine($content);
         $lines = preg_split("/\r\n|\n|\r/", $content);
         if ($lines === false) {
@@ -70,11 +69,13 @@ final class TracedMethodCatalog
             }
 
             $lineNumber = $index + 1;
+            $typeName = $this->enclosingName($typeStarts, $lineNumber);
             $function = $this->enclosingFunction($functionStarts, $lineNumber);
-            if ($function === null) {
+            if ($typeName === null || $function === null) {
                 continue;
             }
 
+            $qualifiedType = $namespace !== '' ? $namespace . '\\' . $typeName : $typeName;
             $found[$qualifiedType . '::' . $function] = true;
         }
 
@@ -118,13 +119,29 @@ final class TracedMethodCatalog
         return trim($matches[1]);
     }
 
-    private function typeNameFrom(string $content): ?string
+    /**
+     * @return array<int, string> line number => type name
+     */
+    private function typeStartsByLine(string $content): array
     {
-        if (preg_match('/^\s*(?:final\s+|abstract\s+)?(?:class|enum)\s+(\w+)/m', $content, $matches) !== 1) {
-            return null;
+        $starts = [];
+        if (preg_match_all(
+            '/^\s*(?:final\s+|abstract\s+)?(?:class|enum)\s+(\w+)/m',
+            $content,
+            $matches,
+            PREG_OFFSET_CAPTURE,
+        ) !== false) {
+            foreach ($matches[1] as $match) {
+                $name = $match[0];
+                $offset = $match[1];
+                $line = substr_count(substr($content, 0, $offset), "\n") + 1;
+                $starts[$line] = $name;
+            }
         }
 
-        return $matches[1];
+        ksort($starts);
+
+        return $starts;
     }
 
     /**
@@ -153,12 +170,12 @@ final class TracedMethodCatalog
     }
 
     /**
-     * @param array<int, string> $functionStarts
+     * @param array<int, string> $starts
      */
-    private function enclosingFunction(array $functionStarts, int $lineNumber): ?string
+    private function enclosingName(array $starts, int $lineNumber): ?string
     {
         $current = null;
-        foreach ($functionStarts as $startLine => $name) {
+        foreach ($starts as $startLine => $name) {
             if ($startLine > $lineNumber) {
                 break;
             }
@@ -166,5 +183,13 @@ final class TracedMethodCatalog
         }
 
         return $current;
+    }
+
+    /**
+     * @param array<int, string> $functionStarts
+     */
+    private function enclosingFunction(array $functionStarts, int $lineNumber): ?string
+    {
+        return $this->enclosingName($functionStarts, $lineNumber);
     }
 }
