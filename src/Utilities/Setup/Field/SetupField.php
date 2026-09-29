@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Utilities\Setup\Field;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
 final class SetupField
 {
     public function __construct(
@@ -11,20 +13,27 @@ final class SetupField
         private readonly string $label,
         private readonly bool $hidden,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     public function key(): string
     {
-        return $this->key;
+        return DenariusLog::trace(__METHOD__, function (): string {
+            return $this->key;
+        });
     }
 
     public function label(): string
     {
-        return $this->label;
+        return DenariusLog::trace(__METHOD__, function (): string {
+            return $this->label;
+        });
     }
 
     public function hidden(): bool
     {
-        return $this->hidden;
+        return DenariusLog::trace(__METHOD__, function (): bool {
+            return $this->hidden;
+        });
     }
 }

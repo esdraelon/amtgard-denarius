@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Statement\Line;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Traits\Builder\Builder;
 use Amtgard\Traits\Builder\Data;
 
@@ -21,5 +22,6 @@ final class LedgerLine
         private string $status = '',
         private string $accountName = '',
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 }
