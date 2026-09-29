@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Utilities\Auth;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
 final class DenariusAuthorizer
 {
     /**
@@ -11,18 +13,20 @@ final class DenariusAuthorizer
      */
     public function isAdmin(string $idpUserId, array $orns, BootstrapAdmins $bootstrap): bool
     {
-        if ($bootstrap->contains($idpUserId)) {
-            return true;
-        }
-
-        foreach ($orns as $orn) {
-            $parsed = ClaimOrn::parse($orn);
-            if ($parsed !== null && $parsed->resource === ClaimOrn::ADMIN) {
+        return DenariusLog::trace(__METHOD__, function () use ($idpUserId, $orns, $bootstrap): bool {
+            if ($bootstrap->contains($idpUserId)) {
                 return true;
             }
-        }
 
-        return false;
+            foreach ($orns as $orn) {
+                $parsed = ClaimOrn::parse($orn);
+                if ($parsed !== null && $parsed->resource === ClaimOrn::ADMIN) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
     }
 
     /**
@@ -31,17 +35,19 @@ final class DenariusAuthorizer
      */
     public function managedKingdomIds(array $orns): array
     {
-        $ids = [];
-        foreach ($orns as $orn) {
-            $parsed = ClaimOrn::parse($orn);
-            if ($parsed !== null && $parsed->resource === ClaimOrn::MANAGE && $parsed->kingdomId > 0) {
-                $ids[$parsed->kingdomId] = $parsed->kingdomId;
+        return DenariusLog::trace(__METHOD__, function () use ($orns): array {
+            $ids = [];
+            foreach ($orns as $orn) {
+                $parsed = ClaimOrn::parse($orn);
+                if ($parsed !== null && $parsed->resource === ClaimOrn::MANAGE && $parsed->kingdomId > 0) {
+                    $ids[$parsed->kingdomId] = $parsed->kingdomId;
+                }
             }
-        }
 
-        $values = array_values($ids);
-        sort($values);
+            $values = array_values($ids);
+            sort($values);
 
-        return $values;
+            return $values;
+        });
     }
 }

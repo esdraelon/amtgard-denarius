@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Utilities\Auth;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
 final class BootstrapAdmins
 {
     /**
@@ -12,27 +14,32 @@ final class BootstrapAdmins
     public function __construct(
         private readonly array $idpUserIds,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     public static function fromEnv(?string $raw): self
     {
-        if ($raw === null || trim($raw) === '') {
-            return new self([]);
-        }
-
-        $ids = [];
-        foreach (explode(',', $raw) as $part) {
-            $id = trim($part);
-            if ($id !== '') {
-                $ids[] = $id;
+        return DenariusLog::trace(__METHOD__, static function () use ($raw): self {
+            if ($raw === null || trim($raw) === '') {
+                return new self([]);
             }
-        }
 
-        return new self($ids);
+            $ids = [];
+            foreach (explode(',', $raw) as $part) {
+                $id = trim($part);
+                if ($id !== '') {
+                    $ids[] = $id;
+                }
+            }
+
+            return new self($ids);
+        });
     }
 
     public function contains(string $idpUserId): bool
     {
-        return in_array($idpUserId, $this->idpUserIds, true);
+        return DenariusLog::trace(__METHOD__, function () use ($idpUserId): bool {
+            return in_array($idpUserId, $this->idpUserIds, true);
+        });
     }
 }

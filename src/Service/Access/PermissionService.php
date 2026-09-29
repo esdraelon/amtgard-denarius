@@ -6,6 +6,7 @@ namespace Amtgard\Denarius\Service\Access;
 
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
 use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
 
@@ -18,6 +19,7 @@ final class PermissionService
         private readonly BootstrapAdmins $bootstrap,
         private readonly int $ttlSeconds = 60,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     /**
@@ -25,29 +27,37 @@ final class PermissionService
      */
     public function orns(string $idpUserId): array
     {
-        $key = $this->key($idpUserId);
-        $cached = $this->cache->get($key);
-        if ($cached !== null) {
-            $decoded = json_decode($cached, true);
-            if (is_array($decoded)) {
-                return array_values(array_map(static fn ($orn): string => (string) $orn, $decoded));
+        return DenariusLog::trace(__METHOD__, function () use ($idpUserId): array {
+            $key = $this->key($idpUserId);
+            $cached = $this->cache->get($key);
+            if ($cached !== null) {
+                $decoded = json_decode($cached, true);
+                if (is_array($decoded)) {
+                    return array_values(array_map(static fn ($orn): string => (string) $orn, $decoded));
+                }
             }
-        }
 
-        $orns = $this->policies->listOrns($idpUserId);
-        $this->cache->set($key, json_encode($orns, JSON_THROW_ON_ERROR), $this->ttlSeconds);
+            $orns = $this->policies->listOrns($idpUserId);
+            $this->cache->set($key, json_encode($orns, JSON_THROW_ON_ERROR), $this->ttlSeconds);
 
-        return $orns;
+            return $orns;
+        });
     }
 
     public function forget(string $idpUserId): void
     {
-        $this->cache->delete($this->key($idpUserId));
+        DenariusLog::trace(__METHOD__, function () use ($idpUserId): mixed {
+            $this->cache->delete($this->key($idpUserId));
+
+            return null;
+        });
     }
 
     public function isAdmin(string $idpUserId): bool
     {
-        return $this->authorizer->isAdmin($idpUserId, $this->orns($idpUserId), $this->bootstrap);
+        return DenariusLog::trace(__METHOD__, function () use ($idpUserId): bool {
+            return $this->authorizer->isAdmin($idpUserId, $this->orns($idpUserId), $this->bootstrap);
+        });
     }
 
     /**
@@ -55,11 +65,15 @@ final class PermissionService
      */
     public function managedKingdomIds(string $idpUserId): array
     {
-        return $this->authorizer->managedKingdomIds($this->orns($idpUserId));
+        return DenariusLog::trace(__METHOD__, function () use ($idpUserId): array {
+            return $this->authorizer->managedKingdomIds($this->orns($idpUserId));
+        });
     }
 
     private function key(string $idpUserId): string
     {
-        return 'denarius:claims:' . $idpUserId;
+        return DenariusLog::trace(__METHOD__, function () use ($idpUserId): string {
+            return 'denarius:claims:' . $idpUserId;
+        });
     }
 }

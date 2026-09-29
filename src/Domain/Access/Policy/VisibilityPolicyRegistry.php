@@ -8,6 +8,7 @@ use Amtgard\Denarius\Domain\Access\Policy\Impl\KingdomVisibilityPolicy;
 use Amtgard\Denarius\Domain\Access\Policy\Impl\PublicVisibilityPolicy;
 use Amtgard\Denarius\Domain\Access\Policy\Impl\RegisteredVisibilityPolicy;
 use Amtgard\Denarius\Domain\Access\Visibility;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class VisibilityPolicyRegistry
 {
@@ -19,6 +20,7 @@ final class VisibilityPolicyRegistry
      */
     public function __construct(array $policies)
     {
+        $entered = DenariusLog::enter(__METHOD__);
         $indexed = [];
         foreach ($policies as $policy) {
             $indexed[$policy->visibility()->value] = $policy;
@@ -28,15 +30,19 @@ final class VisibilityPolicyRegistry
 
     public static function standard(): self
     {
-        return new self([
-            new PublicVisibilityPolicy(),
-            new RegisteredVisibilityPolicy(),
-            new KingdomVisibilityPolicy(),
-        ]);
+        return DenariusLog::trace(__METHOD__, static function (): self {
+            return new self([
+                new PublicVisibilityPolicy(),
+                new RegisteredVisibilityPolicy(),
+                new KingdomVisibilityPolicy(),
+            ]);
+        });
     }
 
     public function for(Visibility $visibility): VisibilityPolicy
     {
-        return $this->policies[$visibility->value];
+        return DenariusLog::trace(__METHOD__, function () use ($visibility): VisibilityPolicy {
+            return $this->policies[$visibility->value];
+        });
     }
 }

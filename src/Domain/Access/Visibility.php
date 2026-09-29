@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Access;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
 enum Visibility: string
 {
     case Public = 'public';
@@ -12,6 +14,8 @@ enum Visibility: string
 
     public static function fromStored(string $value): self
     {
-        return self::tryFrom($value) ?? self::KingdomOnly;
+        return DenariusLog::trace(__METHOD__, static function () use ($value): self {
+            return self::tryFrom($value) ?? self::KingdomOnly;
+        });
     }
 }
