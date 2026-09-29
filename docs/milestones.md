@@ -229,3 +229,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `MethodLogAssert` helpers (`reset`, `assertTraced`, `assertConstructorEntered`, `assertAnyOfTraced`) on the bootstrap `RecordingMethodLog`; `TracedMethodCatalog` scans `src/` for `DenariusLog::trace` / `enter` call sites; unit tests in `MethodLogAssertTest` and `TracedMethodCatalogTest`. Documented catalog workflow in `docs/method-log-tests.md`.
 - Line coverage: 98.23% (2885/2937).
 - Infection covered MSI: 94%.
+
+## Log test HTTP
+
+- Branch: `log-test-http`
+- `TracedHttpMethodsTest` drives controller and HTTP utility paths with memory fakes and asserts every `TracedMethodCatalog` entry under `src/Controller` and `src/Utilities/Http` via `MethodLogAssert` (38 methods).
+- Line coverage: 98.23% (2885/2937).
+- Infection covered MSI: 94%.
