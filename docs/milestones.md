@@ -264,3 +264,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `TracedBankMethodsTest` and shared `BankDomainArrange` reuse adapter and registry tests plus `ServiceWorkerArrange` teller/webhook paths; assert every `TracedMethodCatalog` entry under `src/Domain/Bank` via `MethodLogAssert` (172 methods under PHPUnit bootstrap, including enrollment value types). Adapter tests expose `exerciseCurlForMethodLog()` for scripted curl without dead-port timeouts.
 - Line coverage: 98.57% (2895/2937).
 - Infection covered MSI: 97% (`composer infection` exit 143; skip-initial-tests with `build/coverage-xml`, `--threads=4`).
+
+## Log test rest
+
+- Branch: `log-test-rest`
+- `TracedRestMethodsTest` and shared `RestDomainArrange` reuse `ApplicationTest`, `ProviderSetupTest`, and `LoggingCoreTest` paths with memory fakes; assert every `TracedMethodCatalog` entry under `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security` via `MethodLogAssert` (107 methods), plus the four `Utilities/Log` correlation helpers (494/494 catalog entries asserted across M-02–M-07).
+- Line coverage: 98.57% (2895/2937).
+- Infection covered MSI: 99% (`composer infection` exit 143; skip-initial-tests with `build/coverage-xml`, `--threads=4`).

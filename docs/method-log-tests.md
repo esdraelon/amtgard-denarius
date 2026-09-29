@@ -42,7 +42,7 @@ Gates: `composer test` line coverage of `src/` at least 95%, Infection MSI and c
 - [x] M-04 `log-test-persistence` — Same for `Persistence`.
 - [x] M-05 `log-test-services` — Same for `Service` (except `Service/Access`) and `Worker`.
 - [x] M-06 `log-test-bank` — Same for `Domain/Bank`.
-- [ ] M-07 `log-test-rest` — Same for Statement, Kingdom, Setup, Queue, Session, Security.
+- [x] M-07 `log-test-rest` — Same for Statement, Kingdom, Setup, Queue, Session, Security (107 catalog entries). `TracedRestMethodsTest` also asserts the four `Utilities/Log` correlation sites so **494/494** `TracedMethodCatalog` entries are covered across M-02–M-07 (stderr JSON stays in `LoggingCoreTest` only).
 
 After M-07, run a catalog diff: any `DenariusLog::trace` / `enter` in `src/` without a documented test reference fails CI (optional script in `bin/` or a PHPUnit test that reads a manifest updated each milestone).
 
