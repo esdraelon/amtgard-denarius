@@ -250,3 +250,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `TracedPersistenceMethodsTest` and shared `PersistenceStoreArrange` exercise record builders, memory fakes, and MariaDB repository round-trips; assert every `TracedMethodCatalog` entry under `src/Persistence` via `MethodLogAssert` (52 methods). `StoreTest` reuses the same arrange helper.
 - Line coverage: 98.26% (2886/2937).
 - Infection covered MSI: 95%.
+
+## Log test services
+
+- Branch: `log-test-services`
+- `TracedServicesMethodsTest` and shared `ServiceWorkerArrange` drive admin, enrollment, ledger, month cache, kingdom query/settings, bank connect, and worker paths with memory fakes; assert every `TracedMethodCatalog` entry under `src/Service` (except `Service/Access`) and `src/Worker` via `MethodLogAssert` (86 methods). `ControllerTest` clears session keys at the start of the combined controller test for random-order stability.
+- Line coverage: 98.47% (2892/2937).
+- Infection covered MSI: 94% (`composer infection` initial PHPUnit exit 143; skip-initial-tests with `build/coverage-xml`).

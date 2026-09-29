@@ -42,6 +42,7 @@ final class ControllerTest extends AmtgardTestCase
 {
     public function testHomeVersionKingdomAdminManagerAndWebhook(): void
     {
+        unset($_SESSION['test_session'], $_SESSION['_csrf']);
         $twig = new TwigHtmlRenderer(new Environment(new ArrayLoader([
             'home.twig' => 'home {{ version }} {{ authenticated ? "yes" : "no" }}',
             'message.twig' => '{{ title }} {{ message }}',
