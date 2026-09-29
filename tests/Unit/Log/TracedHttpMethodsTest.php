@@ -38,6 +38,7 @@ use Amtgard\Denarius\Tests\Unit\Strategies;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Http\PostCsrfMiddleware;
 use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
@@ -50,6 +51,7 @@ use Amtgard\PHPUnit\AmtgardTestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Slim\Psr7\Factory\ResponseFactory;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Response;
 use Twig\Environment;
@@ -157,16 +159,26 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             ->withBody((new \Slim\Psr7\Factory\StreamFactory())->createStream((string) $body));
         $webhook->teller($signed, new Response());
 
-        $sync = new SyncPrincipalMiddleware($auth, new PrincipalSync($principals));
-        $sync->process($this->request('GET', '/'), new class implements RequestHandlerInterface {
+        $passThrough = new class implements RequestHandlerInterface {
             public function handle(ServerRequestInterface $request): ResponseInterface
             {
                 return new Response();
             }
-        });
+        };
+        $csrfMiddleware = new PostCsrfMiddleware(new ResponseFactory());
+        $csrfMiddleware->process($this->request('GET', '/'), $passThrough);
+        $_SESSION['_csrf'] = 'token';
+        $csrfMiddleware->process($this->request('POST', '/admin/grant', [], ['csrf' => 'token']), $passThrough);
+        $csrfMiddleware->process($this->request('POST', '/admin/grant', [], ['csrf' => 'nope']), $passThrough);
+        $csrfMiddleware->process($this->request('POST', '/webhooks/teller'), $passThrough);
+
+        $sync = new SyncPrincipalMiddleware($auth, new PrincipalSync($principals));
+        $sync->process($this->request('GET', '/'), $passThrough);
+        $syncGuest = new SyncPrincipalMiddleware(new SessionAuthStore('empty'), new PrincipalSync($principals));
+        $syncGuest->process($this->request('GET', '/'), $passThrough);
 
         $scope = $this->methodsInScope();
-        $this->assertCount(38, $scope);
+        $this->assertCount(40, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

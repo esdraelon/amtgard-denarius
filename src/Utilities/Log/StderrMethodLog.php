@@ -53,6 +53,41 @@ final class StderrMethodLog implements MethodLog
         return $method;
     }
 
+    public function branch(BranchLogLevel $level, string $branch, string $method, array $context = []): void
+    {
+        if (! $this->shouldEmitBranch($level)) {
+            return;
+        }
+
+        $monolog = match ($level) {
+            BranchLogLevel::Debug => Level::Debug,
+            BranchLogLevel::Info => Level::Info,
+            BranchLogLevel::Warn => Level::Warning,
+        };
+
+        $payload = [
+            'time' => (new DateTimeImmutable('now'))->format(DATE_ATOM),
+            'level' => strtolower($monolog->getName()),
+            'channel' => LogChannel::fromMethod($method),
+            'event' => 'branch',
+            'branch' => $branch,
+            'method' => $method,
+            'request_id' => RequestLogContext::id(),
+            'context' => RedactingContext::redact($context),
+        ];
+
+        $this->logger->log($monolog, json_encode($payload, JSON_THROW_ON_ERROR));
+    }
+
+    private function shouldEmitBranch(BranchLogLevel $level): bool
+    {
+        if ($level === BranchLogLevel::Info || $level === BranchLogLevel::Warn) {
+            return true;
+        }
+
+        return $this->debug;
+    }
+
     private function emit(string $event, string $method, Level $level): void
     {
         if (!$this->debug && $event !== 'fail') {

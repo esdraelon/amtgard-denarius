@@ -28,12 +28,23 @@ final class ProviderWebhookHandler
 
     public function handle(string $providerId, string $body, ?string $signature, int $now): bool
     {
-        return DenariusLog::trace(__METHOD__, function () use ($providerId, $body, $signature, $now): bool {
+        $method = __METHOD__;
+
+        return DenariusLog::trace(__METHOD__, function () use ($providerId, $body, $signature, $now, $method): bool {
             $provider = $this->providers->find($providerId);
             $notice = $provider->notice($body, $signature, $now);
             if (!$notice->accepted) {
+                DenariusLog::warnBranch('webhook_auth_denied', $method, [
+                    'provider_id' => $providerId,
+                ]);
+
                 return false;
             }
+
+            DenariusLog::debugBranch('webhook_accepted', $method, [
+                'provider_id' => $providerId,
+                'action' => $notice->action,
+            ]);
 
             return $this->dispatch($provider->id(), $notice->enrollmentId, $notice->action);
         });

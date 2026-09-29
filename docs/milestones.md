@@ -272,6 +272,14 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Line coverage: 98.57% (2895/2937).
 - Infection covered MSI: 99% (`composer infection` exit 143; skip-initial-tests with `build/coverage-xml`, `--threads=4`).
 
+## Branch logging
+
+- Branch: `branch-logging`
+- `DenariusLog::debugBranch` / `infoBranch` / `warnBranch`, `BranchLogLevel`, and branch lines on `StderrMethodLog`; `PostCsrfMiddleware` replaces the inline CSRF closure; decision branches for CSRF reject, principal sync, webhook auth denial, and admin auth (`BranchLoggingTest` asserts branch records). Documented in `docs/logging-spike.md` (M-08).
+- Line coverage: 98.63% (2959/3000).
+- Infection covered MSI: (see `composer infection:ci` on stack tip).
+- Log-tested branches: `csrf_reject`, `csrf_skip`, `csrf_ok`, `principal_sync_session`, `principal_sync_guest`, `webhook_auth_denied`, `auth_login_required`, `auth_admin_denied`.
+
 ## Infection reliable
 
 - Branch: `infection-reliable`

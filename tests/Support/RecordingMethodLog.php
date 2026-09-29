@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Support;
 
+use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
 use Amtgard\Denarius\Utilities\Log\MethodLog;
 use Throwable;
 
@@ -21,6 +22,9 @@ final class RecordingMethodLog implements MethodLog
 
     /** @var list<string> */
     private array $open = [];
+
+    /** @var list<array{level: BranchLogLevel, branch: string, method: string, context: array<string, mixed>}> */
+    private array $branches = [];
 
     public function trace(string $method, callable $body): mixed
     {
@@ -45,6 +49,22 @@ final class RecordingMethodLog implements MethodLog
         $this->left[] = $method;
 
         return $method;
+    }
+
+    public function branch(BranchLogLevel $level, string $branch, string $method, array $context = []): void
+    {
+        $this->branches[] = [
+            'level' => $level,
+            'branch' => $branch,
+            'method' => $method,
+            'context' => $context,
+        ];
+    }
+
+    /** @return list<array{level: BranchLogLevel, branch: string, method: string, context: array<string, mixed>}> */
+    public function branches(): array
+    {
+        return $this->branches;
     }
 
     /** @return list<string> */
@@ -77,5 +97,6 @@ final class RecordingMethodLog implements MethodLog
         $this->left = [];
         $this->failed = [];
         $this->open = [];
+        $this->branches = [];
     }
 }

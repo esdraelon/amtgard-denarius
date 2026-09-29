@@ -26,6 +26,30 @@ final class DenariusLog
         return self::installed()->enter($method);
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
+    public static function debugBranch(string $branch, string $method, array $context = []): void
+    {
+        self::installed()->branch(BranchLogLevel::Debug, $branch, $method, $context);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    public static function infoBranch(string $branch, string $method, array $context = []): void
+    {
+        self::installed()->branch(BranchLogLevel::Info, $branch, $method, $context);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    public static function warnBranch(string $branch, string $method, array $context = []): void
+    {
+        self::installed()->branch(BranchLogLevel::Warn, $branch, $method, $context);
+    }
+
     private static function installed(): MethodLog
     {
         if (self::$logger === null) {

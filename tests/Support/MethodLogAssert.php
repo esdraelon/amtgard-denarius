@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Support;
 
+use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
 use PHPUnit\Framework\Assert;
 
 /** Test helper (Facade): assertions against the active {@see RecordingMethodLog}. */
@@ -35,6 +36,23 @@ final class MethodLogAssert
                 $method,
             ));
         }
+    }
+
+    public static function assertBranchLogged(BranchLogLevel $level, string $branch, string $method): void
+    {
+        $recorder = self::requireRecorder();
+        foreach ($recorder->branches() as $entry) {
+            if ($entry['level'] === $level && $entry['branch'] === $branch && $entry['method'] === $method) {
+                return;
+            }
+        }
+
+        Assert::fail(sprintf(
+            'Expected branch %s at %s (%s) but it was not logged.',
+            $branch,
+            $method,
+            $level->value,
+        ));
     }
 
     public static function assertAnyOfTraced(string ...$methods): void
