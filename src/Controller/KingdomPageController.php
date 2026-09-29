@@ -14,6 +14,7 @@ use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Access\Viewer;
 use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
@@ -28,42 +29,45 @@ final class KingdomPageController
         private readonly SessionAuthStore $auth,
         private readonly TwigHtmlRenderer $html,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     public function show(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
-        $kingdom = $this->kingdoms->findBySlug((string) ($args['slug'] ?? ''));
-        if ($kingdom === null) {
-            return $this->html->html($response, 'message.twig', ['title' => 'Not found', 'message' => 'That kingdom is not published.'], 404);
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $args): ResponseInterface {
+            $kingdom = $this->kingdoms->findBySlug((string) ($args['slug'] ?? ''));
+            if ($kingdom === null) {
+                return $this->html->html($response, 'message.twig', ['title' => 'Not found', 'message' => 'That kingdom is not published.'], 404);
+            }
 
-        $viewer = $this->viewer();
-        $decision = $this->access->decide(
-            Visibility::fromStored($kingdom->getVisibility()),
-            $viewer,
-            $kingdom->getOrkKingdomId(),
-        );
-        if ($decision === AccessResult::Login) {
-            $path = $request->getUri()->getPath();
-            return $response->withHeader('Location', '/login?return_to=' . rawurlencode($path))->withStatus(302);
-        }
-        if ($decision === AccessResult::Deny) {
-            return $this->html->html($response, 'message.twig', ['title' => 'Restricted', 'message' => 'This kingdom statement is limited to members of that kingdom.'], 403);
-        }
+            $viewer = $this->viewer();
+            $decision = $this->access->decide(
+                Visibility::fromStored($kingdom->getVisibility()),
+                $viewer,
+                $kingdom->getOrkKingdomId(),
+            );
+            if ($decision === AccessResult::Login) {
+                $path = $request->getUri()->getPath();
+                return $response->withHeader('Location', '/login?return_to=' . rawurlencode($path))->withStatus(302);
+            }
+            if ($decision === AccessResult::Deny) {
+                return $this->html->html($response, 'message.twig', ['title' => 'Restricted', 'message' => 'This kingdom statement is limited to members of that kingdom.'], 403);
+            }
 
-        $month = MonthWindow::fromQuery($request->getQueryParams()['month'] ?? null, new \DateTimeImmutable('now'));
-        $statement = $this->pages->statement($kingdom, $month);
+            $month = MonthWindow::fromQuery($request->getQueryParams()['month'] ?? null, new \DateTimeImmutable('now'));
+            $statement = $this->pages->statement($kingdom, $month);
 
-        return $this->html->html($response, 'kingdom.twig', [
-            'kingdom' => $kingdom->view(),
-            'month' => $month->key(),
-            'previous' => $month->previous()->key(),
-            'next' => $month->next()->key(),
-            'mode' => DisplayMode::fromStored($kingdom->getDisplayMode())->value,
-            'rows' => $this->rows($statement->rows),
-            'disconnected' => $kingdom->getEnrollmentStatus() === 'disconnected',
-            'syncedAt' => $kingdom->getLastSyncedAt(),
-        ]);
+            return $this->html->html($response, 'kingdom.twig', [
+                'kingdom' => $kingdom->view(),
+                'month' => $month->key(),
+                'previous' => $month->previous()->key(),
+                'next' => $month->next()->key(),
+                'mode' => DisplayMode::fromStored($kingdom->getDisplayMode())->value,
+                'rows' => $this->rows($statement->rows),
+                'disconnected' => $kingdom->getEnrollmentStatus() === 'disconnected',
+                'syncedAt' => $kingdom->getLastSyncedAt(),
+            ]);
+        });
     }
 
     /**
@@ -72,12 +76,14 @@ final class KingdomPageController
      */
     private function rows(array $rows): array
     {
-        $presented = [];
-        foreach ($rows as $row) {
-            $presented[] = $row instanceof CategoryTotal ? $this->total($row) : $this->line($row);
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($rows): array {
+            $presented = [];
+            foreach ($rows as $row) {
+                $presented[] = $row instanceof CategoryTotal ? $this->total($row) : $this->line($row);
+            }
 
-        return $presented;
+            return $presented;
+        });
     }
 
     /**
@@ -85,15 +91,17 @@ final class KingdomPageController
      */
     private function line(LedgerLine $row): array
     {
-        return [
-            'kind' => 'line',
-            'postedOn' => $row->getPostedOn(),
-            'category' => $row->getCategory(),
-            'description' => $row->getDescription(),
-            'counterparty' => $row->getCounterparty(),
-            'amount' => \Amtgard\Denarius\Domain\Statement\Line\Money::format($row->getAmountCents()),
-            'account' => $row->getAccountName(),
-        ];
+        return DenariusLog::trace(__METHOD__, function () use ($row): array {
+            return [
+                'kind' => 'line',
+                'postedOn' => $row->getPostedOn(),
+                'category' => $row->getCategory(),
+                'description' => $row->getDescription(),
+                'counterparty' => $row->getCounterparty(),
+                'amount' => \Amtgard\Denarius\Domain\Statement\Line\Money::format($row->getAmountCents()),
+                'account' => $row->getAccountName(),
+            ];
+        });
     }
 
     /**
@@ -101,21 +109,25 @@ final class KingdomPageController
      */
     private function total(CategoryTotal $row): array
     {
-        return [
-            'kind' => 'total',
-            'category' => $row->category,
-            'count' => $row->count,
-            'amount' => \Amtgard\Denarius\Domain\Statement\Line\Money::format($row->amountCents),
-        ];
+        return DenariusLog::trace(__METHOD__, function () use ($row): array {
+            return [
+                'kind' => 'total',
+                'category' => $row->category,
+                'count' => $row->count,
+                'amount' => \Amtgard\Denarius\Domain\Statement\Line\Money::format($row->amountCents),
+            ];
+        });
     }
 
     private function viewer(): ?Viewer
     {
-        $session = $this->auth->get();
-        if ($session === null) {
-            return null;
-        }
+        return DenariusLog::trace(__METHOD__, function (): ?Viewer {
+            $session = $this->auth->get();
+            if ($session === null) {
+                return null;
+            }
 
-        return new Viewer((string) $session->profile->id, $session->profile->orkProfile?->kingdomId);
+            return new Viewer((string) $session->profile->id, $session->profile->orkProfile?->kingdomId);
+        });
     }
 }

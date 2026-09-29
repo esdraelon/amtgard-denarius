@@ -173,3 +173,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `DenariusLog` facade, stderr JSON method log, request-id ambient context and middleware, redaction, and a PHPUnit recorder that fails unbalanced traces.
 - Line coverage: 97.76% (2008/2054).
 - Infection covered MSI: 94%.
+
+## Logging HTTP
+
+- Branch: `logging-http`
+- Every method in `src/Controller` and `src/Utilities/Http` calls `DenariusLog::trace` or constructor `enter`, so a local request shows which HTTP handler ran.
+- Line coverage: 97.83% (2070/2116).
+- Infection covered MSI: 94%.
