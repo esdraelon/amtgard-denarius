@@ -41,7 +41,7 @@ Tests install a recording logger from `tests/bootstrap.php`. It runs the closure
 - [x] M-01 `logging-core` — Logger, redaction, stderr JSON, request id, test recorder. Wire install in `public/index.php`, `bin/ledger-worker.php`, and `config/container.php`. Add the HTTP middleware. Instrument only the new logging classes' public methods via the same `trace`/`enter` rules where that would not recurse. Gates: `composer test` line coverage of `src/` at least 95%, Infection MSI and covered MSI at least 80%.
 - [x] M-02 `logging-http` — Every method in `src/Controller` and `src/Utilities/Http`.
 - [x] M-03 `logging-auth` — Every method in `src/Utilities/Auth`, `src/Domain/Access`, and `src/Service/Access`.
-- [ ] M-04 `logging-persistence` — Every method in `src/Persistence` and `src/Persistence/Orm.php`.
+- [x] M-04 `logging-persistence` — Every method in `src/Persistence` and `src/Persistence/Orm.php`.
 - [ ] M-05 `logging-services` — Every method in `src/Service` except `Service/Access`, and in `src/Worker`.
 - [ ] M-06 `logging-bank` — Every method in `src/Domain/Bank`.
 - [ ] M-07 `logging-rest` — Every method in `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security`.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Persistence\Record;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Traits\Builder\Builder;
 use Amtgard\Traits\Builder\Data;
 
@@ -25,6 +26,7 @@ final class KingdomRecord
         private string $enrollmentStatus = 'none',
         private ?string $lastSyncedAt = null,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     /**
@@ -32,18 +34,20 @@ final class KingdomRecord
      */
     public function view(): array
     {
-        return [
-            'id' => $this->getId(),
-            'orkKingdomId' => $this->getOrkKingdomId(),
-            'name' => $this->getName(),
-            'slug' => $this->getSlug(),
-            'visibility' => $this->getVisibility(),
-            'displayMode' => $this->getDisplayMode(),
-            'enrollmentId' => $this->getEnrollmentId(),
-            'institutionName' => $this->getInstitutionName(),
-            'provider' => $this->getProvider(),
-            'enrollmentStatus' => $this->getEnrollmentStatus(),
-            'lastSyncedAt' => $this->getLastSyncedAt(),
-        ];
+        return DenariusLog::trace(__METHOD__, function (): array {
+            return [
+                'id' => $this->getId(),
+                'orkKingdomId' => $this->getOrkKingdomId(),
+                'name' => $this->getName(),
+                'slug' => $this->getSlug(),
+                'visibility' => $this->getVisibility(),
+                'displayMode' => $this->getDisplayMode(),
+                'enrollmentId' => $this->getEnrollmentId(),
+                'institutionName' => $this->getInstitutionName(),
+                'provider' => $this->getProvider(),
+                'enrollmentStatus' => $this->getEnrollmentStatus(),
+                'lastSyncedAt' => $this->getLastSyncedAt(),
+            ];
+        });
     }
 }
