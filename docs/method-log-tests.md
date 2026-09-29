@@ -32,7 +32,7 @@ When adding or extending a test for an area milestone (M-02 onward):
 2. For each catalog entry not yet covered, extend an existing fake test or add one focused call that invokes that method, then `MethodLogAssert::assertTraced($method)` or `assertConstructorEntered($method)` as appropriate.
 3. Re-run the catalog locally to confirm the method string matches what the runtime recorder sees (`__METHOD__` in the instrumented body).
 
-Gates: `composer test` line coverage of `src/` at least 95%, Infection MSI and covered MSI at least 80%.
+Gates: `composer test` line coverage of `src/` at least 95%, `composer infection:ci` MSI and covered MSI at least 80%.
 
 ## Milestones
 
