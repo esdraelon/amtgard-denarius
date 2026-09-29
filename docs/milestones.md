@@ -222,3 +222,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `ContainerResolutionOrderTest` boots `config/bootstrap.php`, resolves core services and controllers, and checks named routes against `config/routes.php` (IDP-style integration wiring test). PHPUnit `IDP_IAM_SERVICE_FORMAT` is a JSON array so `IdpClient` resolves under test.
 - Line coverage: 98.23% (2885/2937).
 - Infection covered MSI: not re-run on this branch.
+
+## Log test support
+
+- Branch: `log-test-support`
+- `MethodLogAssert` helpers (`reset`, `assertTraced`, `assertConstructorEntered`, `assertAnyOfTraced`) on the bootstrap `RecordingMethodLog`; `TracedMethodCatalog` scans `src/` for `DenariusLog::trace` / `enter` call sites; unit tests in `MethodLogAssertTest` and `TracedMethodCatalogTest`. Documented catalog workflow in `docs/method-log-tests.md`.
+- Line coverage: 98.23% (2885/2937).
+- Infection covered MSI: 94%.

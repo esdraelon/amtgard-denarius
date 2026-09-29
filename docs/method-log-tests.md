@@ -22,11 +22,21 @@ Prefer extending existing fakes and one focused call per method over a giant gen
 
 Also assert **stderr JSON** only in `LoggingCoreTest` / `StderrMethodLog` tests; do not duplicate stderr checks in every area.
 
+### TracedMethodCatalog
+
+`Amtgard\Denarius\Tests\Support\TracedMethodCatalog::forProject()->all()` returns every `__METHOD__` string referenced by `DenariusLog::trace(__METHOD__` or `DenariusLog::enter(__METHOD__` under `src/`, sorted and deduplicated. Use `methodsInFile($absolutePath)` when scoping a milestone to one directory.
+
+When adding or extending a test for an area milestone (M-02 onward):
+
+1. Filter the catalog (or a subtree of `src/`) to methods in your scope, e.g. `Controller` and `Utilities/Http`.
+2. For each catalog entry not yet covered, extend an existing fake test or add one focused call that invokes that method, then `MethodLogAssert::assertTraced($method)` or `assertConstructorEntered($method)` as appropriate.
+3. Re-run the catalog locally to confirm the method string matches what the runtime recorder sees (`__METHOD__` in the instrumented body).
+
 Gates: `composer test` line coverage of `src/` at least 95%, Infection MSI and covered MSI at least 80%.
 
 ## Milestones
 
-- [ ] M-01 `log-test-support` — `MethodLogAssert`, optional `TracedMethodCatalog` (reflection list of `__METHOD__` strings under `src/`), and a short note in this doc on how to map catalog entries to tests. Gates pass.
+- [x] M-01 `log-test-support` — `MethodLogAssert`, optional `TracedMethodCatalog` (reflection list of `__METHOD__` strings under `src/`), and a short note in this doc on how to map catalog entries to tests. Gates pass.
 - [ ] M-02 `log-test-http` — Every `DenariusLog` site under `src/Controller` and `src/Utilities/Http` has at least one test assertion (new or extended tests).
 - [ ] M-03 `log-test-auth` — Same for `Utilities/Auth`, `Domain/Access`, `Service/Access`.
 - [ ] M-04 `log-test-persistence` — Same for `Persistence`.
