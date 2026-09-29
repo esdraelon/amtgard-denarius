@@ -24,10 +24,15 @@ final class SyncPrincipalMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $handler): ResponseInterface {
+        $method = __METHOD__;
+
+        return DenariusLog::trace(__METHOD__, function () use ($request, $handler, $method): ResponseInterface {
             $session = $this->auth->get();
             if ($session !== null) {
                 $ork = $session->profile->orkProfile;
+                DenariusLog::debugBranch('principal_sync_session', $method, [
+                    'idp_user_id' => (string) $session->profile->id,
+                ]);
                 $this->principals->upsert(
                     (string) $session->profile->id,
                     $session->profile->email,
@@ -36,6 +41,7 @@ final class SyncPrincipalMiddleware implements MiddlewareInterface
                 );
                 CurrentActor::set((string) $session->profile->id);
             } else {
+                DenariusLog::debugBranch('principal_sync_guest', $method, []);
                 CurrentActor::set(null);
             }
 

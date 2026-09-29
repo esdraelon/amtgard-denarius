@@ -26,7 +26,9 @@ $entered = DenariusLog::enter(__METHOD__);
 
 Do not log inside `DenariusLog` itself. That recurses.
 
-JSON fields: `time`, `level`, `channel`, `event` (`enter`, `leave`, `fail`), `method`, `request_id`, `context`. Channel comes from the method's namespace: Controller and `Utilities/Http` → `http`; `Utilities/Auth`, `Domain/Access`, `Service/Access` → `auth`; `Domain/Bank`, `Service/Ledger`, `Service/Enrollment`, `Worker` → `ledger`; everything else → `app`.
+JSON fields: `time`, `level`, `channel`, `event` (`enter`, `leave`, `fail`, `branch`), `method`, `request_id`, `context`, and for branch lines `branch` (decision name). Channel comes from the method's namespace: Controller and `Utilities/Http` → `http`; `Utilities/Auth`, `Domain/Access`, `Service/Access` → `auth`; `Domain/Bank`, `Service/Ledger`, `Service/Enrollment`, `Worker` → `ledger`; everything else → `app`.
+
+Decision branches use `DenariusLog::debugBranch`, `infoBranch`, and `warnBranch`. They emit `event: branch` with a stable `branch` key (for example `csrf_reject`, `principal_sync_session`, `webhook_auth_denied`, `auth_admin_denied`). Info and warn branches always write to stderr; debug branches follow `APP_DEBUG`. Context is redacted like trace context. Tests assert branch lines separately via `MethodLogAssert::assertBranchLogged`.
 
 Redact context values whose key matches `secret`, `token`, `password`, `authorization`, `cookie`, `client_secret`, `access_token`, or `refresh_token` (case-insensitive, nested). Replace the value with `[redacted]`.
 
@@ -47,5 +49,7 @@ Tests install a recording logger from `tests/bootstrap.php`. It runs the closure
 - [x] M-07 `logging-rest` — Every method in `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security`.
 
 Skip interfaces with no body. After M-07, every remaining method under `src/` either traces or is a constructor that assigns `enter`.
+
+- [x] M-08 `branch-logging` — Branch helpers on `DenariusLog`, `PostCsrfMiddleware`, CSRF/auth/webhook/principal decision branches at info/warn/debug, and `BranchLoggingTest` assertions. Gates: `composer test`, `composer infection:ci`.
 
 Each milestone appends a section to `docs/milestones.md`: branch, what changed, line-coverage fraction, Infection covered MSI. Check the box here in the same commit.

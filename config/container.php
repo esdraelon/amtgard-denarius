@@ -42,6 +42,7 @@ use Amtgard\Denarius\Domain\Access\KingdomAccess;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
+use Amtgard\Denarius\Utilities\Http\PostCsrfMiddleware;
 use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Utilities\Log\CorrelationMiddleware;
@@ -238,6 +239,7 @@ return [
     KingdomAccess::class => fn (VisibilityPolicyRegistry $policies) => new KingdomAccess($policies),
     KingdomSettings::class => fn (KingdomRepositoryInterface $kingdoms) => new KingdomSettings($kingdoms),
     PrincipalSync::class => fn (PrincipalRepositoryInterface $principals) => new PrincipalSync($principals),
+    PostCsrfMiddleware::class => fn () => new PostCsrfMiddleware(new Slim\Psr7\Factory\ResponseFactory()),
     SyncPrincipalMiddleware::class => fn (ContainerInterface $c) => new SyncPrincipalMiddleware(
         $c->get(SessionAuthStore::class),
         $c->get(PrincipalSync::class),

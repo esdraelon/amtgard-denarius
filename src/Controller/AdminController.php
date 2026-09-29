@@ -78,10 +78,14 @@ final class AdminController
      */
     private function rejectedToken(ResponseInterface $response, array $body): ?ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($response, $body): ?ResponseInterface {
+        $method = __METHOD__;
+
+        return DenariusLog::trace(__METHOD__, function () use ($response, $body, $method): ?ResponseInterface {
             if (CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
                 return null;
             }
+
+            DenariusLog::warnBranch('csrf_reject', $method, ['surface' => 'admin']);
 
             return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
         });
@@ -89,12 +93,20 @@ final class AdminController
 
     private function guard(ResponseInterface $response): ?ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($response): ?ResponseInterface {
+        $method = __METHOD__;
+
+        return DenariusLog::trace(__METHOD__, function () use ($response, $method): ?ResponseInterface {
             $session = $this->auth->get();
             if ($session === null) {
+                DenariusLog::infoBranch('auth_login_required', $method, []);
+
                 return $response->withHeader('Location', '/login')->withStatus(302);
             }
             if (!$this->permissions->isAdmin((string) $session->profile->id)) {
+                DenariusLog::warnBranch('auth_admin_denied', $method, [
+                    'idp_user_id' => (string) $session->profile->id,
+                ]);
+
                 return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'Denarius admin access is required.'], 403);
             }
 

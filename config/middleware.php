@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Amtgard\Denarius\Utilities\Http\CsrfToken;
+use Amtgard\Denarius\Utilities\Http\PostCsrfMiddleware;
 use Amtgard\Denarius\Utilities\Log\CorrelationMiddleware;
 use Amtgard\Denarius\Utilities\Session\RedisSessionHandler;
 use Psr\Http\Message\ResponseInterface;
@@ -12,20 +12,7 @@ use Slim\App;
 use Slim\Exception\HttpNotFoundException;
 
 return function (App $app): void {
-    $app->add(function (ServerRequestInterface $request, RequestHandlerInterface $handler) use ($app): ResponseInterface {
-        if ($request->getMethod() === 'POST' && !str_starts_with($request->getUri()->getPath(), '/webhooks/')) {
-            $body = $request->getParsedBody();
-            $token = is_array($body) && isset($body['csrf']) ? (string) $body['csrf'] : null;
-            if (!CsrfToken::matches($token)) {
-                $response = $app->getResponseFactory()->createResponse(403);
-                $response->getBody()->write('Forbidden');
-
-                return $response->withHeader('Content-Type', 'text/plain');
-            }
-        }
-
-        return $handler->handle($request);
-    });
+    $app->add(PostCsrfMiddleware::class);
 
     $app->addBodyParsingMiddleware();
 
