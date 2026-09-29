@@ -271,3 +271,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `TracedRestMethodsTest` and shared `RestDomainArrange` reuse `ApplicationTest`, `ProviderSetupTest`, and `LoggingCoreTest` paths with memory fakes; assert every `TracedMethodCatalog` entry under `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security` via `MethodLogAssert` (107 methods), plus the four `Utilities/Log` correlation helpers (494/494 catalog entries asserted across M-02–M-07).
 - Line coverage: 98.57% (2895/2937).
 - Infection covered MSI: 99% (`composer infection` exit 143; skip-initial-tests with `build/coverage-xml`, `--threads=4`).
+
+## Log test catalog gate
+
+- Branch: `log-test-catalog-gate`
+- `TracedMethodCoverageManifest` maps each `TracedMethodCatalog` entry to an M-02–M-07 `Traced*MethodsTest` scope; `TracedMethodCatalogGateTest` fails when a trace site is unmapped. Documented in `docs/method-log-tests.md` (M-08).
+- Line coverage: 98.57% (2895/2937).
+- Infection covered MSI: 99% (skip-initial-tests with `build/coverage-xml`, `--threads=4`).
