@@ -104,6 +104,44 @@ PHP);
         }
     }
 
+    /** Scripted and local HTTP paths for method-log tests (skips long dead-port curl). */
+    public static function exerciseCurlForMethodLog(?string $localBase = null): void
+    {
+        $localBase ??= self::$base;
+        $api = new CurlPlaidApi('https://sandbox.plaid.com/', 'id', 'secret', 'Denarius', function (string $url, array $body): string {
+            if (str_contains($url, '/institutions/search')) {
+                return 'hello';
+            }
+            if (str_contains($url, '/link/token/create')) {
+                return '{"link_token":"link"}';
+            }
+            if (str_contains($url, '/exchange')) {
+                return '{"access_token":"access"}';
+            }
+            if (str_contains($url, '/accounts/get')) {
+                return '{"accounts":"nope"}';
+            }
+            if (str_contains($url, '/webhook_verification_key/get')) {
+                return '{"key":"nope"}';
+            }
+            if (($body['cursor'] ?? '') === 'next') {
+                return '{"added":[],"modified":[{"transaction_id":"t2"}],"has_more":true,"next_cursor":""}';
+            }
+
+            return '{"added":[{"transaction_id":"t1"},"skip"],"modified":[],"has_more":true,"next_cursor":"next"}';
+        });
+        $api->institutions('First');
+        $api->linkToken('golden');
+        $api->exchange('public');
+        $api->accounts('access');
+        $api->verificationKey('kid');
+        $api->transactions('access');
+
+        if ($localBase !== null) {
+            (new CurlPlaidApi($localBase, 'id', 'secret', 'Denarius'))->linkToken('golden');
+        }
+    }
+
     public function testPlaidLinksAccountsAndNotices(): void
     {
         $api = new ScriptedPlaid();

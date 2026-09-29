@@ -41,7 +41,7 @@ Gates: `composer test` line coverage of `src/` at least 95%, Infection MSI and c
 - [x] M-03 `log-test-auth` — Same for `Utilities/Auth`, `Domain/Access`, `Service/Access`.
 - [x] M-04 `log-test-persistence` — Same for `Persistence`.
 - [x] M-05 `log-test-services` — Same for `Service` (except `Service/Access`) and `Worker`.
-- [ ] M-06 `log-test-bank` — Same for `Domain/Bank`.
+- [x] M-06 `log-test-bank` — Same for `Domain/Bank`.
 - [ ] M-07 `log-test-rest` — Same for Statement, Kingdom, Setup, Queue, Session, Security.
 
 After M-07, run a catalog diff: any `DenariusLog::trace` / `enter` in `src/` without a documented test reference fails CI (optional script in `bin/` or a PHPUnit test that reads a manifest updated each milestone).

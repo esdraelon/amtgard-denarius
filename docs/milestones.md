@@ -257,3 +257,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `TracedServicesMethodsTest` and shared `ServiceWorkerArrange` drive admin, enrollment, ledger, month cache, kingdom query/settings, bank connect, and worker paths with memory fakes; assert every `TracedMethodCatalog` entry under `src/Service` (except `Service/Access`) and `src/Worker` via `MethodLogAssert` (86 methods). `ControllerTest` clears session keys at the start of the combined controller test for random-order stability.
 - Line coverage: 98.47% (2892/2937).
 - Infection covered MSI: 94% (`composer infection` initial PHPUnit exit 143; skip-initial-tests with `build/coverage-xml`).
+
+## Log test bank
+
+- Branch: `log-test-bank`
+- `TracedBankMethodsTest` and shared `BankDomainArrange` reuse adapter and registry tests plus `ServiceWorkerArrange` teller/webhook paths; assert every `TracedMethodCatalog` entry under `src/Domain/Bank` via `MethodLogAssert` (172 methods under PHPUnit bootstrap, including enrollment value types). Adapter tests expose `exerciseCurlForMethodLog()` for scripted curl without dead-port timeouts.
+- Line coverage: 98.57% (2895/2937).
+- Infection covered MSI: 97% (`composer infection` exit 143; skip-initial-tests with `build/coverage-xml`, `--threads=4`).

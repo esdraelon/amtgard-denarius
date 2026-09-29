@@ -47,6 +47,11 @@ final class CoverageTest extends AmtgardTestCase
     /** @var resource|null */
     private static $server = null;
 
+    public static function httpBase(): ?string
+    {
+        return self::$base;
+    }
+
     public static function setUpBeforeClass(): void
     {
         $root = sys_get_temp_dir() . '/denarius-http';
