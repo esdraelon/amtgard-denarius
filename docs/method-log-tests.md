@@ -37,7 +37,7 @@ Gates: `composer test` line coverage of `src/` at least 95%, Infection MSI and c
 ## Milestones
 
 - [x] M-01 `log-test-support` — `MethodLogAssert`, optional `TracedMethodCatalog` (reflection list of `__METHOD__` strings under `src/`), and a short note in this doc on how to map catalog entries to tests. Gates pass.
-- [ ] M-02 `log-test-http` — Every `DenariusLog` site under `src/Controller` and `src/Utilities/Http` has at least one test assertion (new or extended tests).
+- [x] M-02 `log-test-http` — Every `DenariusLog` site under `src/Controller` and `src/Utilities/Http` has at least one test assertion (new or extended tests).
 - [ ] M-03 `log-test-auth` — Same for `Utilities/Auth`, `Domain/Access`, `Service/Access`.
 - [ ] M-04 `log-test-persistence` — Same for `Persistence`.
 - [ ] M-05 `log-test-services` — Same for `Service` (except `Service/Access`) and `Worker`.
