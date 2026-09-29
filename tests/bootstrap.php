@@ -8,3 +8,8 @@ ini_set('display_errors', '0');
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 DG\BypassFinals::enable();
+
+use Amtgard\Denarius\Tests\Support\RecordingMethodLog;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
+DenariusLog::install(new RecordingMethodLog());

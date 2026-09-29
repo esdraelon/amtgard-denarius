@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Amtgard\Denarius\Utilities\Http\CsrfToken;
+use Amtgard\Denarius\Utilities\Log\CorrelationMiddleware;
 use Amtgard\Denarius\Utilities\Session\RedisSessionHandler;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -48,4 +49,6 @@ return function (App $app): void {
 
         return $response->withHeader('Content-Type', 'text/plain');
     });
+
+    $app->add(CorrelationMiddleware::class);
 };

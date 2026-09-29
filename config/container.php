@@ -44,6 +44,9 @@ use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
 use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
+use Amtgard\Denarius\Utilities\Log\CorrelationMiddleware;
+use Amtgard\Denarius\Utilities\Log\MethodLog;
+use Amtgard\Denarius\Utilities\Log\StderrMethodLog;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\Impl\MessageKingdomRefreshQueue;
 use Amtgard\Denarius\Utilities\Queue\Message\MessageQueue;
@@ -239,6 +242,9 @@ return [
         $c->get(SessionAuthStore::class),
         $c->get(PrincipalSync::class),
     ),
+    MethodLog::class => fn () => StderrMethodLog::create(),
+    StderrMethodLog::class => fn (ContainerInterface $c) => $c->get(MethodLog::class),
+    CorrelationMiddleware::class => fn () => new CorrelationMiddleware(),
     TwigEnvironment::class => function () {
         $twig = new TwigEnvironment(new FilesystemLoader(__DIR__ . '/../templates'), [
             'cache' => __DIR__ . '/cache/twig',
