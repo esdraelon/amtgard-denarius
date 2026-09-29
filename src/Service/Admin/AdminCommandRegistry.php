@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service\Admin;
 
 use Amtgard\Denarius\Service\Admin\Impl\IgnoredAdminCommand;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class AdminCommandRegistry
 {
@@ -16,6 +17,7 @@ final class AdminCommandRegistry
      */
     public function __construct(array $commands, private readonly IgnoredAdminCommand $ignored = new IgnoredAdminCommand())
     {
+        $entered = DenariusLog::enter(__METHOD__);
         $indexed = [];
         foreach ($commands as $command) {
             $indexed[$command->name()] = $command;
@@ -25,6 +27,8 @@ final class AdminCommandRegistry
 
     public function find(string $name): AdminCommand
     {
-        return $this->commands[$name] ?? $this->ignored;
+        return DenariusLog::trace(__METHOD__, function () use ($name): AdminCommand {
+            return $this->commands[$name] ?? $this->ignored;
+        });
     }
 }

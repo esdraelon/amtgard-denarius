@@ -13,6 +13,7 @@ use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Month\MonthReader;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class KingdomPageQuery implements MonthReader
 {
@@ -21,33 +22,36 @@ final class KingdomPageQuery implements MonthReader
         private readonly AccountRepositoryInterface $accounts,
         private readonly MonthStatementBuilder $builder,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     public function statement(KingdomRecord $kingdom, MonthWindow $month): MonthStatement
     {
-        $names = [];
-        foreach ($this->accounts->forKingdom((int) $kingdom->getId()) as $account) {
-            if ($account->getPublished()) {
-                $names[$account->getTellerAccountId()] = $account->getName();
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $month): MonthStatement {
+            $names = [];
+            foreach ($this->accounts->forKingdom((int) $kingdom->getId()) as $account) {
+                if ($account->getPublished()) {
+                    $names[$account->getTellerAccountId()] = $account->getName();
+                }
             }
-        }
 
-        $lines = [];
-        foreach ($this->transactions->forKingdom((int) $kingdom->getId()) as $transaction) {
-            if (!isset($names[$transaction->getTellerAccountId()])) {
-                continue;
+            $lines = [];
+            foreach ($this->transactions->forKingdom((int) $kingdom->getId()) as $transaction) {
+                if (!isset($names[$transaction->getTellerAccountId()])) {
+                    continue;
+                }
+                $lines[] = LedgerLine::builder()
+                    ->postedOn($transaction->getPostedOn())
+                    ->amountCents($transaction->getAmountCents())
+                    ->category($transaction->getCategory())
+                    ->description($transaction->getDescription())
+                    ->counterparty($transaction->getCounterparty())
+                    ->status($transaction->getStatus())
+                    ->accountName($names[$transaction->getTellerAccountId()])
+                    ->build();
             }
-            $lines[] = LedgerLine::builder()
-                ->postedOn($transaction->getPostedOn())
-                ->amountCents($transaction->getAmountCents())
-                ->category($transaction->getCategory())
-                ->description($transaction->getDescription())
-                ->counterparty($transaction->getCounterparty())
-                ->status($transaction->getStatus())
-                ->accountName($names[$transaction->getTellerAccountId()])
-                ->build();
-        }
 
-        return $this->builder->build($lines, DisplayMode::fromStored($kingdom->getDisplayMode()), $month);
+            return $this->builder->build($lines, DisplayMode::fromStored($kingdom->getDisplayMode()), $month);
+        });
     }
 }

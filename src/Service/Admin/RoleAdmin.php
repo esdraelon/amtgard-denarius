@@ -12,6 +12,7 @@ use Amtgard\Denarius\Persistence\Repository\RoleGrant\RoleGrantRepositoryInterfa
 use Amtgard\Denarius\Domain\Kingdom\KingdomSlug;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class RoleAdmin
 {
@@ -22,54 +23,69 @@ final class RoleAdmin
         private readonly RoleGrantRepositoryInterface $grants,
         private readonly string $actorIdpUserId,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     public function grantAdmin(string $targetIdpUserId): void
     {
-        $this->change($targetIdpUserId, 'grant', ClaimOrn::admin(), ClaimOrn::ADMIN, null);
+        DenariusLog::trace(__METHOD__, function () use ($targetIdpUserId): mixed {
+            $this->change($targetIdpUserId, 'grant', ClaimOrn::admin(), ClaimOrn::ADMIN, null);
+
+            return null;
+        });
     }
 
     public function revokeAdmin(string $targetIdpUserId): void
     {
-        $this->change($targetIdpUserId, 'revoke', ClaimOrn::admin(), ClaimOrn::ADMIN, null);
+        DenariusLog::trace(__METHOD__, function () use ($targetIdpUserId): mixed {
+            $this->change($targetIdpUserId, 'revoke', ClaimOrn::admin(), ClaimOrn::ADMIN, null);
+
+            return null;
+        });
     }
 
     public function grantManager(string $targetIdpUserId, int $orkKingdomId, string $name): KingdomRecord
     {
-        $this->change(
-            $targetIdpUserId,
-            'grant',
-            ClaimOrn::manage($orkKingdomId),
-            ClaimOrn::MANAGE,
-            $orkKingdomId,
-        );
+        return DenariusLog::trace(__METHOD__, function () use ($targetIdpUserId, $orkKingdomId, $name): KingdomRecord {
+            $this->change(
+                $targetIdpUserId,
+                'grant',
+                ClaimOrn::manage($orkKingdomId),
+                ClaimOrn::MANAGE,
+                $orkKingdomId,
+            );
 
-        $existing = $this->kingdoms->findByOrkId($orkKingdomId);
-        if ($existing !== null) {
-            return $existing;
-        }
+            $existing = $this->kingdoms->findByOrkId($orkKingdomId);
+            if ($existing !== null) {
+                return $existing;
+            }
 
-        $slug = KingdomSlug::fromName($name);
-        if ($slug === '' || KingdomSlug::isReserved($slug)) {
-            throw new \InvalidArgumentException('Kingdom name does not produce a usable public slug.');
-        }
+            $slug = KingdomSlug::fromName($name);
+            if ($slug === '' || KingdomSlug::isReserved($slug)) {
+                throw new \InvalidArgumentException('Kingdom name does not produce a usable public slug.');
+            }
 
-        return $this->kingdoms->save(KingdomRecord::builder()
-            ->orkKingdomId($orkKingdomId)
-            ->name($name)
-            ->slug($slug)
-            ->build());
+            return $this->kingdoms->save(KingdomRecord::builder()
+                ->orkKingdomId($orkKingdomId)
+                ->name($name)
+                ->slug($slug)
+                ->build());
+        });
     }
 
     public function revokeManager(string $targetIdpUserId, int $orkKingdomId): void
     {
-        $this->change(
-            $targetIdpUserId,
-            'revoke',
-            ClaimOrn::manage($orkKingdomId),
-            ClaimOrn::MANAGE,
-            $orkKingdomId,
-        );
+        DenariusLog::trace(__METHOD__, function () use ($targetIdpUserId, $orkKingdomId): mixed {
+            $this->change(
+                $targetIdpUserId,
+                'revoke',
+                ClaimOrn::manage($orkKingdomId),
+                ClaimOrn::MANAGE,
+                $orkKingdomId,
+            );
+
+            return null;
+        });
     }
 
     private function change(
@@ -79,20 +95,24 @@ final class RoleAdmin
         string $resource,
         ?int $orkKingdomId,
     ): void {
-        if ($action === 'grant') {
-            $this->policies->grant($targetIdpUserId, $orn);
-        } else {
-            $this->policies->revoke($targetIdpUserId, $orn);
-        }
+        DenariusLog::trace(__METHOD__, function () use ($targetIdpUserId, $action, $orn, $resource, $orkKingdomId): mixed {
+            if ($action === 'grant') {
+                $this->policies->grant($targetIdpUserId, $orn);
+            } else {
+                $this->policies->revoke($targetIdpUserId, $orn);
+            }
 
-        $this->permissions->forget($targetIdpUserId);
-        $this->grants->append(RoleGrantRecord::builder()
-            ->actorIdpUserId($this->actorIdpUserId)
-            ->targetIdpUserId($targetIdpUserId)
-            ->action($action)
-            ->resource($resource)
-            ->orkKingdomId($orkKingdomId)
-            ->createdAt((new \DateTimeImmutable('now'))->format('c'))
-            ->build());
+            $this->permissions->forget($targetIdpUserId);
+            $this->grants->append(RoleGrantRecord::builder()
+                ->actorIdpUserId($this->actorIdpUserId)
+                ->targetIdpUserId($targetIdpUserId)
+                ->action($action)
+                ->resource($resource)
+                ->orkKingdomId($orkKingdomId)
+                ->createdAt((new \DateTimeImmutable('now'))->format('c'))
+                ->build());
+
+            return null;
+        });
     }
 }

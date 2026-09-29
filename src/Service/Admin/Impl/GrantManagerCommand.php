@@ -6,17 +6,24 @@ namespace Amtgard\Denarius\Service\Admin\Impl;
 
 use Amtgard\Denarius\Service\Admin\AdminCommand;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class GrantManagerCommand implements AdminCommand
 {
     public function name(): string
     {
-        return 'grant-manager';
+        return DenariusLog::trace(__METHOD__, function (): string {
+            return 'grant-manager';
+        });
     }
 
     public function execute(RoleAdmin $roles, array $body): void
     {
-        $roles->grantManager($this->target($body), $this->kingdomId($body), $this->kingdomName($body));
+        DenariusLog::trace(__METHOD__, function () use ($roles, $body): mixed {
+            $roles->grantManager($this->target($body), $this->kingdomId($body), $this->kingdomName($body));
+
+            return null;
+        });
     }
 
     /**
@@ -24,7 +31,9 @@ final class GrantManagerCommand implements AdminCommand
      */
     private function target(array $body): string
     {
-        return trim((string) ($body['idp_user_id'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($body): string {
+            return trim((string) ($body['idp_user_id'] ?? ''));
+        });
     }
 
     /**
@@ -32,7 +41,9 @@ final class GrantManagerCommand implements AdminCommand
      */
     private function kingdomId(array $body): int
     {
-        return (int) ($body['ork_kingdom_id'] ?? 0);
+        return DenariusLog::trace(__METHOD__, function () use ($body): int {
+            return (int) ($body['ork_kingdom_id'] ?? 0);
+        });
     }
 
     /**
@@ -40,6 +51,8 @@ final class GrantManagerCommand implements AdminCommand
      */
     private function kingdomName(array $body): string
     {
-        return trim((string) ($body['kingdom_name'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($body): string {
+            return trim((string) ($body['kingdom_name'] ?? ''));
+        });
     }
 }
