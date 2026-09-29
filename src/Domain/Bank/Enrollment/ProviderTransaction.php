@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Bank\Enrollment;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
 final readonly class ProviderTransaction
 {
     public function __construct(
@@ -15,5 +17,6 @@ final readonly class ProviderTransaction
         public string $counterparty,
         public string $status,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 }

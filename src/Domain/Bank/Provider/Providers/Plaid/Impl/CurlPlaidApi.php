@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\Impl;
 
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\PlaidApi;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class CurlPlaidApi implements PlaidApi
 {
@@ -15,67 +16,80 @@ final class CurlPlaidApi implements PlaidApi
         private readonly string $clientName,
         private readonly ?\Closure $fetcher = null,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     public function institutions(string $query): array
     {
-        $page = $this->post('/institutions/search', [
-            'query' => $query,
-            'country_codes' => ['US'],
-            'products' => ['transactions'],
-        ]);
+        return DenariusLog::trace(__METHOD__, function () use ($query): array {
+            $page = $this->post('/institutions/search', [
+                'query' => $query,
+                'country_codes' => ['US'],
+                'products' => ['transactions'],
+            ]);
 
-        return $this->rows($page['institutions'] ?? null);
+            return $this->rows($page['institutions'] ?? null);
+        });
     }
 
     public function linkToken(string $kingdomKey): array
     {
-        return $this->post('/link/token/create', [
-            'client_name' => $this->clientName,
-            'language' => 'en',
-            'country_codes' => ['US'],
-            'user' => ['client_user_id' => $kingdomKey],
-            'products' => ['transactions'],
-        ]);
+        return DenariusLog::trace(__METHOD__, function () use ($kingdomKey): array {
+            return $this->post('/link/token/create', [
+                'client_name' => $this->clientName,
+                'language' => 'en',
+                'country_codes' => ['US'],
+                'user' => ['client_user_id' => $kingdomKey],
+                'products' => ['transactions'],
+            ]);
+        });
     }
 
     public function exchange(string $publicToken): array
     {
-        return $this->post('/item/public_token/exchange', ['public_token' => $publicToken]);
+        return DenariusLog::trace(__METHOD__, function () use ($publicToken): array {
+            return $this->post('/item/public_token/exchange', ['public_token' => $publicToken]);
+        });
     }
 
     public function accounts(string $accessToken): array
     {
-        return $this->rows($this->post('/accounts/get', ['access_token' => $accessToken])['accounts'] ?? null);
+        return DenariusLog::trace(__METHOD__, function () use ($accessToken): array {
+            return $this->rows($this->post('/accounts/get', ['access_token' => $accessToken])['accounts'] ?? null);
+        });
     }
 
     public function transactions(string $accessToken): array
     {
-        $rows = [];
-        $cursor = '';
-        do {
-            $page = $this->post('/transactions/sync', [
-                'access_token' => $accessToken,
-                'cursor' => $cursor,
-                'count' => 100,
-            ]);
-            foreach (['added', 'modified'] as $bucket) {
-                foreach ($this->rows($page[$bucket] ?? null) as $row) {
-                    $rows[] = $row;
+        return DenariusLog::trace(__METHOD__, function () use ($accessToken): array {
+            $rows = [];
+            $cursor = '';
+            do {
+                $page = $this->post('/transactions/sync', [
+                    'access_token' => $accessToken,
+                    'cursor' => $cursor,
+                    'count' => 100,
+                ]);
+                foreach (['added', 'modified'] as $bucket) {
+                    foreach ($this->rows($page[$bucket] ?? null) as $row) {
+                        $rows[] = $row;
+                    }
                 }
-            }
-            $cursor = (string) ($page['next_cursor'] ?? '');
-        } while (($page['has_more'] ?? false) === true && $cursor !== '');
+                $cursor = (string) ($page['next_cursor'] ?? '');
+            } while (($page['has_more'] ?? false) === true && $cursor !== '');
 
-        return $rows;
+            return $rows;
+        });
     }
 
     public function verificationKey(string $keyId): array
     {
-        $page = $this->post('/webhook_verification_key/get', ['key_id' => $keyId]);
-        $key = $page['key'] ?? null;
+        return DenariusLog::trace(__METHOD__, function () use ($keyId): array {
+            $page = $this->post('/webhook_verification_key/get', ['key_id' => $keyId]);
+            $key = $page['key'] ?? null;
 
-        return is_array($key) ? $key : [];
+            return is_array($key) ? $key : [];
+        });
     }
 
     /**
@@ -84,11 +98,13 @@ final class CurlPlaidApi implements PlaidApi
      */
     private function post(string $path, array $body): array
     {
-        $body['client_id'] = $this->clientId;
-        $body['secret'] = $this->secret;
-        $decoded = json_decode($this->send($path, $body), true);
+        return DenariusLog::trace(__METHOD__, function () use ($path, $body): array {
+            $body['client_id'] = $this->clientId;
+            $body['secret'] = $this->secret;
+            $decoded = json_decode($this->send($path, $body), true);
 
-        return is_array($decoded) ? $decoded : [];
+            return is_array($decoded) ? $decoded : [];
+        });
     }
 
     /**
@@ -96,17 +112,19 @@ final class CurlPlaidApi implements PlaidApi
      */
     private function rows(mixed $value): array
     {
-        if (!is_array($value)) {
-            return [];
-        }
-        $rows = [];
-        foreach ($value as $row) {
-            if (is_array($row)) {
-                $rows[] = $row;
+        return DenariusLog::trace(__METHOD__, function () use ($value): array {
+            if (!is_array($value)) {
+                return [];
             }
-        }
+            $rows = [];
+            foreach ($value as $row) {
+                if (is_array($row)) {
+                    $rows[] = $row;
+                }
+            }
 
-        return $rows;
+            return $rows;
+        });
     }
 
     /**
@@ -114,12 +132,14 @@ final class CurlPlaidApi implements PlaidApi
      */
     private function send(string $path, array $body): string
     {
-        $url = rtrim($this->baseUrl, '/') . $path;
-        if ($this->fetcher !== null) {
-            return ($this->fetcher)($url, $body);
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($path, $body): string {
+            $url = rtrim($this->baseUrl, '/') . $path;
+            if ($this->fetcher !== null) {
+                return ($this->fetcher)($url, $body);
+            }
 
-        return $this->fetch($url, $body);
+            return $this->fetch($url, $body);
+        });
     }
 
     /**
@@ -127,25 +147,27 @@ final class CurlPlaidApi implements PlaidApi
      */
     private function fetch(string $url, array $body): string
     {
-        $handle = curl_init($url);
-        if ($handle === false) {
-            throw new \RuntimeException('Unable to start the Plaid request.');
-        }
-        curl_setopt_array($handle, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 5,
-            CURLOPT_CONNECTTIMEOUT => 2,
-            CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS => json_encode($body, JSON_THROW_ON_ERROR),
-        ]);
-        $response = curl_exec($handle);
-        $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
-        curl_close($handle);
-        if (!is_string($response) || $status >= 400 || $status === 0) {
-            throw new \RuntimeException('Plaid request failed.');
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($url, $body): string {
+            $handle = curl_init($url);
+            if ($handle === false) {
+                throw new \RuntimeException('Unable to start the Plaid request.');
+            }
+            curl_setopt_array($handle, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 5,
+                CURLOPT_CONNECTTIMEOUT => 2,
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+                CURLOPT_POSTFIELDS => json_encode($body, JSON_THROW_ON_ERROR),
+            ]);
+            $response = curl_exec($handle);
+            $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
+            curl_close($handle);
+            if (!is_string($response) || $status >= 400 || $status === 0) {
+                throw new \RuntimeException('Plaid request failed.');
+            }
 
-        return $response;
+            return $response;
+        });
     }
 }
