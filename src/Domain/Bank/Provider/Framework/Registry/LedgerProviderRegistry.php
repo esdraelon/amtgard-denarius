@@ -6,6 +6,7 @@ namespace Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry;
 
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\LedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Impl\MissingLedgerProvider;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class LedgerProviderRegistry
 {
@@ -19,6 +20,7 @@ final class LedgerProviderRegistry
         private readonly array $providers,
         private readonly LedgerProvider $missing = new MissingLedgerProvider(),
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
         $indexed = [];
         foreach ($providers as $provider) {
             $indexed[$provider->id()] = $provider;
@@ -28,12 +30,16 @@ final class LedgerProviderRegistry
 
     public function find(string $id): LedgerProvider
     {
-        return $this->byId[$id] ?? $this->missing;
+        return DenariusLog::trace(__METHOD__, function () use ($id): LedgerProvider {
+            return $this->byId[$id] ?? $this->missing;
+        });
     }
 
     public function default(): LedgerProvider
     {
-        return $this->providers[0] ?? $this->missing;
+        return DenariusLog::trace(__METHOD__, function (): LedgerProvider {
+            return $this->providers[0] ?? $this->missing;
+        });
     }
 
     /**
@@ -41,15 +47,17 @@ final class LedgerProviderRegistry
      */
     public function resolve(string $institution, array $skipped): LedgerProvider
     {
-        foreach ($this->providers as $provider) {
-            if ($this->skipped($provider, $skipped) || $provider->supports($institution)->rejected()) {
-                continue;
+        return DenariusLog::trace(__METHOD__, function () use ($institution, $skipped): LedgerProvider {
+            foreach ($this->providers as $provider) {
+                if ($this->skipped($provider, $skipped) || $provider->supports($institution)->rejected()) {
+                    continue;
+                }
+
+                return $provider;
             }
 
-            return $provider;
-        }
-
-        return $this->missing;
+            return $this->missing;
+        });
     }
 
     /**
@@ -57,6 +65,8 @@ final class LedgerProviderRegistry
      */
     private function skipped(LedgerProvider $provider, array $skipped): bool
     {
-        return in_array($provider->id(), $skipped, true);
+        return DenariusLog::trace(__METHOD__, function () use ($provider, $skipped): bool {
+            return in_array($provider->id(), $skipped, true);
+        });
     }
 }

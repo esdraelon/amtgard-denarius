@@ -43,7 +43,7 @@ Tests install a recording logger from `tests/bootstrap.php`. It runs the closure
 - [x] M-03 `logging-auth` — Every method in `src/Utilities/Auth`, `src/Domain/Access`, and `src/Service/Access`.
 - [x] M-04 `logging-persistence` — Every method in `src/Persistence` and `src/Persistence/Orm.php`.
 - [x] M-05 `logging-services` — Every method in `src/Service` except `Service/Access`, and in `src/Worker`.
-- [ ] M-06 `logging-bank` — Every method in `src/Domain/Bank`.
+- [x] M-06 `logging-bank` — Every method in `src/Domain/Bank`.
 - [ ] M-07 `logging-rest` — Every method in `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security`.
 
 Skip interfaces with no body. After M-07, every remaining method under `src/` either traces or is a constructor that assigns `enter`.

@@ -4,31 +4,36 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
 final class PlaidWebhookVerifier
 {
     public function __construct(
         private readonly PlaidApi $api,
         private readonly int $toleranceSeconds = 300,
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 
     public function verify(string $body, ?string $header, int $now): bool
     {
-        $parts = $this->parts($header);
-        if ($parts === null) {
-            return false;
-        }
-        $claims = $this->claims($parts, $now);
-        if ($claims === null) {
-            return false;
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($body, $header, $now): bool {
+            $parts = $this->parts($header);
+            if ($parts === null) {
+                return false;
+            }
+            $claims = $this->claims($parts, $now);
+            if ($claims === null) {
+                return false;
+            }
 
-        $expected = $claims['request_body_sha256'] ?? '';
-        if (!is_string($expected) || strlen($expected) !== 64) {
-            return false;
-        }
+            $expected = $claims['request_body_sha256'] ?? '';
+            if (!is_string($expected) || strlen($expected) !== 64) {
+                return false;
+            }
 
-        return hash_equals($expected, hash('sha256', $body));
+            return hash_equals($expected, hash('sha256', $body));
+        });
     }
 
     /**
@@ -36,15 +41,17 @@ final class PlaidWebhookVerifier
      */
     private function parts(?string $header): ?array
     {
-        if ($header === null || $header === '') {
-            return null;
-        }
-        $pieces = explode('.', $header);
-        if (count($pieces) !== 3 || in_array('', $pieces, true)) {
-            return null;
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($header): ?array {
+            if ($header === null || $header === '') {
+                return null;
+            }
+            $pieces = explode('.', $header);
+            if (count($pieces) !== 3 || in_array('', $pieces, true)) {
+                return null;
+            }
 
-        return [$pieces[0], $pieces[1], $pieces[2]];
+            return [$pieces[0], $pieces[1], $pieces[2]];
+        });
     }
 
     /**
@@ -53,21 +60,23 @@ final class PlaidWebhookVerifier
      */
     private function claims(array $parts, int $now): ?array
     {
-        $header = $this->json($parts[0]);
-        if (($header['alg'] ?? '') !== 'ES256' || !is_string($header['kid'] ?? null) || $header['kid'] === '') {
-            return null;
-        }
-        $key = $this->api->verificationKey($header['kid']);
-        if (!$this->current($key, $now) || !$this->signed($parts, $key)) {
-            return null;
-        }
-        $claims = $this->json($parts[1]);
-        $issued = $claims['iat'] ?? null;
-        if (!is_int($issued) || abs($now - $issued) > $this->toleranceSeconds) {
-            return null;
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($parts, $now): ?array {
+            $header = $this->json($parts[0]);
+            if (($header['alg'] ?? '') !== 'ES256' || !is_string($header['kid'] ?? null) || $header['kid'] === '') {
+                return null;
+            }
+            $key = $this->api->verificationKey($header['kid']);
+            if (!$this->current($key, $now) || !$this->signed($parts, $key)) {
+                return null;
+            }
+            $claims = $this->json($parts[1]);
+            $issued = $claims['iat'] ?? null;
+            if (!is_int($issued) || abs($now - $issued) > $this->toleranceSeconds) {
+                return null;
+            }
 
-        return $claims;
+            return $claims;
+        });
     }
 
     /**
@@ -75,12 +84,14 @@ final class PlaidWebhookVerifier
      */
     private function current(array $key, int $now): bool
     {
-        if (($key['kty'] ?? '') !== 'EC' || ($key['crv'] ?? '') !== 'P-256' || ($key['alg'] ?? '') !== 'ES256') {
-            return false;
-        }
-        $expired = $key['expired_at'] ?? null;
+        return DenariusLog::trace(__METHOD__, function () use ($key, $now): bool {
+            if (($key['kty'] ?? '') !== 'EC' || ($key['crv'] ?? '') !== 'P-256' || ($key['alg'] ?? '') !== 'ES256') {
+                return false;
+            }
+            $expired = $key['expired_at'] ?? null;
 
-        return !is_int($expired) || $expired > $now;
+            return !is_int($expired) || $expired > $now;
+        });
     }
 
     /**
@@ -89,14 +100,16 @@ final class PlaidWebhookVerifier
      */
     private function signed(array $parts, array $key): bool
     {
-        $pem = $this->pem($key);
-        $der = $this->der($this->segment($parts[2]));
-        if ($pem === '' || $der === '') {
-            return false;
-        }
-        $verified = openssl_verify($parts[0] . '.' . $parts[1], $der, $pem, OPENSSL_ALGO_SHA256);
+        return DenariusLog::trace(__METHOD__, function () use ($parts, $key): bool {
+            $pem = $this->pem($key);
+            $der = $this->der($this->segment($parts[2]));
+            if ($pem === '' || $der === '') {
+                return false;
+            }
+            $verified = openssl_verify($parts[0] . '.' . $parts[1], $der, $pem, OPENSSL_ALGO_SHA256);
 
-        return $verified === 1;
+            return $verified === 1;
+        });
     }
 
     /**
@@ -104,34 +117,40 @@ final class PlaidWebhookVerifier
      */
     private function pem(array $key): string
     {
-        $x = $this->segment((string) ($key['x'] ?? ''));
-        $y = $this->segment((string) ($key['y'] ?? ''));
-        if (strlen($x) !== 32 || strlen($y) !== 32) {
-            return '';
-        }
-        $spki = hex2bin('3059301306072a8648ce3d020106082a8648ce3d030107034200') . "\x04" . $x . $y;
+        return DenariusLog::trace(__METHOD__, function () use ($key): string {
+            $x = $this->segment((string) ($key['x'] ?? ''));
+            $y = $this->segment((string) ($key['y'] ?? ''));
+            if (strlen($x) !== 32 || strlen($y) !== 32) {
+                return '';
+            }
+            $spki = hex2bin('3059301306072a8648ce3d020106082a8648ce3d030107034200') . "\x04" . $x . $y;
 
-        return "-----BEGIN PUBLIC KEY-----\n" . chunk_split(base64_encode($spki), 64, "\n") . "-----END PUBLIC KEY-----\n";
+            return "-----BEGIN PUBLIC KEY-----\n" . chunk_split(base64_encode($spki), 64, "\n") . "-----END PUBLIC KEY-----\n";
+        });
     }
 
     private function der(string $raw): string
     {
-        if (strlen($raw) !== 64) {
-            return '';
-        }
-        $body = $this->integer(substr($raw, 0, 32)) . $this->integer(substr($raw, 32));
+        return DenariusLog::trace(__METHOD__, function () use ($raw): string {
+            if (strlen($raw) !== 64) {
+                return '';
+            }
+            $body = $this->integer(substr($raw, 0, 32)) . $this->integer(substr($raw, 32));
 
-        return "\x30" . chr(strlen($body)) . $body;
+            return "\x30" . chr(strlen($body)) . $body;
+        });
     }
 
     private function integer(string $part): string
     {
-        $part = ltrim($part, "\x00");
-        if ($part === '' || (ord($part[0]) & 0x80) !== 0) {
-            $part = "\x00" . $part;
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($part): string {
+            $part = ltrim($part, "\x00");
+            if ($part === '' || (ord($part[0]) & 0x80) !== 0) {
+                $part = "\x00" . $part;
+            }
 
-        return "\x02" . chr(strlen($part)) . $part;
+            return "\x02" . chr(strlen($part)) . $part;
+        });
     }
 
     /**
@@ -139,19 +158,23 @@ final class PlaidWebhookVerifier
      */
     private function json(string $segment): array
     {
-        $decoded = json_decode($this->segment($segment), true);
+        return DenariusLog::trace(__METHOD__, function () use ($segment): array {
+            $decoded = json_decode($this->segment($segment), true);
 
-        return is_array($decoded) ? $decoded : [];
+            return is_array($decoded) ? $decoded : [];
+        });
     }
 
     private function segment(string $value): string
     {
-        $remainder = strlen($value) % 4;
-        if ($remainder > 0) {
-            $value .= str_repeat('=', 4 - $remainder);
-        }
-        $decoded = base64_decode(strtr($value, '-_', '+/'), true);
+        return DenariusLog::trace(__METHOD__, function () use ($value): string {
+            $remainder = strlen($value) % 4;
+            if ($remainder > 0) {
+                $value .= str_repeat('=', 4 - $remainder);
+            }
+            $decoded = base64_decode(strtr($value, '-_', '+/'), true);
 
-        return is_string($decoded) ? $decoded : '';
+            return is_string($decoded) ? $decoded : '';
+        });
     }
 }

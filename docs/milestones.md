@@ -201,3 +201,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Every method in `src/Service` except `Service/Access`, and in `src/Worker`, calls `DenariusLog::trace` or constructor `enter`, so a local sync shows which job method ran.
 - Line coverage: 97.96% (2401/2451).
 - Infection covered MSI: 94%.
+
+## Logging Bank
+
+- Branch: `logging-bank`
+- Every method in `src/Domain/Bank` (framework, readiness, notices, enrollment, and Stripe/Plaid/Teller/SimpleFIN providers) calls `DenariusLog::trace` or constructor `enter`, so a local connect or webhook shows which adapter ran.
+- Line coverage: 98.11% (2698/2750).
+- Infection covered MSI: 94%.

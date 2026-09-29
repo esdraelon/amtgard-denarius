@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Domain\Bank\Notice;
 
 use Amtgard\Denarius\Domain\Bank\Notice\Impl\IgnoredLedgerNotice;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class LedgerNoticeRegistry
 {
@@ -16,6 +17,7 @@ final class LedgerNoticeRegistry
      */
     public function __construct(array $notices, private readonly IgnoredLedgerNotice $ignored = new IgnoredLedgerNotice())
     {
+        $entered = DenariusLog::enter(__METHOD__);
         $indexed = [];
         foreach ($notices as $notice) {
             $indexed[$notice->action()] = $notice;
@@ -25,6 +27,8 @@ final class LedgerNoticeRegistry
 
     public function find(string $action): LedgerNotice
     {
-        return $this->notices[$action] ?? $this->ignored;
+        return DenariusLog::trace(__METHOD__, function () use ($action): LedgerNotice {
+            return $this->notices[$action] ?? $this->ignored;
+        });
     }
 }
