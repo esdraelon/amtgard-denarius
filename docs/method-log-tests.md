@@ -40,7 +40,7 @@ Gates: `composer test` line coverage of `src/` at least 95%, Infection MSI and c
 - [x] M-02 `log-test-http` — Every `DenariusLog` site under `src/Controller` and `src/Utilities/Http` has at least one test assertion (new or extended tests).
 - [x] M-03 `log-test-auth` — Same for `Utilities/Auth`, `Domain/Access`, `Service/Access`.
 - [x] M-04 `log-test-persistence` — Same for `Persistence`.
-- [ ] M-05 `log-test-services` — Same for `Service` (except `Service/Access`) and `Worker`.
+- [x] M-05 `log-test-services` — Same for `Service` (except `Service/Access`) and `Worker`.
 - [ ] M-06 `log-test-bank` — Same for `Domain/Bank`.
 - [ ] M-07 `log-test-rest` — Same for Statement, Kingdom, Setup, Queue, Session, Security.
 
