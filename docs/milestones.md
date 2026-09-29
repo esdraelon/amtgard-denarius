@@ -1,6 +1,6 @@
 # Denarius milestones
 
-Work is stacked with git-branchless. Each milestone is one branch. A milestone is committed after `src/` line coverage is at least 95% and Infection MSI and covered MSI are at least 80%.
+Work is stacked with git-branchless. Each milestone is one branch. A milestone is committed after `composer test` (`src/` line coverage at least 95%) and `composer infection:ci` (MSI and covered MSI at least 80%). The `infection:ci` script runs PHPUnit once for PCOV coverage XML, copies JUnit beside it, then runs Infection with `--skip-initial-tests` so the duplicate PHPUnit pass is not killed (exit 143) under PCOV.
 
 ## Baseline
 
@@ -271,6 +271,13 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `TracedRestMethodsTest` and shared `RestDomainArrange` reuse `ApplicationTest`, `ProviderSetupTest`, and `LoggingCoreTest` paths with memory fakes; assert every `TracedMethodCatalog` entry under `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security` via `MethodLogAssert` (107 methods), plus the four `Utilities/Log` correlation helpers (494/494 catalog entries asserted across M-02–M-07).
 - Line coverage: 98.57% (2895/2937).
 - Infection covered MSI: 99% (`composer infection` exit 143; skip-initial-tests with `build/coverage-xml`, `--threads=4`).
+
+## Infection reliable
+
+- Branch: `infection-reliable`
+- `composer infection:ci` generates `build/coverage-xml` and JUnit once, then runs Infection with `--skip-initial-tests` and `--threads=4` so PCOV does not kill the second PHPUnit pass (exit 143). Documented in this file’s gate paragraph and `docs/method-log-tests.md`.
+- Line coverage: 98.57% (2895/2937).
+- Infection covered MSI: 99% (`composer infection:ci`).
 
 ## Log test catalog gate
 
