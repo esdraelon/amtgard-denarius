@@ -166,3 +166,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Shared ledger-provider types sit under `Domain/Bank/Provider/Framework`. Plaid, SimpleFIN, Stripe, and Teller sit under `Domain/Bank/Provider/Providers`.
 - Line coverage: 97.68% (1933/1979).
 - Infection covered MSI: 95%.
+
+## Logging core
+
+- Branch: `logging-core`
+- `DenariusLog` facade, stderr JSON method log, request-id ambient context and middleware, redaction, and a PHPUnit recorder that fails unbalanced traces.
+- Line coverage: 97.76% (2008/2054).
+- Infection covered MSI: 94%.
