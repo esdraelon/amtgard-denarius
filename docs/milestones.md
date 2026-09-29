@@ -243,3 +243,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `TracedAuthMethodsTest` asserts every `TracedMethodCatalog` entry under `src/Utilities/Auth`, `src/Domain/Access`, and `src/Service/Access` via `MethodLogAssert` (42 methods). `TracedMethodCatalog` maps trace sites to the enclosing class when a file defines more than one type (e.g. `ClaimOrn.php`).
 - Line coverage: 98.26% (2886/2937).
 - Infection covered MSI: not re-run locally (Infection initial PHPUnit run exited 143 with PCOV); prior stack tip was 94%.
+
+## Log test persistence
+
+- Branch: `log-test-persistence`
+- `TracedPersistenceMethodsTest` and shared `PersistenceStoreArrange` exercise record builders, memory fakes, and MariaDB repository round-trips; assert every `TracedMethodCatalog` entry under `src/Persistence` via `MethodLogAssert` (52 methods). `StoreTest` reuses the same arrange helper.
+- Line coverage: 98.26% (2886/2937).
+- Infection covered MSI: 95%.
