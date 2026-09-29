@@ -194,3 +194,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Every method in `src/Persistence` (repositories, records, and `Orm`) calls `DenariusLog::trace` or constructor `enter`, so a local request shows which persistence method ran.
 - Line coverage: 97.99% (2245/2291).
 - Infection covered MSI: 94%.
+
+## Logging Services
+
+- Branch: `logging-services`
+- Every method in `src/Service` except `Service/Access`, and in `src/Worker`, calls `DenariusLog::trace` or constructor `enter`, so a local sync shows which job method ran.
+- Line coverage: 97.96% (2401/2451).
+- Infection covered MSI: 94%.

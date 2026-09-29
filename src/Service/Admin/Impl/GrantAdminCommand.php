@@ -6,17 +6,24 @@ namespace Amtgard\Denarius\Service\Admin\Impl;
 
 use Amtgard\Denarius\Service\Admin\AdminCommand;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class GrantAdminCommand implements AdminCommand
 {
     public function name(): string
     {
-        return 'grant-admin';
+        return DenariusLog::trace(__METHOD__, function (): string {
+            return 'grant-admin';
+        });
     }
 
     public function execute(RoleAdmin $roles, array $body): void
     {
-        $roles->grantAdmin($this->target($body));
+        DenariusLog::trace(__METHOD__, function () use ($roles, $body): mixed {
+            $roles->grantAdmin($this->target($body));
+
+            return null;
+        });
     }
 
     /**
@@ -24,6 +31,8 @@ final class GrantAdminCommand implements AdminCommand
      */
     private function target(array $body): string
     {
-        return trim((string) ($body['idp_user_id'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($body): string {
+            return trim((string) ($body['idp_user_id'] ?? ''));
+        });
     }
 }
