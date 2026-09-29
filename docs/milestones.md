@@ -215,3 +215,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Every method in `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security` calls `DenariusLog::trace` or constructor `enter`, so the last unlogged methods show up in a local request.
 - Line coverage: 98.23% (2885/2937).
 - Infection covered MSI: 94%.
+
+## Container routes wiring
+
+- Branch: `container-routes-wiring`
+- `ContainerResolutionOrderTest` boots `config/bootstrap.php`, resolves core services and controllers, and checks named routes against `config/routes.php` (IDP-style integration wiring test). PHPUnit `IDP_IAM_SERVICE_FORMAT` is a JSON array so `IdpClient` resolves under test.
+- Line coverage: 98.23% (2885/2937).
+- Infection covered MSI: not re-run on this branch.
