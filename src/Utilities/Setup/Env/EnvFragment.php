@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Utilities\Setup\Env;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
 final class EnvFragment
 {
     /**
@@ -11,15 +13,21 @@ final class EnvFragment
      */
     public function write(string $path, array $values): void
     {
-        if (!$this->directory($path) || file_put_contents($path, $this->body($values)) === false) {
-            throw new \RuntimeException('Unable to write the provider env file.');
-        }
-        chmod($path, 0600);
+        DenariusLog::trace(__METHOD__, function () use ($path, $values): mixed {
+            if (!$this->directory($path) || file_put_contents($path, $this->body($values)) === false) {
+                throw new \RuntimeException('Unable to write the provider env file.');
+            }
+            chmod($path, 0600);
+
+            return null;
+        });
     }
 
     private function directory(string $path): bool
     {
-        return is_dir(dirname($path));
+        return DenariusLog::trace(__METHOD__, function () use ($path): bool {
+            return is_dir(dirname($path));
+        });
     }
 
     /**
@@ -27,16 +35,20 @@ final class EnvFragment
      */
     private function body(array $values): string
     {
-        $lines = [];
-        foreach ($values as $key => $value) {
-            $lines[] = $key . '=' . $this->quoted($value);
-        }
+        return DenariusLog::trace(__METHOD__, function () use ($values): string {
+            $lines = [];
+            foreach ($values as $key => $value) {
+                $lines[] = $key . '=' . $this->quoted($value);
+            }
 
-        return implode("\n", $lines) . "\n";
+            return implode("\n", $lines) . "\n";
+        });
     }
 
     private function quoted(string $value): string
     {
-        return '"' . str_replace(["\\", '"', "\r", "\n"], ['\\\\', '\\"', '', ''], $value) . '"';
+        return DenariusLog::trace(__METHOD__, function () use ($value): string {
+            return '"' . str_replace(["\\", '"', "\r", "\n"], ['\\\\', '\\"', '', ''], $value) . '"';
+        });
     }
 }

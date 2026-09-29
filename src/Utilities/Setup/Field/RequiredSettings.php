@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Utilities\Setup\Field;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
+
 final class RequiredSettings
 {
     /**
@@ -12,17 +14,21 @@ final class RequiredSettings
      */
     public function ready(array $values, array $keys): bool
     {
-        foreach ($keys as $key) {
-            if ($this->blank($values[$key] ?? null)) {
-                return false;
+        return DenariusLog::trace(__METHOD__, function () use ($values, $keys): bool {
+            foreach ($keys as $key) {
+                if ($this->blank($values[$key] ?? null)) {
+                    return false;
+                }
             }
-        }
 
-        return true;
+            return true;
+        });
     }
 
     private function blank(mixed $value): bool
     {
-        return trim((string) $value) === '';
+        return DenariusLog::trace(__METHOD__, function () use ($value): bool {
+            return trim((string) $value) === '';
+        });
     }
 }

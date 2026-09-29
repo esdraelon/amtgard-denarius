@@ -8,6 +8,7 @@ use Amtgard\Denarius\Domain\Statement\Presentation\Impl\AllFieldsPresenter;
 use Amtgard\Denarius\Domain\Statement\Presentation\Impl\RedactedPresenter;
 use Amtgard\Denarius\Domain\Statement\Presentation\Impl\SummarizedPresenter;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class StatementPresenterRegistry
 {
@@ -19,6 +20,7 @@ final class StatementPresenterRegistry
      */
     public function __construct(array $presenters)
     {
+        $entered = DenariusLog::enter(__METHOD__);
         $indexed = [];
         foreach ($presenters as $presenter) {
             $indexed[$presenter->mode()->value] = $presenter;
@@ -28,15 +30,19 @@ final class StatementPresenterRegistry
 
     public static function standard(): self
     {
-        return new self([
-            new AllFieldsPresenter(),
-            new RedactedPresenter(),
-            new SummarizedPresenter(),
-        ]);
+        return DenariusLog::trace(__METHOD__, static function (): self {
+            return new self([
+                new AllFieldsPresenter(),
+                new RedactedPresenter(),
+                new SummarizedPresenter(),
+            ]);
+        });
     }
 
     public function for(DisplayMode $mode): StatementPresenter
     {
-        return $this->presenters[$mode->value];
+        return DenariusLog::trace(__METHOD__, function () use ($mode): StatementPresenter {
+            return $this->presenters[$mode->value];
+        });
     }
 }

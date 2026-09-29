@@ -208,3 +208,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Every method in `src/Domain/Bank` (framework, readiness, notices, enrollment, and Stripe/Plaid/Teller/SimpleFIN providers) calls `DenariusLog::trace` or constructor `enter`, so a local connect or webhook shows which adapter ran.
 - Line coverage: 98.11% (2698/2750).
 - Infection covered MSI: 94%.
+
+## Logging Rest
+
+- Branch: `logging-rest`
+- Every method in `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security` calls `DenariusLog::trace` or constructor `enter`, so the last unlogged methods show up in a local request.
+- Line coverage: 98.23% (2885/2937).
+- Infection covered MSI: 94%.
