@@ -99,6 +99,46 @@ PHP);
         }
     }
 
+    /** Scripted and local HTTP paths for method-log tests (skips long dead-port curl). */
+    public static function exerciseCurlForMethodLog(?string $localBase = null): void
+    {
+        $localBase ??= self::$base;
+        $api = new CurlStripeApi('https://api.stripe.com/', 'sk_test', function (string $method, string $url, array $fields): string {
+            if (str_contains($url, '/v1/customers')) {
+                return 'hello';
+            }
+            if (str_contains($url, '/sessions')) {
+                return '{"client_secret":"cs"}';
+            }
+            if (str_contains($url, '/subscribe')) {
+                return '{"id":"fca_1"}';
+            }
+            if (str_contains($url, 'starting_after=fctxn_1')) {
+                return '{"data":[{"id":"fctxn_2"}],"has_more":true}';
+            }
+            if (str_contains($url, 'starting_after=fctxn_2')) {
+                return '{"data":[],"has_more":false}';
+            }
+            if (str_contains($url, '/transactions')) {
+                return '{"data":[{"id":"fctxn_1"},"skip"],"has_more":true}';
+            }
+            if (str_contains($url, 'starting_after=fca_1')) {
+                return '{"data":[{"display_name":"no-id"}],"has_more":true}';
+            }
+
+            return '{"data":[{"id":"fca_1"},"skip"],"has_more":true}';
+        });
+        $api->createCustomer('golden');
+        $api->createSession('cus_1');
+        $api->accounts('cus_1');
+        $api->subscribe('fca 1');
+        $api->transactions('fca_1', 1, 2);
+
+        if ($localBase !== null) {
+            (new CurlStripeApi($localBase, 'sk_test'))->createCustomer('golden');
+        }
+    }
+
     public function testStripeConnectsAccountsAndNotices(): void
     {
         $api = new ScriptedStripe();

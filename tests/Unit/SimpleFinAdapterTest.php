@@ -80,6 +80,32 @@ PHP);
         }
     }
 
+    /** Scripted and local HTTP paths for method-log tests (skips long dead-port curl). */
+    public static function exerciseCurlForMethodLog(?string $localBase = null): void
+    {
+        $localBase ??= self::$base;
+        $api = new CurlSimpleFinApi(new SimpleFinHost(['simplefin.org']), function (string $method, string $url): string {
+            if ($method === 'POST') {
+                return " \n";
+            }
+            if (str_contains($url, 'start-date=')) {
+                return '{"accounts":"nope"}';
+            }
+
+            return 'hello';
+        });
+        $api->claim('https://bridge.simplefin.org/simplefin/claim/abc');
+        $api->accounts('https://user:secret@bridge.simplefin.org/simplefin', 1, 2);
+        try {
+            $api->claim('https://evil.example/claim');
+        } catch (\InvalidArgumentException) {
+        }
+
+        if ($localBase !== null) {
+            (new CurlSimpleFinApi(new SimpleFinHost(['127.0.0.1'], true)))->claim($localBase . '/claim');
+        }
+    }
+
     public function testSimpleFinClaimsAccountsInsideTheWindow(): void
     {
         $api = new ScriptedSimpleFin();
