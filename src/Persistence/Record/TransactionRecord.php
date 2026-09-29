@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Persistence\Record;
 
+use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Traits\Builder\Builder;
 use Amtgard\Traits\Builder\Data;
 
@@ -24,5 +25,6 @@ final class TransactionRecord
         private string $counterparty = '',
         private string $status = '',
     ) {
+        $entered = DenariusLog::enter(__METHOD__);
     }
 }
