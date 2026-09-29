@@ -180,3 +180,10 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Every method in `src/Controller` and `src/Utilities/Http` calls `DenariusLog::trace` or constructor `enter`, so a local request shows which HTTP handler ran.
 - Line coverage: 97.83% (2070/2116).
 - Infection covered MSI: 94%.
+
+## Logging Auth
+
+- Branch: `logging-auth`
+- Every method in `src/Utilities/Auth`, `src/Domain/Access`, and `src/Service/Access` calls `DenariusLog::trace` or constructor `enter`, so a local request shows which permission decision ran.
+- Line coverage: 97.90% (2145/2191).
+- Infection covered MSI: 94%.
