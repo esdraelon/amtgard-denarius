@@ -42,12 +42,19 @@ use Amtgard\Denarius\Domain\Access\KingdomAccess;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
+use Amtgard\Denarius\Utilities\Http\BuildInfo;
+use Amtgard\Denarius\Utilities\Http\IdpUserDirectory;
+use Amtgard\Denarius\Utilities\Http\LoggingIdpHttpClient;
+use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
 use Amtgard\Denarius\Utilities\Http\PostCsrfMiddleware;
 use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Utilities\Log\CorrelationMiddleware;
+use Amtgard\Denarius\Utilities\Log\JsonStderrHandler;
 use Amtgard\Denarius\Utilities\Log\MethodLog;
 use Amtgard\Denarius\Utilities\Log\StderrMethodLog;
+use Monolog\Handler\WhatFailureGroupHandler;
+use Monolog\Logger;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\Impl\MessageKingdomRefreshQueue;
 use Amtgard\Denarius\Utilities\Queue\Message\MessageQueue;
@@ -56,7 +63,11 @@ use Amtgard\Denarius\Utilities\Queue\KeyValue\Impl\RedisKeyValueStore;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\Impl\CurlSimpleFinApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinHost;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinLedgerProvider;
+use Amtgard\Denarius\Controller\SimpleFinReturnController;
+use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
+use Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
@@ -64,9 +75,12 @@ use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;
+use Amtgard\Denarius\Service\Access\AccountNavBuilder;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
+use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
+use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
 use Amtgard\Denarius\Service\Admin\Impl\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeAdminCommand;
@@ -88,6 +102,7 @@ use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\Impl\CurlTellerApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerWebhookVerifier;
 use Amtgard\Denarius\Worker\LedgerWorker;
 use Amtgard\IdpClient\Client\IdpClient;
+use Amtgard\IdpClient\Config\IdpClientEnvironmentFactory;
 use Amtgard\IdpClient\Config\IdpClientFactory;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Amtgard\IdpClient\Slim\IdpAuthController;
@@ -109,7 +124,18 @@ return [
     TransactionRepositoryInterface::class => fn () => Orm::repository(TransactionRepository::class),
     RoleGrantRepositoryInterface::class => fn () => Orm::repository(RoleGrantRepository::class),
     SessionAuthStore::class => fn () => new SessionAuthStore(),
-    IdpClient::class => fn () => IdpClientFactory::fromEnvVars(),
+    LoggingIdpHttpClient::class => function () {
+        $environment = IdpClientEnvironmentFactory::fromEnvVars();
+        $inner = new \GuzzleHttp\Client([
+            'headers' => [
+                'User-Agent' => $environment->httpUserAgent(),
+                'Accept' => 'application/json',
+            ],
+        ]);
+
+        return new LoggingIdpHttpClient($inner);
+    },
+    IdpClient::class => fn (ContainerInterface $c) => IdpClientFactory::fromEnvVars(null, null, $c->get(LoggingIdpHttpClient::class)),
     PolicyGateway::class => fn (IdpClient $idp) => new IdpPolicyGateway($idp->clientIam()),
     BootstrapAdmins::class => fn () => BootstrapAdmins::fromEnv($_ENV['DENARIUS_BOOTSTRAP_ADMIN_IDP_USER_IDS'] ?? null),
     DenariusAuthorizer::class => fn () => new DenariusAuthorizer(),
@@ -142,6 +168,10 @@ return [
         $c->get(RedisKeyValueStore::class),
         $c->get(DenariusAuthorizer::class),
         $c->get(BootstrapAdmins::class),
+    ),
+    AccountNavBuilder::class => fn (ContainerInterface $c) => new AccountNavBuilder(
+        $c->get(PermissionService::class),
+        $c->get(KingdomRepositoryInterface::class),
     ),
     TokenCipher::class => fn () => new TokenCipher($_ENV['APP_KEY'] ?? ''),
     TellerApi::class => fn () => new CurlTellerApi(
@@ -188,13 +218,33 @@ return [
         new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? ''])),
         new ProviderAdmission($c->get(PlaidLedgerProvider::class), new PresentCredentials([$_ENV['PLAID_CLIENT_ID'] ?? '', $_ENV['PLAID_SECRET'] ?? ''])),
         new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? ''])),
-        new ProviderAdmission($c->get(SimpleFinLedgerProvider::class), new AlwaysReady()),
+        new ProviderAdmission($c->get(SimpleFinLedgerProvider::class), new PresentCredentials([
+            $_ENV['SIMPLEFIN_APP_ID'] ?? '',
+            $_ENV['SIMPLEFIN_APP_TOKEN'] ?? '',
+        ])),
     ]))->registry(),
+    SimpleFinApplicationConfig::class => fn () => SimpleFinApplicationConfig::fromEnv(),
     SimpleFinApi::class => fn () => new CurlSimpleFinApi(new SimpleFinHost(['simplefin.org'])),
     SimpleFinLedgerProvider::class => fn (ContainerInterface $c) => new SimpleFinLedgerProvider(
         $c->get(SimpleFinApi::class),
-        new AlwaysReady(),
+        new PresentCredentials([
+            $_ENV['SIMPLEFIN_APP_ID'] ?? '',
+            $_ENV['SIMPLEFIN_APP_TOKEN'] ?? '',
+        ]),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
+        $c->get(SimpleFinApplicationConfig::class),
+    ),
+    SimpleFinConnectSession::class => fn () => new SimpleFinConnectSession(),
+    SimpleFinReturnEnrollment::class => fn (ContainerInterface $c) => new SimpleFinReturnEnrollment(
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(EnrollmentService::class),
+        $c->get(SimpleFinConnectSession::class),
+        $c->get(PermissionService::class),
+    ),
+    SimpleFinReturnController::class => fn (ContainerInterface $c) => new SimpleFinReturnController(
+        $c->get(SessionAuthStore::class),
+        $c->get(SimpleFinReturnEnrollment::class),
+        $c->get(TwigHtmlRenderer::class),
     ),
     EnrollmentService::class => fn (ContainerInterface $c) => new EnrollmentService(
         $c->get(KingdomRepositoryInterface::class),
@@ -244,14 +294,38 @@ return [
         $c->get(SessionAuthStore::class),
         $c->get(PrincipalSync::class),
     ),
-    MethodLog::class => fn () => StderrMethodLog::create(),
+    MethodLog::class => function () {
+        $debug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
+        $handlers = [new JsonStderrHandler()];
+        $root = dirname(__DIR__);
+        $logFile = $_ENV['DENARIUS_METHOD_LOG'] ?? ($debug ? $root . '/logs/method-trace.jsonl' : '');
+        if ($logFile !== '') {
+            $dir = dirname($logFile);
+            $canWrite = is_file($logFile)
+                ? is_writable($logFile)
+                : (is_dir($dir) && is_writable($dir));
+            if ($canWrite) {
+                $stream = @fopen($logFile, 'ab');
+                if ($stream !== false) {
+                    $handlers[] = new JsonStderrHandler($stream);
+                }
+            }
+        }
+
+        return new StderrMethodLog(
+            new Logger('denarius', [new WhatFailureGroupHandler($handlers)]),
+            $debug,
+        );
+    },
     StderrMethodLog::class => fn (ContainerInterface $c) => $c->get(MethodLog::class),
     CorrelationMiddleware::class => fn () => new CorrelationMiddleware(),
     TwigEnvironment::class => function () {
-        $twig = new TwigEnvironment(new FilesystemLoader(__DIR__ . '/../templates'), [
+        $root = dirname(__DIR__);
+        $twig = new TwigEnvironment(new FilesystemLoader($root . '/templates'), [
             'cache' => __DIR__ . '/cache/twig',
             'auto_reload' => true,
         ]);
+        $twig->addGlobal('appVersion', BuildInfo::version($root));
         $twig->addFunction(new Twig\TwigFunction('csrf_token', static fn (): string => Amtgard\Denarius\Utilities\Http\CsrfToken::issue()));
         return $twig;
     },
@@ -259,6 +333,7 @@ return [
     HomeController::class => fn (ContainerInterface $c) => new HomeController(
         $c->get(TwigHtmlRenderer::class),
         $c->get(SessionAuthStore::class),
+        $c->get(AccountNavBuilder::class),
         dirname(__DIR__),
     ),
     KingdomPageController::class => fn (ContainerInterface $c) => new KingdomPageController(
@@ -267,6 +342,31 @@ return [
         $c->get(KingdomAccess::class),
         $c->get(SessionAuthStore::class),
         $c->get(TwigHtmlRenderer::class),
+    ),
+    IdpUserDirectory::class => function (ContainerInterface $c) {
+        $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();
+
+        return new IdpUserDirectory(
+            IdpClientEnvironmentFactory::fromEnvVars(),
+            $c->get(LoggingIdpHttpClient::class),
+            $psr17,
+        );
+    },
+    AdminGrantTargetResolver::class => fn (ContainerInterface $c) => new AdminGrantTargetResolver(
+        $c->get(IdpUserDirectory::class),
+        $c->get(PrincipalRepositoryInterface::class),
+        $c->get(PrincipalSync::class),
+    ),
+    AdminGrantedRoleIndex::class => fn (ContainerInterface $c) => new AdminGrantedRoleIndex(
+        $c->get(RoleGrantRepositoryInterface::class),
+        $c->get(PrincipalRepositoryInterface::class),
+        $c->get(OrkKingdomDirectory::class),
+    ),
+    OrkKingdomDirectory::class => fn (ContainerInterface $c) => new OrkKingdomDirectory(
+        dirname(__DIR__),
+        $_ENV['ORK_KINGDOMS_CACHE'] ?? null,
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(PrincipalRepositoryInterface::class),
     ),
     AdminController::class => fn (ContainerInterface $c) => new AdminController(
         $c->get(SessionAuthStore::class),
@@ -282,6 +382,9 @@ return [
             new GrantManagerCommand(),
             new RevokeManagerCommand(),
         ]),
+        $c->get(OrkKingdomDirectory::class),
+        $c->get(AdminGrantTargetResolver::class),
+        $c->get(AdminGrantedRoleIndex::class),
     ),
     ManagerController::class => fn (ContainerInterface $c) => new ManagerController(
         $c->get(SessionAuthStore::class),
@@ -293,6 +396,7 @@ return [
         $c->get(KingdomRefreshQueue::class),
         $c->get(TwigHtmlRenderer::class),
         $c->get(BankConnect::class),
+        $c->get(SimpleFinConnectSession::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(

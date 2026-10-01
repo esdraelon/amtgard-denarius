@@ -9,4 +9,9 @@ use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
 interface RoleGrantRepositoryInterface
 {
     public function append(RoleGrantRecord $grant): void;
+
+    /**
+     * @return list<RoleGrantRecord>
+     */
+    public function listChronological(): array;
 }

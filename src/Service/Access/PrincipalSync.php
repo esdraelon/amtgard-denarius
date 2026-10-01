@@ -20,6 +20,9 @@ final class PrincipalSync
     {
         return DenariusLog::trace(__METHOD__, function () use ($idpUserId, $email, $orkKingdomId, $orkKingdomName): PrincipalRecord {
             $existing = $this->principals->findByIdpUserId($idpUserId);
+            if ($existing === null && trim($email) !== '') {
+                $existing = $this->principals->findByEmail($email);
+            }
 
             return $this->principals->save(PrincipalRecord::builder()
                 ->id($existing?->getId())

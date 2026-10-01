@@ -73,7 +73,7 @@ final class StderrMethodLog implements MethodLog
             'branch' => $branch,
             'method' => $method,
             'request_id' => RequestLogContext::id(),
-            'context' => RedactingContext::redact($context),
+            'context' => RedactingContext::redact($context, $branch),
         ];
 
         $this->logger->log($monolog, json_encode($payload, JSON_THROW_ON_ERROR));

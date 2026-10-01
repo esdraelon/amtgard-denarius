@@ -87,6 +87,16 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
         });
     }
 
+    public function all(): array
+    {
+        return DenariusLog::trace(__METHOD__, function (): array {
+            $this->clear();
+            $this->orderBy('name', OrderBy::ASC);
+
+            return $this->collected();
+        });
+    }
+
     private function entity(KingdomRecord $kingdom): KingdomEntity
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom): KingdomEntity {

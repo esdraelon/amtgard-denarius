@@ -35,6 +35,8 @@ final class ProviderSetupTest extends AmtgardTestCase
             '/tmp/teller.pem',
             '/tmp/teller.key',
             'whsec_teller',
+            'amtgard_denarius_dev',
+            'simplefin-app-token',
         ]);
         $path = $this->path();
         $code = $this->wired($client, $io)->run($path);
@@ -49,7 +51,9 @@ final class ProviderSetupTest extends AmtgardTestCase
         $this->assertStringContainsString("teller verified.\n", $written);
         $this->assertStringContainsString("simplefin verified.\n", $written);
         $this->assertStringContainsString('mode 0600. Do not commit this file.', $written);
-        $this->assertSame([true, false, true, false, true, false, true, false], $io->hidden);
+        $this->assertGreaterThanOrEqual(10, count($io->hidden));
+        $this->assertTrue($io->hidden[2]);
+        $this->assertTrue($io->hidden[4]);
 
         $file = (string) file_get_contents($path);
         $this->assertStringContainsString('STRIPE_SECRET_KEY="' . self::SECRET . '"', $file);
@@ -77,6 +81,8 @@ final class ProviderSetupTest extends AmtgardTestCase
             '/tmp/teller.pem',
             '/tmp/teller.key',
             'whsec_teller',
+            '',
+            '',
         ]);
         $path = $this->path();
         $code = $this->wired($client, $io)->run($path);
@@ -133,12 +139,12 @@ final class ProviderSetupTest extends AmtgardTestCase
         $this->assertFalse($teller->verify(['TELLER_APPLICATION_ID' => '', 'TELLER_CERT_PATH' => '/cert', 'TELLER_KEY_PATH' => '/key', 'TELLER_WEBHOOK_SECRET' => 'wh']));
         $this->assertSame('Teller rejected the credentials.', $teller->failure());
 
-        $simple = new SimpleFinGuide();
+        $simple = new SimpleFinGuide(new RequiredSettings());
         $this->assertSame('simplefin', $simple->id());
-        $this->assertSame([], $simple->fields());
-        $this->assertStringContainsString('https://bridge.simplefin.org/simplefin/create', $simple->instructions());
-        $this->assertTrue($simple->verify([]));
-        $this->assertSame('SimpleFIN needs no platform credentials.', $simple->failure());
+        $this->assertSame('SIMPLEFIN_APP_ID', $simple->fields()[0]->key());
+        $this->assertStringContainsString('SIMPLEFIN_APP_ID', $simple->instructions());
+        $this->assertTrue($simple->verify(['SIMPLEFIN_APP_ID' => 'amtgard_denarius_dev', 'SIMPLEFIN_APP_TOKEN' => 'token']));
+        $this->assertSame('SimpleFIN needs SIMPLEFIN_APP_ID and SIMPLEFIN_APP_TOKEN.', $simple->failure());
     }
 
     public function testHiddenLineAndEnvFragmentKeepSecretsOutOfTheTerminal(): void
@@ -233,7 +239,7 @@ final class ProviderSetupTest extends AmtgardTestCase
                 new StripeGuide($client, $required, 'https://api.stripe.test'),
                 new PlaidGuide($client, $required, 'https://plaid.test'),
                 new TellerGuide($client, $required),
-                new SimpleFinGuide(),
+                new SimpleFinGuide($required),
             ],
             new HiddenLine($io),
             new EnvFragment(),

@@ -23,7 +23,7 @@ $setup = new ProviderSetup(
         new StripeGuide($client, $required, $_ENV['STRIPE_API_BASE'] ?? 'https://api.stripe.com'),
         new PlaidGuide($client, $required, $_ENV['PLAID_API_BASE'] ?? 'https://sandbox.plaid.com'),
         new TellerGuide($client, $required),
-        new SimpleFinGuide(),
+        new SimpleFinGuide($required),
     ],
     new HiddenLine($io),
     new EnvFragment(),

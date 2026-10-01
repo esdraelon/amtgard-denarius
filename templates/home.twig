@@ -1,11 +1,40 @@
 {% extends "base.twig" %}
+
 {% block title %}Denarius{% endblock %}
-{% block body %}
-<h1>Kingdom bank statements</h1>
-<p>Amtgard kingdom treasuries published for accountability. Version {{ version }}.</p>
-{% if authenticated %}
-    <p><a href="/logout">Log out</a> <a href="/admin">Admin</a></p>
-{% else %}
-    <p><a href="/login">Log in with Amtgard ID</a></p>
-{% endif %}
+
+{% block content %}
+    {% embed "partials/brand.twig" %}
+        {% import "macros.twig" as ui %}
+        {% block brand_inner %}
+            <h1 class="text-3xl font-serif font-bold text-secondary mb-4">
+                <a href="/" class="hover:text-primary transition-colors no-underline text-secondary">Denarius</a>
+            </h1>
+            <p class="mb-4 text-gray-700">
+                Amtgard kingdom treasuries published for accountability. Kingdom bank statements, shared with the community you serve.
+            </p>
+
+            {% if authenticated %}
+                <h2 class="text-2xl font-serif font-semibold text-tertiary mt-6 mb-3">Account</h2>
+                <p class="mb-3 text-gray-700">You are signed in with Amtgard ID.</p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    {% for action in accountActions %}
+                        {{ ui.btn_primary(action.label, action.href) }}
+                    {% endfor %}
+                    {{ ui.btn_secondary('Log out', '/logout') }}
+                </div>
+                {% if accountActions is empty %}
+                    <p class="mb-4 text-sm text-gray-600">No Denarius admin or kingdom manager roles are loaded for this account. If access was just granted, log out and sign in again so Denarius can refresh your IdP permissions.</p>
+                {% endif %}
+            {% else %}
+                <h2 class="text-2xl font-serif font-semibold text-tertiary mt-6 mb-3">Sign in</h2>
+                <p class="mb-3 text-gray-700">Use your Amtgard ID to manage kingdoms or view restricted statements.</p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    {{ ui.btn_login_with_amtgard('/login') }}
+                </div>
+            {% endif %}
+
+            <h2 class="text-2xl font-serif font-semibold text-tertiary mt-6 mb-3">About</h2>
+            <p class="mb-2 text-gray-700">Denarius connects kingdom bank accounts through approved providers and publishes monthly statements according to each kingdom&apos;s visibility settings.</p>
+        {% endblock %}
+    {% endembed %}
 {% endblock %}

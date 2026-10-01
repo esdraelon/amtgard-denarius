@@ -102,12 +102,15 @@ final class PersistenceStoreArrange
         $kingdoms->findByProviderEnrollment('teller', 'enr');
         $kingdoms->findByProviderEnrollment('stripe', 'enr');
         $kingdoms->connected();
+        $kingdoms->all();
         $kingdoms->save(KingdomRecord::builder()->id($saved->getId())->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('registered')->displayMode('summarized')->enrollmentId('enr')->institutionName('Bank')->provider('teller')->enrollmentStatus('connected')->lastSyncedAt('2026-09-01')->build());
 
         $principals = Orm::repository(PrincipalRepository::class);
         $principal = $principals->save(PrincipalRecord::builder()->idpUserId('9')->email('person@example.com')->orkKingdomId(4)->orkKingdomName('Golden Plains')->build());
         $principals->findByIdpUserId('9');
+        $principals->findByEmail('person@example.com');
         $principals->searchByEmail('person@');
+        $principals->listOrkKingdomHints();
         $principals->save(PrincipalRecord::builder()->id($principal->getId())->idpUserId('9')->email('other@example.com')->build());
 
         $accounts = Orm::repository(AccountRepository::class);
@@ -127,5 +130,6 @@ final class PersistenceStoreArrange
 
         $grants = Orm::repository(RoleGrantRepository::class);
         $grants->append(RoleGrantRecord::builder()->actorIdpUserId('15')->targetIdpUserId('9')->action('grant')->resource('Denarius/Admin')->createdAt('2026-09-01T00:00:00+00:00')->build());
+        $grants->listChronological();
     }
 }

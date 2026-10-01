@@ -6,9 +6,10 @@ namespace Amtgard\Denarius\Service\Access;
 
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
-use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
+use Amtgard\IdpClient\Exception\ClientIamException;
 
 final class PermissionService
 {
@@ -37,7 +38,15 @@ final class PermissionService
                 }
             }
 
-            $orns = $this->policies->listOrns($idpUserId);
+            try {
+                $orns = $this->policies->listOrns($idpUserId);
+            } catch (ClientIamException $exception) {
+                DenariusLog::warnBranch('client_iam_unavailable', __METHOD__, [
+                    'idp_user_id' => $idpUserId,
+                    'error_code' => $exception->errorCode()->value,
+                ]);
+                $orns = [];
+            }
             $this->cache->set($key, json_encode($orns, JSON_THROW_ON_ERROR), $this->ttlSeconds);
 
             return $orns;
@@ -56,6 +65,10 @@ final class PermissionService
     public function isAdmin(string $idpUserId): bool
     {
         return DenariusLog::trace(__METHOD__, function () use ($idpUserId): bool {
+            if ($this->bootstrap->contains($idpUserId)) {
+                return true;
+            }
+
             return $this->authorizer->isAdmin($idpUserId, $this->orns($idpUserId), $this->bootstrap);
         });
     }

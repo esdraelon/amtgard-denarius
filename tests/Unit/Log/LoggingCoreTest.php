@@ -251,6 +251,14 @@ final class LoggingCoreTest extends AmtgardTestCase
         }
     }
 
+    public function testJsonStderrHandlerDefaultStreamUsesGlobalStderr(): void
+    {
+        $this->assertInstanceOf(
+            \Amtgard\Denarius\Utilities\Log\JsonStderrHandler::class,
+            new \Amtgard\Denarius\Utilities\Log\JsonStderrHandler(),
+        );
+    }
+
     public function testJsonStderrHandlerWritesLine(): void
     {
         $stream = fopen('php://memory', 'r+');

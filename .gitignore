@@ -1,5 +1,6 @@
 .env
 provider.env
+data/ork-kingdoms.json
 .idea
 .phpunit.cache
 .phpunit.cache/

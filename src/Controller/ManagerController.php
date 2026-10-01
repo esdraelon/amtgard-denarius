@@ -16,10 +16,10 @@ use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\IdpClient\Session\SessionAuthStore;
-use Optional\Optional;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -35,26 +35,34 @@ final class ManagerController
         private readonly KingdomRefreshQueue $queue,
         private readonly TwigHtmlRenderer $html,
         private readonly BankConnect $connects,
+        private readonly SimpleFinConnectSession $simplefinSession,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
 
-    public function show(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    public function show(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $args): ResponseInterface {
-            $kingdom = $this->managed($response, (string) ($args['slug'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
 
-            return $this->page($response, $kingdom, $this->connects->blank($this->remembered($kingdom)));
+            return $this->page($response, $kingdom, $this->connects->idle());
         });
     }
 
-    public function connect(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    public function connectGet(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $args): ResponseInterface {
-            $kingdom = $this->managed($response, (string) ($args['slug'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($response, $slug): ResponseInterface {
+            return $response->withHeader('Location', '/manage/' . $slug)->withStatus(302);
+        });
+    }
+
+    public function connect(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -63,14 +71,19 @@ final class ManagerController
                 return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
             }
 
-            return $this->page($response, $kingdom, $this->connects->offer($kingdom->getSlug(), $body));
+            $connect = $this->connects->launch($kingdom->getSlug(), $body);
+            if (($connect['provider'] ?? '') === 'simplefin') {
+                $this->simplefinSession->remember($kingdom->getSlug());
+            }
+
+            return $this->page($response, $kingdom, $connect);
         });
     }
 
-    public function settings(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    public function settings(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $args): ResponseInterface {
-            $kingdom = $this->managed($response, (string) ($args['slug'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -89,10 +102,10 @@ final class ManagerController
         });
     }
 
-    public function enrollment(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    public function enrollment(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $args): ResponseInterface {
-            $kingdom = $this->managed($response, (string) ($args['slug'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -111,10 +124,10 @@ final class ManagerController
         });
     }
 
-    public function accounts(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    public function accounts(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $args): ResponseInterface {
-            $kingdom = $this->managed($response, (string) ($args['slug'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -136,10 +149,10 @@ final class ManagerController
         });
     }
 
-    public function refresh(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    public function refresh(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $args): ResponseInterface {
-            $kingdom = $this->managed($response, (string) ($args['slug'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -175,13 +188,6 @@ final class ManagerController
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdomId): array {
             return array_map(static fn ($account) => $account->view(), $this->accounts->forKingdom($kingdomId));
-        });
-    }
-
-    private function remembered(KingdomRecord $kingdom): string
-    {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdom): string {
-            return Optional::ofNullable($kingdom->getInstitutionName())->orElse('');
         });
     }
 

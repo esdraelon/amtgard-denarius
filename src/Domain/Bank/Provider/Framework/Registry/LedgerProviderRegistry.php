@@ -63,6 +63,22 @@ final class LedgerProviderRegistry
     /**
      * @param list<string> $skipped
      */
+    public function next(array $skipped): LedgerProvider
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($skipped): LedgerProvider {
+            foreach ($this->providers as $provider) {
+                if (!$this->skipped($provider, $skipped)) {
+                    return $provider;
+                }
+            }
+
+            return $this->missing;
+        });
+    }
+
+    /**
+     * @param list<string> $skipped
+     */
     private function skipped(LedgerProvider $provider, array $skipped): bool
     {
         return DenariusLog::trace(__METHOD__, function () use ($provider, $skipped): bool {

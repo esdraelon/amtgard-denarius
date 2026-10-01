@@ -20,7 +20,9 @@ use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Access\PermissionService;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinLedgerProvider;
+use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\IdpClient\OAuth\TokenSet;
 use Amtgard\IdpClient\Resource\AuthenticatedSession;
 use Amtgard\IdpClient\Resource\OrkProfile;
@@ -42,7 +44,7 @@ final class ManageConnectTest extends AmtgardTestCase
         $_SESSION['_csrf'] = 'token';
         $_SESSION['test_session'] = (new AuthenticatedSession(
             new TokenSet('a'),
-            new UserProfile(9, 'person@example.com', 'jwt', OrkProfile::fromArray(['kingdom_id' => 4, 'kingdom_name' => 'Golden Plains'])),
+            new UserProfile('9', 'person@example.com', 'jwt', OrkProfile::fromArray(['kingdom_id' => 4, 'kingdom_name' => 'Golden Plains'])),
         ))->toSessionArray();
 
         $kingdoms = new MemoryKingdoms();
@@ -73,7 +75,7 @@ final class ManageConnectTest extends AmtgardTestCase
                 {
                     return [];
                 }
-            }, new AlwaysReady(), new PreviousMonthWindow(new DateTimeImmutable('2026-09-28'))),
+            }, new AlwaysReady(), new PreviousMonthWindow(new DateTimeImmutable('2026-09-28')), new SimpleFinApplicationConfig('amtgard_denarius_dev', 'token', 'https://bridge.simplefin.org/simplefin')),
         ]);
         $this->manager = new ManagerController(
             new SessionAuthStore('test_session'),
@@ -85,60 +87,48 @@ final class ManageConnectTest extends AmtgardTestCase
             $queue,
             new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
             new BankConnect($providers),
+            new SimpleFinConnectSession(),
         );
     }
 
-    public function testANamedBankMountsTellerThenSimpleFinThenStops(): void
+    public function testAddBankMountsProvidersInOrderThenStops(): void
     {
-        $shown = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), ['slug' => 'golden-plains']));
-        $this->assertStringContainsString('value="First Credit Union"', $shown);
-        $this->assertStringContainsString('Reconnect this kingdom from the bank form.', $shown);
+        $shown = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
+        $this->assertStringContainsString('Add bank', $shown);
+        $this->assertStringNotContainsString('Find my bank', $shown);
+        $this->assertStringNotContainsString('Refresh transactions', $shown);
+        $this->assertStringContainsString('Bank access was disconnected', $shown);
         $this->assertStringNotContainsString('Connect with Teller', $shown);
         $this->assertStringContainsString('Checking', $shown);
 
         $teller = $this->body($this->manager->connect($this->request('POST', '/manage/golden-plains/connect', [
             'csrf' => 'token',
-            'institution' => '  First Bank  ',
-            'skipped' => 'teller',
-            'current' => 'simplefin',
-        ]), new Response(), ['slug' => 'golden-plains']));
+        ]), new Response(), 'golden-plains'));
         $this->assertStringContainsString('Connect with Teller', $teller);
         $this->assertStringContainsString('app_test', $teller);
         $this->assertStringContainsString('sandbox', $teller);
         $this->assertStringContainsString('enrollmentId: "enr_9"', $teller);
-        $this->assertStringContainsString('value="First Bank"', $teller);
-        $this->assertStringNotContainsString('value="simplefin"', $teller);
+        $this->assertStringContainsString('Try another provider', $teller);
 
         $simple = $this->body($this->manager->connect($this->request('POST', '/manage/golden-plains/connect', [
             'csrf' => 'token',
-            'institution' => 'First Bank',
             'current' => 'teller',
             'skip' => '1',
-        ]), new Response(), ['slug' => 'golden-plains']));
-        $this->assertStringContainsString('simplefin-token', $simple);
-        $this->assertSame(2, substr_count($simple, 'value="teller"'));
+        ]), new Response(), 'golden-plains'));
+        $this->assertStringContainsString('simplefin-connect', $simple);
+        $this->assertStringContainsString('amtgard_denarius_dev', $simple);
+        $this->assertStringContainsString('apps', $simple);
 
         $again = $this->body($this->manager->connect($this->request('POST', '/manage/golden-plains/connect', [
             'csrf' => 'token',
-            'institution' => 'First Bank',
             'skipped' => ['teller', 'teller', ''],
             'current' => 'simplefin',
             'skip' => '1',
-        ]), new Response(), ['slug' => 'golden-plains']));
-        $this->assertStringContainsString('No configured provider can connect this bank.', $again);
-        $this->assertSame(1, substr_count($again, 'value="teller"'));
-        $this->assertSame(1, substr_count($again, 'value="simplefin"'));
+        ]), new Response(), 'golden-plains'));
+        $this->assertStringContainsString('No configured provider is available', $again);
 
-        $blank = $this->body($this->manager->connect($this->request('POST', '/manage/golden-plains/connect', [
-            'csrf' => 'token',
-            'institution' => '   ',
-            'skip' => '1',
-            'current' => '',
-        ]), new Response(), ['slug' => 'golden-plains']));
-        $this->assertStringContainsString('Enter the bank name.', $blank);
-
-        $this->assertSame(403, $this->manager->connect($this->request('POST', '/connect', ['csrf' => 'nope', 'institution' => 'First Bank']), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
-        $this->assertSame(404, $this->manager->connect($this->request('POST', '/missing', ['csrf' => 'token', 'institution' => 'First Bank']), new Response(), ['slug' => 'missing'])->getStatusCode());
+        $this->assertSame(403, $this->manager->connect($this->request('POST', '/connect', ['csrf' => 'nope']), new Response(), 'golden-plains')->getStatusCode());
+        $this->assertSame(404, $this->manager->connect($this->request('POST', '/missing', ['csrf' => 'token']), new Response(), 'missing')->getStatusCode());
         $guest = new ManagerController(
             new SessionAuthStore('empty'),
             new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null)),
@@ -149,8 +139,9 @@ final class ManageConnectTest extends AmtgardTestCase
             new MemoryRefresh(),
             new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
             new BankConnect(Strategies::providers(Strategies::teller())),
+            new SimpleFinConnectSession(),
         );
-        $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), ['slug' => 'golden-plains'])->getStatusCode());
+        $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), 'golden-plains')->getStatusCode());
     }
 
     public function testStripeAndPlaidWidgetsRenderFromConnectConfig(): void
@@ -171,9 +162,9 @@ final class ManageConnectTest extends AmtgardTestCase
             'accounts' => [],
             'connect' => [
                 'available' => true,
+                'autostart' => true,
                 'reason' => '',
                 'provider' => 'stripe',
-                'institution' => 'First Bank',
                 'skipped' => [],
                 'config' => ['publishableKey' => 'pk_test', 'clientSecret' => 'cs_test', 'customerId' => 'cus_1'],
             ],
@@ -193,9 +184,9 @@ final class ManageConnectTest extends AmtgardTestCase
             'accounts' => [],
             'connect' => [
                 'available' => true,
+                'autostart' => true,
                 'reason' => '',
                 'provider' => 'plaid',
-                'institution' => 'First Bank',
                 'skipped' => [],
                 'config' => ['linkToken' => 'link-sandbox'],
             ],

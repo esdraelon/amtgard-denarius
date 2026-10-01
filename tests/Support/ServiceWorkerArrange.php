@@ -12,6 +12,9 @@ use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
+use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
+use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
@@ -32,6 +35,7 @@ use Amtgard\Denarius\Tests\Unit\ArrayStore;
 use Amtgard\Denarius\Tests\Unit\FakePolicies;
 use Amtgard\Denarius\Tests\Unit\MemoryAccounts;
 use Amtgard\Denarius\Tests\Unit\MemoryGrants;
+use Amtgard\Denarius\Tests\Unit\MemoryPrincipals;
 use Amtgard\Denarius\Tests\Unit\MemoryKingdoms;
 use Amtgard\Denarius\Tests\Unit\MemoryMessages;
 use Amtgard\Denarius\Tests\Unit\MemoryRefresh;
@@ -54,6 +58,26 @@ final class ServiceWorkerArrange
         $roleAdmin->revokeAdmin('9');
         $saved = $roleAdmin->grantManager('9', 4, 'Golden Plains');
         $roleAdmin->revokeManager('9', 4);
+
+        $principals = new MemoryPrincipals();
+        $principals->save(PrincipalRecord::builder()->idpUserId('31786326')->email('legacy@example.com')->build());
+        $grantTargets = Strategies::grantTargets($principals);
+        $legacyPrincipal = $principals->findByEmail('legacy@example.com');
+        if ($legacyPrincipal !== null) {
+            $grantTargets->viewForAdmin($legacyPrincipal);
+        }
+        try {
+            $grantTargets->resolveIdpUserId([
+                'target_email' => 'legacy@example.com',
+                'idp_user_id' => '31786326',
+            ]);
+        } catch (\InvalidArgumentException) {
+        }
+        AdminGrantTargetResolver::isLegacyPublicId('31786326');
+
+        $grantedIndex = new AdminGrantedRoleIndex($grants, $principals, Strategies::orkKingdoms($kingdoms, $principals));
+        $grantedIndex->search(null, null);
+        $grantedIndex->search('legacy', 'Golden');
 
         $registry = Strategies::admin();
         $body = ['idp_user_id' => '9', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains'];
@@ -129,6 +153,62 @@ final class ServiceWorkerArrange
         $connect->offer('golden-plains', ['institution' => 'First Bank', 'skipped' => 'teller', 'current' => 'simplefin', 'skip' => '1']);
         $connect->offer('golden-plains', ['institution' => '', 'skip' => '1', 'current' => 'teller']);
         $connect->offer('golden-plains', ['institution' => 'First Bank', 'skipped' => ['teller', ''], 'current' => 'teller', 'skip' => '1']);
+        $connect->idle();
+        $connect->launch('golden-plains', ['skip' => '1', 'current' => 'teller']);
+
+        $_ENV['APP_PUBLIC_URL'] = 'http://localhost:37180';
+        $_ENV['SIMPLEFIN_APP_ID'] = 'amtgard_denarius_dev';
+        $_ENV['SIMPLEFIN_APP_TOKEN'] = 'token';
+        \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig::fromEnv()->userCreateUrl();
+        $sfSession = new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession();
+        $sfSession->remember('golden-plains');
+        $sfSession->peekKingdomSlug();
+        $sfSession->pullKingdomSlug();
+        \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinSetupToken::decode(base64_encode('https://bridge.simplefin.org/simplefin/claim/test'));
+        \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinSetupToken::forbidden('Forbidden (was it already claimed?)');
+        \Amtgard\Denarius\Utilities\Http\AppPublicUrl::base();
+        $_ENV['APP_PUBLIC_URL'] = 'http://localhost:37180';
+        $sfConfig = new \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig('amtgard_denarius_dev', 'token', 'https://bridge.simplefin.org/simplefin');
+        $sfConfig->userCreateUrl();
+        $sfConfig->appId();
+        $sfConfig->appToken();
+        $sfConfig->returnUrl();
+        $sfConfig->configured();
+        $sfReturn = new \Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment(
+            $kingdoms,
+            $enrollment,
+            new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(),
+            $permissions,
+        );
+        try {
+            $sfReturn->complete('9', []);
+        } catch (\Amtgard\Denarius\Service\Enrollment\SimpleFinReturnException $exception) {
+            $exception->reason();
+        }
+        $sfProviders = new \Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry([
+            new \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinLedgerProvider(
+                new class implements \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApi {
+                    public function claim(string $claimUrl): string
+                    {
+                        return 'https://user:secret@bridge.simplefin.org/simplefin';
+                    }
+
+                    public function accounts(string $accessUrl, int $startsAt, int $endsAt): array
+                    {
+                        return [];
+                    }
+                },
+                new \Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AlwaysReady(),
+                new \Amtgard\Denarius\Domain\Bank\Provider\Framework\Support\PreviousMonthWindow(new \DateTimeImmutable('2026-09-28')),
+                new \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig('app', 'tok', 'https://bridge.simplefin.org/simplefin'),
+            ),
+        ]);
+        $sfEnrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $sfProviders, $cipher, $queue, Strategies::months($cache));
+        $sfSession2 = new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession();
+        $sfSession2->remember($saved->getSlug());
+        $adminPermissions = new PermissionService(new FakePolicies([\Amtgard\Denarius\Utilities\Auth\ClaimOrn::admin()]), $cache, new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
+        $sfReturn2 = new \Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment($kingdoms, $sfEnrollment, $sfSession2, $adminPermissions);
+        $sfReturn2->complete('9', ['setup_token' => base64_encode('https://bridge.simplefin.org/simplefin/claim/worker')]);
 
         $month = new MonthWindow(2026, 9);
         $kingdomRow = KingdomRecord::builder()->id(4)->orkKingdomId(8)->name('Golden Plains')->slug('golden-plains')->displayMode('all')->build();

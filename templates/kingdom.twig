@@ -1,49 +1,59 @@
 {% extends "base.twig" %}
+{% import "macros.twig" as ui %}
+
 {% block title %}{{ kingdom.name }}{% endblock %}
-{% block body %}
-<h1>{{ kingdom.name }}</h1>
-<p>
-    <a href="/{{ kingdom.slug }}?month={{ previous }}">Previous month</a>
-    {{ month }}
-    <a href="/{{ kingdom.slug }}?month={{ next }}">Next month</a>
-</p>
-{% if disconnected %}<p>The bank connection needs to be repaired.</p>{% endif %}
-{% if syncedAt %}<p>Last synced {{ syncedAt }}.</p>{% endif %}
-{% if rows is empty %}
-    <p>No transactions for this month.</p>
-{% elseif mode == 'summarized' %}
-    <table>
-        <thead><tr><th>Category</th><th>Transactions</th><th>Amount</th></tr></thead>
-        <tbody>
-        {% for row in rows %}
-            <tr><td>{{ row.category }}</td><td>{{ row.count }}</td><td>{{ row.amount }}</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
-{% elseif mode == 'redacted' %}
-    <table>
-        <thead><tr><th>Date</th><th>Category</th><th>Amount</th></tr></thead>
-        <tbody>
-        {% for row in rows %}
-            <tr><td>{{ row.postedOn }}</td><td>{{ row.category }}</td><td>{{ row.amount }}</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <table>
-        <thead><tr><th>Date</th><th>Account</th><th>Category</th><th>Counterparty</th><th>Description</th><th>Amount</th></tr></thead>
-        <tbody>
-        {% for row in rows %}
-            <tr>
-                <td>{{ row.postedOn }}</td>
-                <td>{{ row.account }}</td>
-                <td>{{ row.category }}</td>
-                <td>{{ row.counterparty }}</td>
-                <td>{{ row.description }}</td>
-                <td>{{ row.amount }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-{% endif %}
+{% block container_class %}max-w-6xl{% endblock %}
+
+{% block content %}
+    <h1 class="text-3xl font-serif font-bold text-secondary mb-2">{{ kingdom.name }}</h1>
+    <p class="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+        {{ ui.btn_secondary('Previous month', '/' ~ kingdom.slug ~ '?month=' ~ previous) }}
+        <span class="font-semibold text-tertiary">{{ month }}</span>
+        {{ ui.btn_secondary('Next month', '/' ~ kingdom.slug ~ '?month=' ~ next) }}
+    </p>
+    {% if disconnected %}<p class="mb-3 text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">The bank connection needs to be repaired.</p>{% endif %}
+    {% if syncedAt %}<p class="mb-4 text-sm text-gray-500">Last synced {{ syncedAt }}.</p>{% endif %}
+    {% if rows is empty %}
+        <p class="text-gray-700">No transactions for this month.</p>
+    {% elseif mode == 'summarized' %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm border-collapse">
+                <thead><tr class="bg-gray-100 text-left"><th class="p-2 border">Category</th><th class="p-2 border">Transactions</th><th class="p-2 border">Amount</th></tr></thead>
+                <tbody>
+                {% for row in rows %}
+                    <tr class="odd:bg-gray-50"><td class="p-2 border">{{ row.category }}</td><td class="p-2 border">{{ row.count }}</td><td class="p-2 border">{{ row.amount }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elseif mode == 'redacted' %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm border-collapse">
+                <thead><tr class="bg-gray-100 text-left"><th class="p-2 border">Date</th><th class="p-2 border">Category</th><th class="p-2 border">Amount</th></tr></thead>
+                <tbody>
+                {% for row in rows %}
+                    <tr class="odd:bg-gray-50"><td class="p-2 border">{{ row.postedOn }}</td><td class="p-2 border">{{ row.category }}</td><td class="p-2 border">{{ row.amount }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm border-collapse">
+                <thead><tr class="bg-gray-100 text-left"><th class="p-2 border">Date</th><th class="p-2 border">Account</th><th class="p-2 border">Category</th><th class="p-2 border">Counterparty</th><th class="p-2 border">Description</th><th class="p-2 border">Amount</th></tr></thead>
+                <tbody>
+                {% for row in rows %}
+                    <tr class="odd:bg-gray-50">
+                        <td class="p-2 border">{{ row.postedOn }}</td>
+                        <td class="p-2 border">{{ row.account }}</td>
+                        <td class="p-2 border">{{ row.category }}</td>
+                        <td class="p-2 border">{{ row.counterparty }}</td>
+                        <td class="p-2 border">{{ row.description }}</td>
+                        <td class="p-2 border">{{ row.amount }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
 {% endblock %}
