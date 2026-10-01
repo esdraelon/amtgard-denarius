@@ -38,6 +38,18 @@ class PrincipalRepository extends Repository implements EntityRepositoryInterfac
         });
     }
 
+    public function findByEmail(string $email): ?PrincipalRecord
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($email): ?PrincipalRecord {
+            $email = trim($email);
+            if ($email === '') {
+                return null;
+            }
+
+            return $this->record($this->fetchBy('email', $email));
+        });
+    }
+
     public function save(PrincipalRecord $principal): PrincipalRecord
     {
         return DenariusLog::trace(__METHOD__, function () use ($principal): PrincipalRecord {
@@ -61,6 +73,27 @@ class PrincipalRepository extends Repository implements EntityRepositoryInterfac
             $this->limit(0, 20);
 
             return $this->collected();
+        });
+    }
+
+    public function listOrkKingdomHints(): array
+    {
+        return DenariusLog::trace(__METHOD__, function (): array {
+            $this->clear();
+            $this->orderBy('ork_kingdom_name', OrderBy::ASC);
+
+            /** @var array<int, array{id: int, name: string}> $byId */
+            $byId = [];
+            foreach ($this->collected() as $principal) {
+                $id = $principal->getOrkKingdomId();
+                $name = $principal->getOrkKingdomName();
+                if ($id === null || $id <= 0 || ! is_string($name) || trim($name) === '') {
+                    continue;
+                }
+                $byId[$id] = ['id' => $id, 'name' => trim($name)];
+            }
+
+            return array_values($byId);
         });
     }
 

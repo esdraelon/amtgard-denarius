@@ -86,6 +86,7 @@ final class ContainerResolutionOrderTest extends TestCase
         $named = [
             'home' => [HomeController::class, 'home'],
             'version' => [HomeController::class, 'version'],
+            'privacy-policy' => [HomeController::class, 'privacyPolicy'],
             'auth.login' => [IdpAuthController::class, 'login'],
             'auth.callback' => [IdpAuthController::class, 'callback'],
             'auth.logout' => [IdpAuthController::class, 'logout'],

@@ -8,6 +8,7 @@ use Amtgard\Denarius\Persistence\Repository\RoleGrant\RoleGrantRepositoryInterfa
 use Amtgard\ActiveRecordOrm\Attribute\RepositoryOf;
 use Amtgard\ActiveRecordOrm\Entity\Repository\Repository;
 use Amtgard\ActiveRecordOrm\Interface\EntityRepositoryInterface;
+use Amtgard\ActiveRecordOrm\Query\OrderBy;
 use Amtgard\Denarius\Persistence\Entity\RoleGrantEntity;
 use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
@@ -45,6 +46,59 @@ class RoleGrantRepository extends Repository implements EntityRepositoryInterfac
             $this->persist($entity);
 
             return null;
+        });
+    }
+
+    /**
+     * @return list<RoleGrantRecord>
+     */
+    public function listChronological(): array
+    {
+        return DenariusLog::trace(__METHOD__, function (): array {
+            $this->clear();
+            $this->orderBy('created_at', OrderBy::ASC);
+            $this->orderBy('id', OrderBy::ASC);
+
+            return $this->collected();
+        });
+    }
+
+    private function record(mixed $entity): ?RoleGrantRecord
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($entity): ?RoleGrantRecord {
+            if (!$entity instanceof RoleGrantEntity) {
+                return null;
+            }
+
+            return RoleGrantRecord::builder()
+                ->actorIdpUserId((string) $entity->getActorIdpUserId())
+                ->targetIdpUserId((string) $entity->getTargetIdpUserId())
+                ->action((string) $entity->getAction())
+                ->resource((string) $entity->getResource())
+                ->orkKingdomId($entity->getOrkKingdomId())
+                ->createdAt((string) $entity->getCreatedAt())
+                ->build();
+        });
+    }
+
+    /**
+     * @return list<RoleGrantRecord>
+     */
+    private function collected(): array
+    {
+        return DenariusLog::trace(__METHOD__, function (): array {
+            if ($this->find() === 0) {
+                return [];
+            }
+            $rows = [];
+            while ($this->next()) {
+                $record = $this->record($this->getCurrent());
+                if ($record !== null) {
+                    $rows[] = $record;
+                }
+            }
+
+            return $rows;
         });
     }
 }

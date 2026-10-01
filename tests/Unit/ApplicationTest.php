@@ -47,7 +47,11 @@ use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Access\PermissionService;
+use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
+use Amtgard\IdpClient\Exception\ClientIamException;
+use Amtgard\IdpClient\Exception\ErrorCode;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
+use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
@@ -163,6 +167,34 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertTrue($permissions->isAdmin('1'));
         $permissions->forget('1');
         $this->assertFalse($permissions->isAdmin('1'));
+        $iamDenied = new PermissionService(new ClientIamDeniedPolicies(), $cache, $authorizer, $bootstrap, 30);
+        $this->assertTrue($iamDenied->isAdmin('7'));
+        $this->assertFalse($iamDenied->isAdmin('1'));
+        $orkJson = json_encode([
+            'Status' => ['Status' => 0],
+            'Kingdoms' => [
+                '4' => ['KingdomId' => 4, 'KingdomName' => 'Golden Plains'],
+                '9' => ['KingdomId' => 9, 'KingdomName' => 'Dragonspine'],
+            ],
+        ], JSON_THROW_ON_ERROR);
+        $this->assertSame([
+            ['id' => 9, 'name' => 'Dragonspine'],
+            ['id' => 4, 'name' => 'Golden Plains'],
+        ], OrkKingdomDirectory::parse($orkJson));
+        $root = sys_get_temp_dir() . '/denarius-ork-' . uniqid();
+        mkdir($root);
+        mkdir($root . '/data');
+        file_put_contents($root . '/data/ork-kingdoms.json', json_encode(['kingdoms' => [['id' => 1, 'name' => 'Alpha']]], JSON_THROW_ON_ERROR));
+        $principals = new MemoryPrincipals();
+        $principals->save(PrincipalRecord::builder()->idpUserId('1')->email('a@b.c')->orkKingdomId(2)->orkKingdomName('Beta')->build());
+        $kingdoms = new MemoryKingdoms();
+        $kingdoms->save(KingdomRecord::builder()->orkKingdomId(3)->name('Gamma')->slug('gamma')->visibility('public')->displayMode('all')->enrollmentStatus('none')->build());
+        $directory = new OrkKingdomDirectory($root, 'data/ork-kingdoms.json', $kingdoms, $principals);
+        $this->assertSame([
+            ['id' => 1, 'name' => 'Alpha'],
+            ['id' => 2, 'name' => 'Beta'],
+            ['id' => 3, 'name' => 'Gamma'],
+        ], $directory->list());
         $cache->set('denarius:claims:2', '{', 10);
         $policies->orns = [ClaimOrn::manage(5)];
         $this->assertSame([5], $permissions->managedKingdomIds('2'));
@@ -269,6 +301,12 @@ final class ApplicationTest extends AmtgardTestCase
         $second = $syncPrincipal->upsert('9', 'new@b.c', null, null);
         $this->assertSame($first->getId(), $second->getId());
         $this->assertSame('new@b.c', $second->getEmail());
+        $legacy = $syncPrincipal->upsert('31786326', 'legacy@example.com', null, null);
+        $uuid = $syncPrincipal->upsert('31786326-550e-8400-e29b-41d71644665540', 'legacy@example.com', 4, 'Plains');
+        $this->assertSame($legacy->getId(), $uuid->getId());
+        $this->assertSame('31786326-550e-8400-e29b-41d71644665540', $uuid->getIdpUserId());
+        $this->assertTrue(AdminGrantTargetResolver::isLegacyPublicId('31786326'));
+        $this->assertFalse(AdminGrantTargetResolver::isLegacyPublicId('9'));
 
         $sweep = new DailySweep($kingdoms, $queue);
         $this->assertSame(0, $sweep->enqueueConnected());
@@ -439,6 +477,28 @@ final class ArrayStore implements KeyValueStore
     }
 }
 
+final class ClientIamDeniedPolicies implements PolicyGateway
+{
+    public function ensureFormat(): void
+    {
+    }
+
+    public function listOrns(string $idpUserId): array
+    {
+        throw new ClientIamException(ErrorCode::ClientIamUnauthorized, 'denied');
+    }
+
+    public function grant(string $idpUserId, string $orn): void
+    {
+        throw new ClientIamException(ErrorCode::ClientIamUnauthorized, 'denied');
+    }
+
+    public function revoke(string $idpUserId, string $orn): void
+    {
+        throw new ClientIamException(ErrorCode::ClientIamUnauthorized, 'denied');
+    }
+}
+
 final class FakePolicies implements PolicyGateway
 {
     public function __construct(public array $orns)
@@ -525,6 +585,11 @@ final class MemoryKingdoms implements KingdomRepositoryInterface
     {
         return array_values(array_filter($this->rows, static fn (KingdomRecord $row): bool => $row->getEnrollmentStatus() === 'connected'));
     }
+
+    public function all(): array
+    {
+        return array_values($this->rows);
+    }
 }
 
 final class MemoryGrants implements RoleGrantRepositoryInterface
@@ -533,6 +598,21 @@ final class MemoryGrants implements RoleGrantRepositoryInterface
     public function append(RoleGrantRecord $grant): void
     {
         $this->rows[] = $grant;
+    }
+
+    public function listChronological(): array
+    {
+        $rows = $this->rows;
+        usort($rows, static function (RoleGrantRecord $a, RoleGrantRecord $b): int {
+            $at = strcmp($a->getCreatedAt(), $b->getCreatedAt());
+            if ($at !== 0) {
+                return $at;
+            }
+
+            return strcmp($a->getTargetIdpUserId(), $b->getTargetIdpUserId());
+        });
+
+        return $rows;
     }
 }
 
@@ -610,6 +690,18 @@ final class MemoryPrincipals implements PrincipalRepositoryInterface
     {
         return $this->rows[$idpUserId] ?? null;
     }
+
+    public function findByEmail(string $email): ?PrincipalRecord
+    {
+        foreach ($this->rows as $row) {
+            if (strcasecmp($row->getEmail(), $email) === 0) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
     public function save(PrincipalRecord $principal): PrincipalRecord
     {
         $saved = PrincipalRecord::builder()
@@ -619,12 +711,34 @@ final class MemoryPrincipals implements PrincipalRepositoryInterface
             ->orkKingdomId($principal->getOrkKingdomId())
             ->orkKingdomName($principal->getOrkKingdomName())
             ->build();
-        $this->rows[$principal->getIdpUserId()] = $saved;
+        foreach ($this->rows as $key => $row) {
+            if ($row->getId() === $saved->getId() && $key !== $saved->getIdpUserId()) {
+                unset($this->rows[$key]);
+            }
+        }
+        $this->rows[$saved->getIdpUserId()] = $saved;
+
         return $saved;
     }
     public function searchByEmail(string $term): array
     {
         return array_values(array_filter($this->rows, static fn (PrincipalRecord $row): bool => str_contains($row->getEmail(), $term)));
+    }
+
+    public function listOrkKingdomHints(): array
+    {
+        /** @var array<int, array{id: int, name: string}> $byId */
+        $byId = [];
+        foreach ($this->rows as $row) {
+            $id = $row->getOrkKingdomId();
+            $name = $row->getOrkKingdomName();
+            if ($id === null || $id <= 0 || ! is_string($name) || trim($name) === '') {
+                continue;
+            }
+            $byId[$id] = ['id' => $id, 'name' => trim($name)];
+        }
+
+        return array_values($byId);
     }
 }
 

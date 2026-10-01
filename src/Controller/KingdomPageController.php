@@ -32,10 +32,10 @@ final class KingdomPageController
         $entered = DenariusLog::enter(__METHOD__);
     }
 
-    public function show(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    public function show(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $args): ResponseInterface {
-            $kingdom = $this->kingdoms->findBySlug((string) ($args['slug'] ?? ''));
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->kingdoms->findBySlug($slug);
             if ($kingdom === null) {
                 return $this->html->html($response, 'message.twig', ['title' => 'Not found', 'message' => 'That kingdom is not published.'], 404);
             }

@@ -76,7 +76,11 @@ final class CurlSimpleFinApi implements SimpleFinApi
                 CURLOPT_TIMEOUT => 5,
                 CURLOPT_CONNECTTIMEOUT => 2,
                 CURLOPT_CUSTOMREQUEST => $method,
+                CURLOPT_USERAGENT => 'Amtgard-Denarius SimpleFIN/1.0',
             ];
+            if ($method === 'POST') {
+                $options[CURLOPT_POSTFIELDS] = '';
+            }
             if ($user !== '' || $password !== '') {
                 $options[CURLOPT_USERPWD] = $user . ':' . $password;
             }
@@ -84,7 +88,13 @@ final class CurlSimpleFinApi implements SimpleFinApi
             $body = curl_exec($handle);
             $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
             curl_close($handle);
-            if (!is_string($body) || $status >= 400 || $status === 0) {
+            if (!is_string($body) || $status === 0) {
+                throw new \RuntimeException('SimpleFIN request failed.');
+            }
+            if ($method === 'POST' && $status === 403) {
+                return trim($body);
+            }
+            if ($status >= 400) {
                 throw new \RuntimeException('SimpleFIN request failed.');
             }
 

@@ -21,6 +21,7 @@ final class SimpleFinLedgerProvider implements LedgerProvider
         private readonly SimpleFinApi $api,
         private readonly ProviderReady $ready,
         private readonly PreviousMonthWindow $window,
+        private readonly SimpleFinApplicationConfig $application,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -56,6 +57,9 @@ final class SimpleFinLedgerProvider implements LedgerProvider
             return [
                 'provider' => $this->id(),
                 'kingdomKey' => $kingdomKey,
+                'appId' => $this->application->appId(),
+                'bridgeUrl' => $this->application->userCreateUrl(),
+                'returnUrl' => $this->application->returnUrl(),
             ];
         });
     }
@@ -65,8 +69,8 @@ final class SimpleFinLedgerProvider implements LedgerProvider
         return DenariusLog::trace(__METHOD__, function () use ($payload): ConnectedEnrollment {
             $claimUrl = $this->claimUrl($payload);
             $accessUrl = trim($this->api->claim($claimUrl));
-            if ($accessUrl === '') {
-                throw new \RuntimeException('SimpleFIN did not return an access URL.');
+            if ($accessUrl === '' || SimpleFinSetupToken::forbidden($accessUrl)) {
+                throw new \RuntimeException('SimpleFIN rejected the setup token. Generate a new connection from the bridge.');
             }
             $user = parse_url($accessUrl, PHP_URL_USER);
 
@@ -132,13 +136,8 @@ final class SimpleFinLedgerProvider implements LedgerProvider
     {
         return DenariusLog::trace(__METHOD__, function () use ($payload): string {
             $token = $this->text($payload['setupToken'] ?? $payload['setup_token'] ?? null);
-            $decoded = base64_decode($token, true);
-            $url = is_string($decoded) ? trim($decoded) : '';
-            if ($url === '' || !str_starts_with($url, 'http')) {
-                throw new \InvalidArgumentException('SimpleFIN enrollment is missing a setup token.');
-            }
 
-            return $url;
+            return SimpleFinSetupToken::decode($token)->claimUrl();
         });
     }
 

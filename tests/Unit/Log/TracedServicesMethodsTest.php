@@ -28,7 +28,7 @@ final class TracedServicesMethodsTest extends AmtgardTestCase
         ServiceWorkerArrange::exerciseAll();
 
         $scope = $this->methodsInScope();
-        $this->assertCount(86, $scope);
+        $this->assertCount(101, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Support;
 
+use Amtgard\Denarius\Utilities\Log\IdpHttpTrafficLog;
+use Nyholm\Psr7\Request;
+use Nyholm\Psr7\Response;
+
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Tests\Unit\ApplicationTest;
 use Amtgard\Denarius\Tests\Unit\Log\LoggingCoreTest;
@@ -32,6 +36,12 @@ final class RestDomainArrange
     {
         self::run(LoggingCoreTest::class, 'testRequestLogContext');
         self::run(LoggingCoreTest::class, 'testCorrelationMiddlewareAcceptsAndRejectsRequestId');
+        $_ENV['APP_DEBUG'] = 'true';
+        $_ENV['DENARIUS_IDP_HTTP_LOG'] = 'true';
+        IdpHttpTrafficLog::record(
+            new Request('GET', 'https://idp.example.test/ping', ['Authorization' => ['Basic x']]),
+            new Response(200, [], '{}'),
+        );
     }
 
     /**

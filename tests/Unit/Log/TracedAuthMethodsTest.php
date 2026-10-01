@@ -8,6 +8,7 @@ use Amtgard\Denarius\Domain\Access\KingdomAccess;
 use Amtgard\Denarius\Domain\Access\Viewer;
 use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
+use Amtgard\Denarius\Service\Access\AccountNavBuilder;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Tests\Support\MethodLogAssert;
@@ -15,7 +16,9 @@ use Amtgard\Denarius\Tests\Support\TracedMethodCatalog;
 use Amtgard\Denarius\Tests\Unit\ApplicationTest;
 use Amtgard\Denarius\Tests\Unit\ArrayStore;
 use Amtgard\Denarius\Tests\Unit\FakePolicies;
+use Amtgard\Denarius\Tests\Unit\MemoryKingdoms;
 use Amtgard\Denarius\Tests\Unit\MemoryPrincipals;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
@@ -114,6 +117,12 @@ final class TracedAuthMethodsTest extends AmtgardTestCase
         $permissions->isAdmin('9');
         $permissions->managedKingdomIds('9');
 
+        $kingdoms = new MemoryKingdoms();
+        $kingdoms->save(KingdomRecord::builder()->orkKingdomId(6)->name('Iron Mountains')->slug('iron-mountains')->build());
+        $nav = new AccountNavBuilder($permissions, $kingdoms);
+        $composed = $nav->actionsFor('9');
+        $this->assertCount(2, $composed);
+
         $principals = new MemoryPrincipals();
         $sync = new PrincipalSync($principals);
         $sync->upsert('9', 'person@example.com', 4, 'Golden Plains');
@@ -137,7 +146,7 @@ final class TracedAuthMethodsTest extends AmtgardTestCase
         $access->decide(Visibility::KingdomOnly, new Viewer('9', 99), 4);
 
         $scope = $this->methodsInScope();
-        $this->assertCount(42, $scope);
+        $this->assertCount(44, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

@@ -18,10 +18,36 @@ final class BankConnect
     /**
      * @return array<string, mixed>
      */
-    public function blank(string $institution): array
+    public function idle(): array
     {
-        return DenariusLog::trace(__METHOD__, function () use ($institution): array {
-            return $this->none(trim($institution), [], '');
+        return DenariusLog::trace(__METHOD__, function (): array {
+            return $this->none([], '');
+        });
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    public function launch(string $kingdomKey, array $body): array
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdomKey, $body): array {
+            $skipped = $this->skipped($body);
+            $provider = $this->providers->next($skipped);
+            if ($provider->id() === '') {
+                return $this->none($skipped, 'exhausted');
+            }
+
+            $id = $provider->id();
+
+            return [
+                'available' => true,
+                'autostart' => $id !== 'simplefin',
+                'reason' => '',
+                'provider' => $id,
+                'skipped' => $skipped,
+                'config' => $provider->connectConfig($kingdomKey),
+            ];
         });
     }
 
@@ -31,27 +57,15 @@ final class BankConnect
      */
     public function offer(string $kingdomKey, array $body): array
     {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdomKey, $body): array {
-            $institution = trim((string) ($body['institution'] ?? ''));
-            $skipped = $this->skipped($body);
-            if ($institution === '') {
-                return $this->none($institution, $skipped, 'institution');
-            }
+        return $this->launch($kingdomKey, $body);
+    }
 
-            $provider = $this->providers->resolve($institution, $skipped);
-            if ($provider->id() === '') {
-                return $this->none($institution, $skipped, 'exhausted');
-            }
-
-            return [
-                'available' => true,
-                'reason' => '',
-                'provider' => $provider->id(),
-                'institution' => $institution,
-                'skipped' => $skipped,
-                'config' => $provider->connectConfig($kingdomKey),
-            ];
-        });
+    /**
+     * @return array<string, mixed>
+     */
+    public function blank(string $institution): array
+    {
+        return $this->idle();
     }
 
     /**
@@ -118,14 +132,14 @@ final class BankConnect
      * @param list<string> $skipped
      * @return array<string, mixed>
      */
-    private function none(string $institution, array $skipped, string $reason): array
+    private function none(array $skipped, string $reason): array
     {
-        return DenariusLog::trace(__METHOD__, function () use ($institution, $skipped, $reason): array {
+        return DenariusLog::trace(__METHOD__, function () use ($skipped, $reason): array {
             return [
                 'available' => false,
+                'autostart' => false,
                 'reason' => $reason,
                 'provider' => '',
-                'institution' => $institution,
                 'skipped' => $skipped,
                 'config' => [],
             ];

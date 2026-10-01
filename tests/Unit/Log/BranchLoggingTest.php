@@ -104,7 +104,7 @@ final class BranchLoggingTest extends AmtgardTestCase
         $auth = new SessionAuthStore('test_session');
         $_SESSION['test_session'] = (new AuthenticatedSession(
             new TokenSet('a'),
-            new UserProfile(9, 'person@example.com', 'jwt', OrkProfile::fromArray(['kingdom_id' => 4, 'kingdom_name' => 'Golden Plains'])),
+            new UserProfile('9', 'person@example.com', 'jwt', OrkProfile::fromArray(['kingdom_id' => 4, 'kingdom_name' => 'Golden Plains'])),
         ))->toSessionArray();
         $session = new SyncPrincipalMiddleware($auth, $sync);
         $session->process((new ServerRequestFactory())->createServerRequest('GET', '/'), $handler);
@@ -135,6 +135,8 @@ final class BranchLoggingTest extends AmtgardTestCase
         $member = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $principals = new MemoryPrincipals();
         $kingdoms = new MemoryKingdoms();
+        $orkKingdoms = Strategies::orkKingdoms($kingdoms, $principals);
+        $grantTargets = Strategies::grantTargets($principals);
         $admin = new AdminController(
             new SessionAuthStore('empty'),
             $member,
@@ -144,6 +146,9 @@ final class BranchLoggingTest extends AmtgardTestCase
             new MemoryGrants(),
             $twig,
             Strategies::admin(),
+            $orkKingdoms,
+            $grantTargets,
+            Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms),
         );
         $admin->index((new ServerRequestFactory())->createServerRequest('GET', '/admin'), new Response());
         MethodLogAssert::assertBranchLogged(
@@ -156,9 +161,9 @@ final class BranchLoggingTest extends AmtgardTestCase
         $auth = new SessionAuthStore('test_session');
         $_SESSION['test_session'] = (new AuthenticatedSession(
             new TokenSet('a'),
-            new UserProfile(9, 'person@example.com', 'jwt', null),
+            new UserProfile('9', 'person@example.com', 'jwt', null),
         ))->toSessionArray();
-        $denied = new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin());
+        $denied = new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms));
         $denied->index((new ServerRequestFactory())->createServerRequest('GET', '/admin'), new Response());
         MethodLogAssert::assertBranchLogged(
             BranchLogLevel::Warn,

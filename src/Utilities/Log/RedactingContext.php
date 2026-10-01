@@ -19,8 +19,12 @@ final class RedactingContext
     ];
 
     /** @param array<mixed> $context */
-    public static function redact(array $context): array
+    public static function redact(array $context, ?string $branch = null): array
     {
+        if ($branch === IdpHttpTrafficLog::BRANCH && IdpHttpTrafficLog::plaintextExchanges()) {
+            return $context;
+        }
+
         return self::walk($context);
     }
 

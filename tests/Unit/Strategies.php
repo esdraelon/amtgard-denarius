@@ -14,7 +14,15 @@ use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerApi;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
+use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Principal\PrincipalRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\RoleGrant\RoleGrantRepositoryInterface;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
+use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
+use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
+use Amtgard\Denarius\Service\Access\PrincipalSync;
+use Amtgard\Denarius\Utilities\Http\IdpUserDirectory;
+use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
 use Amtgard\Denarius\Service\Admin\Impl\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeAdminCommand;
@@ -28,6 +36,45 @@ use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 
 final class Strategies
 {
+    public static function orkKingdoms(
+        KingdomRepositoryInterface $kingdoms,
+        PrincipalRepositoryInterface $principals,
+    ): OrkKingdomDirectory {
+        return new OrkKingdomDirectory(dirname(__DIR__, 2), null, $kingdoms, $principals);
+    }
+
+    public static function grantedRoles(
+        RoleGrantRepositoryInterface $grants,
+        PrincipalRepositoryInterface $principals,
+        KingdomRepositoryInterface $kingdoms,
+    ): AdminGrantedRoleIndex {
+        return new AdminGrantedRoleIndex(
+            $grants,
+            $principals,
+            self::orkKingdoms($kingdoms, $principals),
+        );
+    }
+
+    public static function grantTargets(PrincipalRepositoryInterface $principals): AdminGrantTargetResolver
+    {
+        $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();
+
+        return new AdminGrantTargetResolver(
+            new IdpUserDirectory(
+                \Amtgard\IdpClient\Config\IdpClientEnvironmentFactory::fromEnvVars([
+                    'IDP_BASE_URL' => 'https://idp.example.test',
+                    'IDP_CLIENT_ID' => 'denarius_test',
+                    'IDP_CLIENT_SECRET' => 'secret',
+                    'IDP_REDIRECT_URI' => 'https://denarius.example.test/oauth/callback',
+                ]),
+                new \GuzzleHttp\Client(),
+                $psr17,
+            ),
+            $principals,
+            new PrincipalSync($principals),
+        );
+    }
+
     public static function admin(): AdminCommandRegistry
     {
         return new AdminCommandRegistry([

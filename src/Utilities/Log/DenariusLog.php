@@ -16,6 +16,11 @@ final class DenariusLog
         self::$logger = $logger;
     }
 
+    public static function installedQuietly(): bool
+    {
+        return self::$logger !== null;
+    }
+
     public static function trace(string $method, callable $body): mixed
     {
         return self::installed()->trace($method, $body);

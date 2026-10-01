@@ -22,4 +22,9 @@ interface KingdomRepositoryInterface
      * @return list<KingdomRecord>
      */
     public function connected(): array;
+
+    /**
+     * @return list<KingdomRecord>
+     */
+    public function all(): array;
 }

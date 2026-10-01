@@ -12,6 +12,7 @@ use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ProviderAdmission;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\Impl\CurlSimpleFinApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinHost;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinLedgerProvider;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
@@ -115,7 +116,14 @@ PHP);
         $this->assertSame('unknown', $provider->supports('First Bank')->verdict());
         $this->assertTrue($provider->supports(' ')->rejected());
         $this->assertTrue($this->provider($api, new PresentCredentials(['']))->supports('First Bank')->rejected());
-        $this->assertSame(['provider' => 'simplefin', 'kingdomKey' => 'golden'], $provider->connectConfig('golden'));
+        $_ENV['IDP_REDIRECT_URI'] = 'http://localhost:37180/oauth/callback';
+        $this->assertSame([
+            'provider' => 'simplefin',
+            'kingdomKey' => 'golden',
+            'appId' => 'amtgard_denarius_dev',
+            'bridgeUrl' => 'https://bridge.simplefin.org/simplefin/apps/amtgard_denarius_dev/create?return_url=http%3A%2F%2Flocalhost%3A37180%2Fbank%2Fsimplefin%2Freturn',
+            'returnUrl' => 'http://localhost:37180/bank/simplefin/return',
+        ], $provider->connectConfig('golden'));
         $this->assertTrue($provider->notice('nope', null, self::NOW)->accepted);
         $this->assertSame('', $provider->notice('nope', null, self::NOW)->action);
 
@@ -129,6 +137,7 @@ PHP);
         $this->assertThrows(\InvalidArgumentException::class, fn () => $provider->enrollment([]));
         $this->assertThrows(\InvalidArgumentException::class, fn () => $provider->enrollment(['setupToken' => base64_encode('not-a-url')]));
         $this->assertThrows(\RuntimeException::class, fn () => $this->provider(new ScriptedSimpleFin(''))->enrollment(['setupToken' => $token]));
+        $this->assertThrows(\RuntimeException::class, fn () => $this->provider(new ScriptedSimpleFin('Forbidden (was it already claimed?)'))->enrollment(['setupToken' => $token]));
 
         $accounts = $provider->accounts($connected->accessToken);
         $this->assertSame('Checking', $accounts[0]->name);
@@ -209,6 +218,7 @@ PHP);
             $api,
             $ready ?? new AlwaysReady(),
             new PreviousMonthWindow(new \DateTimeImmutable('@' . self::NOW)),
+            new SimpleFinApplicationConfig('amtgard_denarius_dev', 'token', 'https://bridge.simplefin.org/simplefin'),
         );
     }
 }

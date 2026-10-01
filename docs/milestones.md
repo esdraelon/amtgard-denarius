@@ -300,3 +300,9 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - `TracedMethodCoverageManifest` maps each `TracedMethodCatalog` entry to an M-02–M-07 `Traced*MethodsTest` scope; `TracedMethodCatalogGateTest` fails when a trace site is unmapped. Documented in `docs/method-log-tests.md` (M-08).
 - Line coverage: 98.57% (2895/2937).
 - Infection covered MSI: 99% (skip-initial-tests with `build/coverage-xml`, `--threads=4`).
+
+## UI IDP design
+
+- Branch: `ui-idp-design` (stacked on `app-bootstrap-wiring`).
+- Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
+- Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.

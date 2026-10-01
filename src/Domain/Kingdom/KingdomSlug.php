@@ -18,6 +18,7 @@ final class KingdomSlug
         'version',
         'webhooks',
         'health',
+        'privacy-policy',
     ];
 
     public static function fromName(string $name): string
