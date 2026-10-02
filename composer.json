@@ -1,0 +1,60 @@
+{
+    "name": "amtgard/denarius",
+    "description": "Public accountability for Amtgard kingdom bank accounts",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "ext-pdo": "*",
+        "ext-redis": "*",
+        "amtgard/aaro-extensions": "^0.9",
+        "amtgard/active-record-orm": "^1.6",
+        "amtgard/idp-php-client": "^2.0",
+        "amtgard/redis-set-queue": "^1.1",
+        "guzzlehttp/guzzle": "^7.9",
+        "jedibc/optional": "^1.0",
+        "monolog/monolog": "^3.7",
+        "php-di/php-di": "^6.3",
+        "php-di/slim-bridge": "^3.2",
+        "robmorgan/phinx": "^0.16.8",
+        "slim/psr7": "^1.5",
+        "slim/slim": "^4.9",
+        "twig/twig": "^3.21",
+        "vlucas/phpdotenv": "^5.4"
+    },
+    "require-dev": {
+        "amtgard/phpunit-extensions": "^1.0",
+        "dg/bypass-finals": "^1.9",
+        "infection/infection": "^0.33.2",
+        "phpunit/phpunit": "^12"
+    },
+    "autoload": {
+        "psr-4": {
+            "Amtgard\\Denarius\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Amtgard\\Denarius\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --coverage-clover build/coverage.xml && php bin/check-coverage.php build/coverage.xml 95",
+        "test:unit": "phpunit --testsuite Unit",
+        "infection": "infection --min-msi=80 --min-covered-msi=80 --threads=max",
+        "infection:ci": [
+            "@php -d display_errors=0 -d error_reporting=8191 vendor/bin/phpunit --coverage-xml build/coverage-xml --log-junit build/junit.xml",
+            "cp build/junit.xml build/coverage-xml/junit.xml",
+            "@php vendor/bin/infection --skip-initial-tests --coverage=build/coverage-xml --min-msi=80 --min-covered-msi=80 --threads=4"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "infection/extension-installer": true
+        }
+    }
+}

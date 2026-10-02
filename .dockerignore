@@ -1,0 +1,13 @@
+.env
+.git
+.idea
+.phpunit.cache
+build
+logs
+vendor
+tests
+keys
+dev-keys
+infection.json5
+phpunit.xml
+*.md

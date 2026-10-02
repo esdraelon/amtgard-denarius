@@ -1,0 +1,29 @@
+FROM ubuntu:24.04
+
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata \
+ && apt-get install -y less gzip wget nginx nginx-extras zip unzip git nano mysql-client memcached redis software-properties-common ca-certificates lsb-release \
+ && add-apt-repository -y ppa:ondrej/php && apt-get update \
+ && apt-get install --no-install-recommends -y php8.4 \
+ && apt-get install -y php8.4-fpm php8.4-cli php8.4-common php8.4-mysql php8.4-mbstring php8.4-curl php8.4-xml php8.4-memcached php8.4-redis php8.4-gd \
+ && sed -i 's/;\s*clear_env = no/clear_env = no/g' /etc/php/8.4/fpm/pool.d/www.conf \
+ && echo "env[ENVIRONMENT] = PROD" >> /etc/php/8.4/fpm/pool.d/www.conf \
+ && sed -i 's/^variables_order = .*/variables_order = "EGPCS"/' /etc/php/8.4/fpm/php.ini /etc/php/8.4/cli/php.ini \
+ && mkdir -p /var/www/denarius.amtgard.com
+
+COPY docker/nginx.denarius.config /etc/nginx/sites-available/denarius.amtgard.com
+RUN rm /etc/nginx/sites-enabled/* \
+ && ln -s /etc/nginx/sites-available/denarius.amtgard.com /etc/nginx/sites-enabled/denarius.amtgard.com
+COPY docker/etc.memcached /etc/memcached.conf
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+WORKDIR /var/www/denarius.amtgard.com
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+COPY . .
+RUN mkdir -p logs config/cache/twig keys \
+ && chown -R www-data:www-data /var/www/denarius.amtgard.com
+WORKDIR /var/www
+COPY docker/heartbeat.sh /var/www/heartbeat.sh
+RUN chmod +x heartbeat.sh
+CMD ./heartbeat.sh

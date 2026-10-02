@@ -1,0 +1,199 @@
+{% extends "base.twig" %}
+
+{% block title %}Denarius admin{% endblock %}
+{% block container_class %}max-w-4xl{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-serif font-bold text-secondary mb-4">Roles</h1>
+<form method="get" action="/admin" class="mb-6 flex flex-wrap items-end gap-3" id="admin-principal-form">
+    <input type="hidden" name="perm_email" value="{{ perm_email }}">
+    <input type="hidden" name="perm_kingdom" value="{{ perm_kingdom }}">
+    <div class="relative flex-1 min-w-[20rem] max-w-2xl">
+        <label for="admin-email" class="block text-sm font-semibold text-tertiary mb-1">Email</label>
+        <input
+            id="admin-email"
+            name="email"
+            type="text"
+            value="{{ email }}"
+            autocomplete="off"
+            class="block w-full border border-gray-300 rounded px-3 py-2 font-normal text-base"
+        >
+        <ul id="admin-email-suggestions" class="admin-typeahead hidden absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded border border-gray-300 bg-white py-1 shadow-lg" role="listbox"></ul>
+    </div>
+    <button type="submit" class="bg-primary hover:bg-primary-dark text-white py-2 px-5 rounded transition-colors duration-200 cursor-pointer border-0 shrink-0">Select</button>
+</form>
+{% for principal in principals %}
+    <section class="mb-8 pb-6 border-b border-gray-200 last:border-0">
+        <h2 class="text-xl font-serif font-semibold text-tertiary mb-3">{{ principal.email }} <span class="text-sm font-sans text-gray-500">({{ principal.idpUserId }})</span></h2>
+        <form method="post" action="/admin/grant" class="mb-3 flex flex-wrap gap-2">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="idp_user_id" value="{{ principal.idpUserId }}">
+            <input type="hidden" name="target_email" value="{{ principal.email }}">
+            <button name="action" value="grant-admin" type="submit" class="bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded text-sm border-0 cursor-pointer">Grant admin</button>
+            <button name="action" value="revoke-admin" type="submit" class="border border-gray-400 hover:border-gray-600 text-gray-700 py-2 px-4 rounded text-sm cursor-pointer bg-white">Revoke admin</button>
+        </form>
+        <form method="post" action="/admin/grant" class="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="idp_user_id" value="{{ principal.idpUserId }}">
+            <input type="hidden" name="target_email" value="{{ principal.email }}">
+            <label class="text-sm font-semibold text-tertiary">Kingdom
+                <select name="ork_kingdom_id" class="ork-kingdom mt-1 block min-w-[12rem] border border-gray-300 rounded px-3 py-2 font-normal"></select>
+            </label>
+            <p class="ork-kingdom-hint hidden w-full text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-0">
+                No ORK kingdom directory loaded. Import a GetKingdoms snapshot with <code class="text-xs">bin/ork-kingdoms-import.php</code> (see script header).
+            </p>
+            <input type="hidden" name="kingdom_name" value="">
+            <button name="action" value="grant-manager" type="submit" class="bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded text-sm border-0 cursor-pointer">Grant kingdom manager</button>
+            <button name="action" value="revoke-manager" type="submit" class="border border-gray-400 hover:border-gray-600 text-gray-700 py-2 px-4 rounded text-sm cursor-pointer bg-white">Revoke kingdom manager</button>
+        </form>
+    </section>
+{% endfor %}
+
+<section class="mt-10 pt-8 border-t border-gray-300">
+    <h2 class="text-2xl font-serif font-semibold text-secondary mb-4">Granted permissions</h2>
+    <form method="get" action="/admin" class="mb-4 flex flex-wrap items-end gap-3" id="admin-permissions-filter">
+        <input type="hidden" name="email" value="{{ email }}">
+        <div class="flex-1 min-w-[14rem]">
+            <label for="perm-email" class="block text-sm font-semibold text-tertiary mb-1">Filter by email</label>
+            <input
+                id="perm-email"
+                name="perm_email"
+                type="text"
+                value="{{ perm_email }}"
+                autocomplete="off"
+                class="block w-full border border-gray-300 rounded px-3 py-2 font-normal text-base"
+            >
+        </div>
+        <div class="flex-1 min-w-[14rem]">
+            <label for="perm-kingdom" class="block text-sm font-semibold text-tertiary mb-1">Filter by kingdom</label>
+            <input
+                id="perm-kingdom"
+                name="perm_kingdom"
+                type="text"
+                value="{{ perm_kingdom }}"
+                autocomplete="off"
+                class="block w-full border border-gray-300 rounded px-3 py-2 font-normal text-base"
+            >
+        </div>
+        <button type="submit" class="bg-primary hover:bg-primary-dark text-white py-2 px-5 rounded transition-colors duration-200 cursor-pointer border-0 shrink-0">Filter</button>
+        {% if perm_email or perm_kingdom %}
+            <a href="/admin{% if email %}?email={{ email|url_encode }}{% endif %}" class="text-sm text-primary hover:underline py-2">Clear filters</a>
+        {% endif %}
+    </form>
+    {% if grantedPermissions is empty %}
+        <p class="text-gray-700">No active grants match the current filters.</p>
+    {% else %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 text-left">
+                        <th class="p-2 border">Email</th>
+                        <th class="p-2 border">Permission</th>
+                        <th class="p-2 border">Kingdom</th>
+                        <th class="p-2 border">Granted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in grantedPermissions %}
+                    <tr class="odd:bg-gray-50">
+                        <td class="p-2 border">
+                            {% if row.email %}
+                                {{ row.email }}<span class="block text-xs text-gray-500">{{ row.idpUserId }}</span>
+                            {% else %}
+                                <span class="text-gray-500">{{ row.idpUserId }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-2 border">{{ row.permission }}</td>
+                        <td class="p-2 border">{{ row.kingdomName }}</td>
+                        <td class="p-2 border">{{ row.grantedAt }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+jQuery(function ($) {
+    function fillKingdomSelects(kingdoms) {
+        if (!kingdoms.length) {
+            $('.ork-kingdom-hint').removeClass('hidden');
+            return;
+        }
+        kingdoms.forEach(function (kingdom) {
+            $('select.ork-kingdom').append(
+                $('<option>').val(String(kingdom.id)).text(kingdom.name)
+            );
+        });
+    }
+
+    $.getJSON('/admin/kingdoms').done(function (payload) {
+        fillKingdomSelects(payload.kingdoms || []);
+    });
+
+    var suggestTimer = null;
+    var $email = $('#admin-email');
+    var $list = $('#admin-email-suggestions');
+
+    function hideSuggestions() {
+        $list.addClass('hidden').empty();
+    }
+
+    function showSuggestions(items) {
+        $list.empty();
+        if (!items.length) {
+            hideSuggestions();
+            return;
+        }
+        items.forEach(function (item) {
+            var $li = $('<li>', {
+                class: 'cursor-pointer px-3 py-2 text-sm hover:bg-gray-100',
+                role: 'option',
+                text: item.email + ' (' + item.idpUserId + ')'
+            });
+            $li.data('email', item.email);
+            $list.append($li);
+        });
+        $list.removeClass('hidden');
+    }
+
+    $email.on('input', function () {
+        window.clearTimeout(suggestTimer);
+        var q = $email.val().trim();
+        if (q.length < 2) {
+            hideSuggestions();
+            return;
+        }
+        suggestTimer = window.setTimeout(function () {
+            $.getJSON('/admin/principal-suggestions', { q: q })
+                .done(function (payload) {
+                    showSuggestions(payload.suggestions || []);
+                });
+        }, 200);
+    });
+
+    $list.on('click', 'li', function () {
+        $email.val($(this).data('email'));
+        hideSuggestions();
+    });
+
+    $(document).on('click', function (event) {
+        if (!$(event.target).closest('#admin-principal-form').length) {
+            hideSuggestions();
+        }
+    });
+
+    $(document).on('submit', 'form', function () {
+        var select = $(this).find('select.ork-kingdom');
+        if (select.length === 0) {
+            return;
+        }
+        $(this).find('input[name="kingdom_name"]').val(select.find('option:selected').text());
+    });
+});
+</script>
+{% endblock %}

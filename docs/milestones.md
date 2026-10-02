@@ -1,0 +1,308 @@
+# Denarius milestones
+
+Work is stacked with git-branchless. Each milestone is one branch. A milestone is committed after `composer test` (`src/` line coverage at least 95%) and `composer infection:ci` (MSI and covered MSI at least 80%). The `infection:ci` script runs PHPUnit once for PCOV coverage XML, copies JUnit beside it, then runs Infection with `--skip-initial-tests` so the duplicate PHPUnit pass is not killed (exit 143) under PCOV.
+
+## Baseline
+
+- Branch: `main`
+- Commit: `bf4ea83`
+- Slim application, Docker overlays, Phinx schema, Teller enrollment, and the MariaDB ledger.
+
+## Design pattern review
+
+- Branch: `design-pattern-review`
+- Display modes, visibility, webhook events, refresh jobs, and admin commands are strategies. The container builds the registries that select them.
+- Optional is not used as a parameter or return type.
+- Line coverage: 96.46% (1062/1101).
+- Infection covered MSI: 89%.
+
+## Redacted rows
+
+- Branch: `redacted-rows`
+- A redacted month keeps the date, amount, category, status, and account name.
+- Description and counterparty are omitted.
+- Line coverage: 96.47% (1065/1104).
+- Infection covered MSI: 89%.
+
+## Redis month cache
+
+- Branch: `redis-month-cache`
+- Transactions stay in MariaDB. A month page is served from Redis DB 0 and rebuilt from MariaDB on a miss.
+- A sync or a published-account change bumps a generation key, so the next read misses.
+- The shared Redis container stays up across a blue-green install. Session flush uses Redis DB 1 and does not clear month keys. `INSTALL_REBUILD_SESSIONS=1` is the opt-in wipe.
+- Line coverage: 96.50% (1132/1173).
+- Infection covered MSI: 89%.
+
+## Ledger provider
+
+- Branch: `ledger-provider`
+- Enrollment, sync, and webhooks talk to a `LedgerProvider`. Teller is one adapter behind that port.
+- A different bank is a container binding. Denarius notice actions stay `refresh` and `disconnect`.
+- Line coverage: 96.82% (1189/1228).
+- Infection covered MSI: 90%.
+
+## Provider registry
+
+- Branch: `provider-registry`
+- A `LedgerProviderRegistry` walks configured providers in order. A rejected institution, or one the manager skipped, falls through to the next provider. An unknown id resolves to a missing provider.
+- Teller reports unknown coverage when its application id is present, and no coverage when the id or the institution name is blank.
+- Line coverage: 96.93% (1233/1272).
+- Infection covered MSI: 91%.
+
+## Kingdom provider
+
+- Branch: `kingdom-provider`
+- A kingdom stores the provider chosen when it connects. Sync and webhooks look the kingdom up by that provider and enrollment id, so a later fallback does not move an existing link.
+- Line coverage: 97.00% (1263/1302).
+- Infection covered MSI: 90%.
+
+## Stripe adapter
+
+- Branch: `stripe-adapter`
+- Stripe Financial Connections is admitted when `STRIPE_SECRET_KEY` is set, ahead of Teller. Connect creates a customer and a transactions session. The stored secret is the Stripe customer id. Account refresh and disconnect webhooks verify `Stripe-Signature`.
+- Transaction reads cover the previous calendar month through today. A later page in the same sync does not call Stripe again.
+- Line coverage: 97.27% (1459/1500).
+- Infection covered MSI: 91%.
+
+## Plaid adapter
+
+- Branch: `plaid-adapter`
+- Plaid is admitted when `PLAID_CLIENT_ID` and `PLAID_SECRET` are both set, after Stripe and before Teller. Institution search answers yes or no for US transaction coverage. Connect returns a Link token. The stored secret is the access token and the enrollment id is the Item id.
+- `Plaid-Verification` is an ES256 JWT. The body hash and a five-minute issued-at window have to match. Transaction sync is drained inside the adapter for the previous calendar month through today.
+- Line coverage: 97.50% (1674/1717).
+- Infection covered MSI: 93%.
+
+## SimpleFIN adapter
+
+- Branch: `simplefin-adapter`
+- SimpleFIN is always admitted, after Stripe, Plaid, and Teller. It has no platform secret. A setup token is base64 of a claim URL on a SimpleFIN host. The claim runs once and the access URL is the stored secret.
+- Coverage stays unknown, so it is the paste-token fallback after the earlier providers are skipped. There is no webhook. Transaction reads use the previous calendar month through today.
+- Line coverage: 97.53% (1818/1864).
+- Infection covered MSI: 93%.
+
+## Manage connect
+
+- Branch: `manage-connect`
+- The manage page asks for the bank name and posts it to `/manage/{slug}/connect`. The registry mounts Stripe, Plaid, Teller, or a SimpleFIN setup token, in that order. "My bank is not listed" adds the current provider to the skipped list and mounts the next one.
+- A kingdom that already connected through Teller passes that enrollment id back into Teller Connect. Stripe's widget uses `STRIPE_PUBLISHABLE_KEY`.
+- Line coverage: 97.60% (1870/1916).
+- Infection covered MSI: 94%.
+
+## Provider setup
+
+- Branch: `provider-setup`
+- `bin/provider-setup.php` prints the human steps for Stripe, Plaid, Teller, and SimpleFIN. Secret prompts hide terminal echo. Stripe and Plaid are checked with a read-only request. Teller is checked by reading the certificate and key paths. SimpleFIN has no platform secret.
+- Verified values are written to a mode 0600 env fragment. The script does not print those values, and `provider.env` is gitignored.
+- Line coverage: 97.70% (2000/2047).
+- Infection covered MSI: 94%.
+
+## Bank connector folders
+
+- Branch: `bank-connector-folders`
+- Stripe, Plaid, Teller, and SimpleFIN sit under `Bank`, and each vendor API interface sits beside its connector. Ledger notices sit under `Bank/Notice`. Setup stays a CLI package.
+- Line coverage: 97.70% (2000/2047).
+- Infection covered MSI: 94%.
+
+## Colocated ports
+
+- Branch: `colocated-ports`
+- `PolicyGateway` sits beside `IdpPolicyGateway`. `MessageQueue`, `KingdomRefreshQueue`, and `KeyValueStore` sit beside their queue adapters. `IdpPolicyGateway` remains the `idp-php-client` adapter.
+- Line coverage: 97.70% (2000/2047).
+- Infection covered MSI: 94%.
+
+## Browser kingdom list
+
+- Branch: `browser-kingdom-list`
+- The admin page loads `Kingdom/GetKingdoms` in the browser and posts the ORK id and name. Denarius no longer calls ORK, caches the directory, or refreshes it from the worker.
+- Stored `ork_kingdom_id` values stay. They identify a kingdom in Denarius.
+- Line coverage: 97.77% (1926/1970).
+- Infection covered MSI: 95%.
+
+## Repository names
+
+- Branch: `repository-names`
+- Kingdom, account, principal, secret, transaction, and role-grant access lives on the Active Record repositories. Each port sits beside its repository. The Aaro store wrappers and the `Contract` store interfaces are gone.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.
+
+## Persistence records
+
+- Branch: `persistence-records`
+- Kingdom, account, principal, role-grant, and transaction records sit under `Persistence/Record`, next to the repositories that build them.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 94%.
+
+## Utility modules
+
+- Branch: `utility-modules`
+- Auth, HTTP, queue, security, session, and setup sit under `Utilities`. They stay siblings: the only cross-use is HTTP middleware reading the current actor, and that actor is also used outside HTTP. Queue and setup ports sit above an `Impl` folder. Setup is split into client, guide, I/O, field, and env.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.
+
+## Domain bank
+
+- Branch: `domain-bank`
+- Bank moves under Domain. Stripe, Plaid, Teller, and SimpleFIN sit under Providers. Enrollment, notices, readiness, the provider registry, and shared support are separate modules. Statements and access are grouped the same way, with each port above an `Impl` folder.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.
+
+## Repository implementations
+
+- Branch: `repository-impl`
+- Each repository port has its own folder. The interface stays at the top of that folder, and the Active Record class sits in `Impl`.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.
+
+## Service modules
+
+- Branch: `service-modules`
+- Services are grouped into enrollment, ledger sync, kingdom pages, access, admin, and month. Admin commands, the cached month reader, and refresh jobs sit under `Impl`. Statement lines and display mode sit in their own modules so the statement folder stays small.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.
+
+## Provider framework
+
+- Branch: `provider-framework`
+- Shared ledger-provider types sit under `Domain/Bank/Provider/Framework`. Plaid, SimpleFIN, Stripe, and Teller sit under `Domain/Bank/Provider/Providers`.
+- Line coverage: 97.68% (1933/1979).
+- Infection covered MSI: 95%.
+
+## Logging core
+
+- Branch: `logging-core`
+- `DenariusLog` facade, stderr JSON method log, request-id ambient context and middleware, redaction, and a PHPUnit recorder that fails unbalanced traces.
+- Line coverage: 97.76% (2008/2054).
+- Infection covered MSI: 94%.
+
+## Logging HTTP
+
+- Branch: `logging-http`
+- Every method in `src/Controller` and `src/Utilities/Http` calls `DenariusLog::trace` or constructor `enter`, so a local request shows which HTTP handler ran.
+- Line coverage: 97.83% (2070/2116).
+- Infection covered MSI: 94%.
+
+## Logging Auth
+
+- Branch: `logging-auth`
+- Every method in `src/Utilities/Auth`, `src/Domain/Access`, and `src/Service/Access` calls `DenariusLog::trace` or constructor `enter`, so a local request shows which permission decision ran.
+- Line coverage: 97.90% (2145/2191).
+- Infection covered MSI: 94%.
+
+## Logging Persistence
+
+- Branch: `logging-persistence`
+- Every method in `src/Persistence` (repositories, records, and `Orm`) calls `DenariusLog::trace` or constructor `enter`, so a local request shows which persistence method ran.
+- Line coverage: 97.99% (2245/2291).
+- Infection covered MSI: 94%.
+
+## Logging Services
+
+- Branch: `logging-services`
+- Every method in `src/Service` except `Service/Access`, and in `src/Worker`, calls `DenariusLog::trace` or constructor `enter`, so a local sync shows which job method ran.
+- Line coverage: 97.96% (2401/2451).
+- Infection covered MSI: 94%.
+
+## Logging Bank
+
+- Branch: `logging-bank`
+- Every method in `src/Domain/Bank` (framework, readiness, notices, enrollment, and Stripe/Plaid/Teller/SimpleFIN providers) calls `DenariusLog::trace` or constructor `enter`, so a local connect or webhook shows which adapter ran.
+- Line coverage: 98.11% (2698/2750).
+- Infection covered MSI: 94%.
+
+## Logging Rest
+
+- Branch: `logging-rest`
+- Every method in `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security` calls `DenariusLog::trace` or constructor `enter`, so the last unlogged methods show up in a local request.
+- Line coverage: 98.23% (2885/2937).
+- Infection covered MSI: 94%.
+
+## Container routes wiring
+
+- Branch: `container-routes-wiring`
+- `ContainerResolutionOrderTest` boots `config/bootstrap.php`, resolves core services and controllers, and checks named routes against `config/routes.php` (IDP-style integration wiring test). PHPUnit `IDP_IAM_SERVICE_FORMAT` is a JSON array so `IdpClient` resolves under test.
+- Line coverage: 98.23% (2885/2937).
+- Infection covered MSI: not re-run on this branch.
+
+## Log test support
+
+- Branch: `log-test-support`
+- `MethodLogAssert` helpers (`reset`, `assertTraced`, `assertConstructorEntered`, `assertAnyOfTraced`) on the bootstrap `RecordingMethodLog`; `TracedMethodCatalog` scans `src/` for `DenariusLog::trace` / `enter` call sites; unit tests in `MethodLogAssertTest` and `TracedMethodCatalogTest`. Documented catalog workflow in `docs/method-log-tests.md`.
+- Line coverage: 98.23% (2885/2937).
+- Infection covered MSI: 94%.
+
+## Log test HTTP
+
+- Branch: `log-test-http`
+- `TracedHttpMethodsTest` drives controller and HTTP utility paths with memory fakes and asserts every `TracedMethodCatalog` entry under `src/Controller` and `src/Utilities/Http` via `MethodLogAssert` (38 methods).
+- Line coverage: 98.23% (2885/2937).
+- Infection covered MSI: 94%.
+
+## Log test auth
+
+- Branch: `log-test-auth`
+- `TracedAuthMethodsTest` asserts every `TracedMethodCatalog` entry under `src/Utilities/Auth`, `src/Domain/Access`, and `src/Service/Access` via `MethodLogAssert` (42 methods). `TracedMethodCatalog` maps trace sites to the enclosing class when a file defines more than one type (e.g. `ClaimOrn.php`).
+- Line coverage: 98.26% (2886/2937).
+- Infection covered MSI: not re-run locally (Infection initial PHPUnit run exited 143 with PCOV); prior stack tip was 94%.
+
+## Log test persistence
+
+- Branch: `log-test-persistence`
+- `TracedPersistenceMethodsTest` and shared `PersistenceStoreArrange` exercise record builders, memory fakes, and MariaDB repository round-trips; assert every `TracedMethodCatalog` entry under `src/Persistence` via `MethodLogAssert` (52 methods). `StoreTest` reuses the same arrange helper.
+- Line coverage: 98.26% (2886/2937).
+- Infection covered MSI: 95%.
+
+## Log test services
+
+- Branch: `log-test-services`
+- `TracedServicesMethodsTest` and shared `ServiceWorkerArrange` drive admin, enrollment, ledger, month cache, kingdom query/settings, bank connect, and worker paths with memory fakes; assert every `TracedMethodCatalog` entry under `src/Service` (except `Service/Access`) and `src/Worker` via `MethodLogAssert` (86 methods). `ControllerTest` clears session keys at the start of the combined controller test for random-order stability.
+- Line coverage: 98.47% (2892/2937).
+- Infection covered MSI: 94% (`composer infection` initial PHPUnit exit 143; skip-initial-tests with `build/coverage-xml`).
+
+## Log test bank
+
+- Branch: `log-test-bank`
+- `TracedBankMethodsTest` and shared `BankDomainArrange` reuse adapter and registry tests plus `ServiceWorkerArrange` teller/webhook paths; assert every `TracedMethodCatalog` entry under `src/Domain/Bank` via `MethodLogAssert` (172 methods under PHPUnit bootstrap, including enrollment value types). Adapter tests expose `exerciseCurlForMethodLog()` for scripted curl without dead-port timeouts.
+- Line coverage: 98.57% (2895/2937).
+- Infection covered MSI: 97% (`composer infection` exit 143; skip-initial-tests with `build/coverage-xml`, `--threads=4`).
+
+## Log test rest
+
+- Branch: `log-test-rest`
+- `TracedRestMethodsTest` and shared `RestDomainArrange` reuse `ApplicationTest`, `ProviderSetupTest`, and `LoggingCoreTest` paths with memory fakes; assert every `TracedMethodCatalog` entry under `src/Domain/Statement`, `src/Domain/Kingdom`, `src/Utilities/Setup`, `src/Utilities/Queue`, `src/Utilities/Session`, and `src/Utilities/Security` via `MethodLogAssert` (107 methods), plus the four `Utilities/Log` correlation helpers (494/494 catalog entries asserted across M-02–M-07).
+- Line coverage: 98.57% (2895/2937).
+- Infection covered MSI: 99% (`composer infection` exit 143; skip-initial-tests with `build/coverage-xml`, `--threads=4`).
+
+## App bootstrap wiring
+
+- Branch: `app-bootstrap-wiring`
+- `AppBootstrapWiringTest` boots like `public/index.php` (bootstrap, `DenariusLog::install`, `middleware.php`, `routes.php` with `SESSION_REDIS_HOST` empty), resolves every route callable from the container, smoke-tests `GET /`, and asserts `POST /admin/grant` without CSRF returns 403.
+- Line coverage: 98.63% (2959/3000).
+- Infection covered MSI: 99% (`composer infection:ci`, `--threads=4`).
+
+## Branch logging
+
+- Branch: `branch-logging`
+- `DenariusLog::debugBranch` / `infoBranch` / `warnBranch`, `BranchLogLevel`, and branch lines on `StderrMethodLog`; `PostCsrfMiddleware` replaces the inline CSRF closure; decision branches for CSRF reject, principal sync, webhook auth denial, and admin auth (`BranchLoggingTest` asserts branch records). Documented in `docs/logging-spike.md` (M-08).
+- Line coverage: 98.63% (2959/3000).
+- Infection covered MSI: 99% (`composer infection:ci`, `--threads=4`).
+- Log-tested branches: `csrf_reject`, `csrf_skip`, `csrf_ok`, `principal_sync_session`, `principal_sync_guest`, `webhook_auth_denied`, `auth_login_required`, `auth_admin_denied`.
+
+## Infection reliable
+
+- Branch: `infection-reliable`
+- `composer infection:ci` generates `build/coverage-xml` and JUnit once, then runs Infection with `--skip-initial-tests` and `--threads=4` so PCOV does not kill the second PHPUnit pass (exit 143). Documented in this file’s gate paragraph and `docs/method-log-tests.md`.
+- Line coverage: 98.57% (2895/2937).
+- Infection covered MSI: 99% (`composer infection:ci`).
+
+## Log test catalog gate
+
+- Branch: `log-test-catalog-gate`
+- `TracedMethodCoverageManifest` maps each `TracedMethodCatalog` entry to an M-02–M-07 `Traced*MethodsTest` scope; `TracedMethodCatalogGateTest` fails when a trace site is unmapped. Documented in `docs/method-log-tests.md` (M-08).
+- Line coverage: 98.57% (2895/2937).
+- Infection covered MSI: 99% (skip-initial-tests with `build/coverage-xml`, `--threads=4`).
+
+## UI IDP design
+
+- Branch: `ui-idp-design` (stacked on `app-bootstrap-wiring`).
+- Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
+- Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.

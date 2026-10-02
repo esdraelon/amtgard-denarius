@@ -1,0 +1,23 @@
+services:
+  ledger-worker:
+    image: amtgard-denarius-ledger-worker:latest
+    container_name: amtgard-denarius-ledger-worker
+    hostname: amtgard-denarius-ledger-worker
+    restart: unless-stopped
+    stop_grace_period: 15s
+    working_dir: /var/www/denarius.amtgard.com
+    command: ["php", "-d", "memory_limit=256M", "/var/www/denarius.amtgard.com/bin/ledger-worker.php"]
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/var/www/denarius.amtgard.com/.env:ro
+      - ./keys:/var/www/denarius.amtgard.com/keys:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - amtgard-denarius-shared
+
+networks:
+  amtgard-denarius-shared:
+    name: amtgard-denarius-shared
+    external: true
