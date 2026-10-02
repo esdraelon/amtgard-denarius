@@ -1,0 +1,6 @@
+{
+    "kingdoms": [
+        {"id": 4, "name": "Golden Plains"},
+        {"id": 9, "name": "Dragonspine"}
+    ]
+}

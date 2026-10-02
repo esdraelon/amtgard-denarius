@@ -1,0 +1,69 @@
+{% extends "base.twig" %}
+{% import "macros.twig" as ui %}
+
+{% block title %}Privacy Policy — Denarius{% endblock %}
+{% block container_class %}max-w-3xl{% endblock %}
+
+{% block content %}
+{% include "partials/brand.twig" with {
+    brand_inner: '<h1 class="text-3xl font-serif font-bold text-secondary mb-2">Privacy Policy</h1>
+        <p class="text-sm text-gray-600 mb-0">Effective {{ effectiveDate }}</p>'
+} %}
+
+<div class="prose prose-sm max-w-none text-gray-700 mt-6 space-y-4">
+    <p>
+        Denarius (<a class="text-primary underline" href="https://denarius.amtgard.com">denarius.amtgard.com</a>)
+        helps Amtgard kingdom treasurers publish bank-backed financial statements for their groups.
+        This policy describes how we handle information when you use the service.
+    </p>
+
+    <h2 class="text-xl font-serif font-semibold text-tertiary mt-6">Who we are</h2>
+    <p>
+        Denarius is operated for the Amtgard community. Kingdom financial data is controlled by authorized
+        kingdom managers. Questions about this policy: <a class="text-primary underline" href="mailto:{{ contactEmail }}">{{ contactEmail }}</a>.
+    </p>
+
+    <h2 class="text-xl font-serif font-semibold text-tertiary mt-6">Information we collect</h2>
+    <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Identity.</strong> When you sign in, we receive your profile from the Amtgard Identity Provider (name, email, kingdom roles).</li>
+        <li><strong>Bank connection data.</strong> If a kingdom connects a bank through our supported providers (such as Stripe Financial Connections or Plaid), we receive account and transaction data needed to build statements—not your online banking password.</li>
+        <li><strong>Technical logs.</strong> We keep server logs (IP address, request metadata, errors) for security and troubleshooting.</li>
+    </ul>
+
+    <h2 class="text-xl font-serif font-semibold text-tertiary mt-6">How we use information</h2>
+    <ul class="list-disc pl-5 space-y-1">
+        <li>Authenticate users and enforce who may manage or view a kingdom’s statements.</li>
+        <li>Sync and store ledger data to produce kingdom financial reports.</li>
+        <li>Operate, secure, and improve the service.</li>
+    </ul>
+
+    <h2 class="text-xl font-serif font-semibold text-tertiary mt-6">Sharing</h2>
+    <p>
+        We share data only as needed to run Denarius: identity verification with the Amtgard IDP;
+        bank data retrieval with the financial institution connectivity partner you choose (for example Stripe or Plaid);
+        and hosting providers that process data on our behalf under contract.
+        We do not sell personal information.
+    </p>
+
+    <h2 class="text-xl font-serif font-semibold text-tertiary mt-6">Retention &amp; security</h2>
+    <p>
+        Kingdom ledger and connection credentials are stored in encrypted form where applicable.
+        We retain data while a kingdom uses Denarius and as needed for legal or operational requirements.
+        You may request access or deletion of your personal account data by contacting us at the email above.
+    </p>
+
+    <h2 class="text-xl font-serif font-semibold text-tertiary mt-6">Your choices</h2>
+    <p>
+        Kingdom managers choose whether to connect a bank and which accounts to publish.
+        Statement visibility settings (public, registered users, kingdom-only) are configured in Denarius manage pages.
+    </p>
+
+    <h2 class="text-xl font-serif font-semibold text-tertiary mt-6">Changes</h2>
+    <p>
+        We may update this policy. The effective date at the top will change when we do.
+        Continued use of Denarius after an update means you accept the revised policy.
+    </p>
+</div>
+
+<p class="mt-8">{{ ui.btn_secondary('Back to Denarius', '/') }}</p>
+{% endblock %}

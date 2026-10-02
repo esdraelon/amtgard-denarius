@@ -1,0 +1,23 @@
+services:
+  sessions:
+    image: redis:7-alpine
+    container_name: amtgard-denarius-sessions
+    hostname: amtgard-denarius-sessions
+    restart: unless-stopped
+    volumes:
+      - amtgard-denarius-session-data:/data
+    networks:
+      - amtgard-denarius-shared
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+
+volumes:
+  amtgard-denarius-session-data:
+    name: amtgard-denarius-session-data
+
+networks:
+  amtgard-denarius-shared:
+    name: amtgard-denarius-shared
+    external: true

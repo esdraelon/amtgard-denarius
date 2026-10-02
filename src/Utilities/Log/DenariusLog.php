@@ -1,0 +1,66 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Amtgard\Denarius\Utilities\Log;
+
+use LogicException;
+
+/** Facade: process-wide method log installed once per entrypoint. */
+final class DenariusLog
+{
+    private static ?MethodLog $logger = null;
+
+    public static function install(MethodLog $logger): void
+    {
+        self::$logger = $logger;
+    }
+
+    public static function installedQuietly(): bool
+    {
+        return self::$logger !== null;
+    }
+
+    public static function trace(string $method, callable $body): mixed
+    {
+        return self::installed()->trace($method, $body);
+    }
+
+    public static function enter(string $method): string
+    {
+        return self::installed()->enter($method);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    public static function debugBranch(string $branch, string $method, array $context = []): void
+    {
+        self::installed()->branch(BranchLogLevel::Debug, $branch, $method, $context);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    public static function infoBranch(string $branch, string $method, array $context = []): void
+    {
+        self::installed()->branch(BranchLogLevel::Info, $branch, $method, $context);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    public static function warnBranch(string $branch, string $method, array $context = []): void
+    {
+        self::installed()->branch(BranchLogLevel::Warn, $branch, $method, $context);
+    }
+
+    private static function installed(): MethodLog
+    {
+        if (self::$logger === null) {
+            throw new LogicException('DenariusLog is not installed.');
+        }
+
+        return self::$logger;
+    }
+}
