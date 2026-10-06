@@ -14,6 +14,7 @@ use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegis
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Service\Kingdom\ManagerKingdomPageQuery;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Utilities\Log\CorrelationMiddleware;
 use Amtgard\Denarius\Utilities\Log\MethodLog;
@@ -61,6 +62,7 @@ final class ContainerResolutionOrderTest extends TestCase
         $this->assertInstanceOf(LedgerProviderRegistry::class, $this->resolveOrSkip(LedgerProviderRegistry::class));
         $this->assertInstanceOf(ProviderWebhookHandler::class, $this->resolveOrSkip(ProviderWebhookHandler::class));
         $this->assertInstanceOf(EnrollmentService::class, $this->resolveOrSkip(EnrollmentService::class));
+        $this->assertInstanceOf(ManagerKingdomPageQuery::class, $this->resolveOrSkip(ManagerKingdomPageQuery::class));
     }
 
     public function testOrmBackedRepositoriesResolveWhenDatabaseIsReachable(): void

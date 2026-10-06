@@ -4,23 +4,24 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Kingdom;
 
-use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
-use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
-use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
-use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationEnvelope;
+use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationPipeline;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
+/** Public read path: month statements from the public publication pipeline only. */
 final class KingdomPageQuery implements MonthReader
 {
     public function __construct(
-        private readonly TransactionRepositoryInterface $transactions,
-        private readonly AccountRepositoryInterface $accounts,
+        private readonly KingdomPublicationLineSource $lines,
+        private readonly PublicationPipeline $publicPipeline,
         private readonly MonthStatementBuilder $builder,
+        private readonly \DateTimeImmutable $asOf,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -28,30 +29,17 @@ final class KingdomPageQuery implements MonthReader
     public function statement(KingdomRecord $kingdom, MonthWindow $month): MonthStatement
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $month): MonthStatement {
-            $names = [];
-            foreach ($this->accounts->forKingdom((int) $kingdom->getId()) as $account) {
-                if ($account->getPublished()) {
-                    $names[$account->getTellerAccountId()] = $account->getName();
-                }
-            }
+            $mode = DisplayMode::fromStored($kingdom->getDisplayMode());
+            $envelope = new PublicationEnvelope(
+                $kingdom,
+                $month,
+                $mode,
+                $this->asOf,
+                $this->lines->candidates($kingdom),
+            );
+            $envelope = $this->publicPipeline->run($envelope);
 
-            $lines = [];
-            foreach ($this->transactions->forKingdomPublished((int) $kingdom->getId()) as $transaction) {
-                if (!isset($names[$transaction->getTellerAccountId()])) {
-                    continue;
-                }
-                $lines[] = LedgerLine::builder()
-                    ->postedOn($transaction->getPostedOn())
-                    ->amountCents($transaction->getAmountCents())
-                    ->category($transaction->getCategory())
-                    ->description($transaction->getDescription())
-                    ->counterparty($transaction->getCounterparty())
-                    ->status($transaction->getStatus())
-                    ->accountName($names[$transaction->getTellerAccountId()])
-                    ->build();
-            }
-
-            return $this->builder->build($lines, DisplayMode::fromStored($kingdom->getDisplayMode()), $month);
+            return $this->builder->build($envelope->toLedgerLines(), $mode, $month);
         });
     }
 }

@@ -5,7 +5,7 @@ Source: [publication-threat-model.md](publication-threat-model.md), [milestones.
 Stack base: `ui-twig-components` @ `dacfa14` (unless a later publication branch is the tip).
 
 - [x] **M-01** `transaction-publication-schema` — DB columns, kingdom settings (embargo_days, backfill flags), transaction publish state; public read path excludes unpublished rows
-- [ ] **M-02** `publication-pipeline-core` — envelope, stages, manager vs public paths, month cache hook
+- [x] **M-02** `publication-pipeline-core` — envelope, stages, manager vs public paths, month cache hook
 - [ ] **M-03** `statement-absence-reasons` — Unreviewed / Stale / No current transactions banners
 - [ ] **M-04** `transaction-review-ui` — manage queue, publish/withhold actions
 - [ ] **M-05** `micro-deposit-hard-redact` — pairing + keyword HARD rules at ingest

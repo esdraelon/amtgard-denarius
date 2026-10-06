@@ -70,8 +70,11 @@ use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationPipelineFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Service\Kingdom\KingdomPublicationLineSource;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
+use Amtgard\Denarius\Service\Kingdom\ManagerKingdomPageQuery;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;
@@ -285,10 +288,22 @@ return [
             new DisconnectLedgerNotice($c->get(EnrollmentService::class)),
         ]),
     ),
-    KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
+    PublicationPipelineFactory::class => fn () => PublicationPipelineFactory::standard(),
+    KingdomPublicationLineSource::class => fn (ContainerInterface $c) => new KingdomPublicationLineSource(
         $c->get(TransactionRepositoryInterface::class),
         $c->get(AccountRepositoryInterface::class),
+    ),
+    KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
+        $c->get(KingdomPublicationLineSource::class),
+        $c->get(PublicationPipelineFactory::class)->forPublicRead(),
         new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
+        new DateTimeImmutable('now'),
+    ),
+    ManagerKingdomPageQuery::class => fn (ContainerInterface $c) => new ManagerKingdomPageQuery(
+        $c->get(KingdomPublicationLineSource::class),
+        $c->get(PublicationPipelineFactory::class)->forManagerReview(),
+        new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
+        new DateTimeImmutable('now'),
     ),
     MonthInvalidator::class => fn (RedisKeyValueStore $store) => new MonthInvalidator($store),
     MonthReader::class => fn (ContainerInterface $c) => new CachingMonthReader(

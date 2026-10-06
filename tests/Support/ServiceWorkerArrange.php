@@ -18,7 +18,7 @@ use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Ledger\DailySweep;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
@@ -145,8 +145,10 @@ final class ServiceWorkerArrange
         $unknownSig = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $unknown, 'whsec');
         $handler->handle('teller', (string) $unknown, $unknownSig, $now);
 
-        $page = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $page = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $page->statement($kingdoms->findByOrkId(4), new MonthWindow(2026, 9));
+        KingdomPageQueryFactory::managerReview($transactions, $accounts)
+            ->statement($kingdoms->findByOrkId(4), new MonthWindow(2026, 9));
 
         $connect = new BankConnect(Strategies::providers($teller));
         $connect->blank('  ');

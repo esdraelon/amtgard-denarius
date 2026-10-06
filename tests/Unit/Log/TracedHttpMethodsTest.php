@@ -20,7 +20,7 @@ use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Tests\Support\MethodLogAssert;
@@ -100,7 +100,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $accounts->save(AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->published(true)->build());
         $transactions = new MemoryTransactions();
         $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->publishedAt('2026-09-03T00:00:00+00:00')->build());
-        $pages = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $pages = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $page = new KingdomPageController($kingdoms, $pages, KingdomAccess::standard(), $auth, $twig);
         $page->show($this->request('GET', '/missing'), new Response(), 'missing');
 

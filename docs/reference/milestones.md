@@ -307,6 +307,15 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Publication pipeline core
+
+- Branch: `publication-pipeline-core` (stacked on `transaction-publication-schema`).
+- `PublicationEnvelope` and `PublicationPipeline` (chain of responsibility) with `EmbargoPublicationStage`, `PublicationStatusStage`, and deferred slots for pattern registry, quantization, redaction, aggregates, balance, and envelope review.
+- `KingdomPageQuery` (public) and `ManagerKingdomPageQuery` (manager) run through `PublicationStatementService`; Redis `CachingMonthReader` caches post-pipeline public statements and busts on kingdom settings changes.
+- Line coverage: 95.61% (3815/3990).
+- Infection covered MSI: 95% (skip-initial-tests, Unit coverage XML, `--threads=4`, ~24m).
+- Log-tested branches: `publication_embargo_withheld`, `publication_unpublished_withheld`, `publication_pipeline_complete`, `publication_public_read`, `publication_manager_read`, `publication_lines_loaded`, `month_cache_store_public_pipeline`, `kingdom_settings_month_cache_bust`, `publication_stage_deferred`.
+
 ## Transaction publication schema
 
 - Branch: `transaction-publication-schema` (stacked on `ui-twig-components`).

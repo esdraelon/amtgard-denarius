@@ -19,7 +19,7 @@ use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Access\AccountNavBuilder;
 use Amtgard\Denarius\Service\Access\PermissionService;
@@ -74,7 +74,7 @@ final class ControllerTest extends AmtgardTestCase
         $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->type('depository')->published(true)->build());
         $transactions = new MemoryTransactions();
         $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('office')->description('paper')->counterparty('Shop')->status('posted')->build());
-        $pages = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $pages = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $page = new KingdomPageController($kingdoms, $pages, KingdomAccess::standard(), $auth, $twig);
         $missing = $page->show($this->request('GET', '/missing'), new Response(), 'missing');
         $this->assertSame(404, $missing->getStatusCode());
