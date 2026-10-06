@@ -312,7 +312,7 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Branch: `transaction-review-ui` (stacked on `statement-absence-reasons`).
 - Manage **Transaction review** queue with publish/withhold POST actions; sets `published_at` via `TransactionReviewService` and busts month cache.
 - Line coverage: 95.18% (4072/4278).
-- Infection covered MSI: (run `composer infection:ci` on this branch).
+- Infection covered MSI: 96% (Unit coverage XML + skip-initial-tests, `--threads=4`, ~100m; 36 errors/98 timeouts in run but gate metric 96%).
 - Log-tested branches: `transaction_review_published`, `transaction_review_withheld`, `transaction_review_rejected_embargo`, `transaction_review_queue_loaded`, and related reject paths.
 
 ## Statement absence reasons
@@ -321,7 +321,7 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - `StatementAbsenceClassifier` chooses **Unreviewed**, **Stale transactions**, or **No current transactions since {date}** when the public month statement has no rows; `kingdom.twig` shows an info alert via `absenceMessage`.
 - Line coverage: 95.62% (3910/4089).
 - Infection covered MSI: 95% (skip-initial-tests, Unit coverage XML, `--threads=4`, ~22m).
-- Log-tested branches: absence classification branches on `StatementAbsenceClassifier` (see `StatementAbsenceTest`).
+- Log-tested branches: `statement_absence_unreviewed`, `statement_absence_stale`, `statement_absence_no_since` (see `StatementAbsenceTest`).
 
 ## Publication pipeline core
 
