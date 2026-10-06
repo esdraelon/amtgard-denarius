@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Tests\Unit;
 
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
-use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class PublicationPublicReadTest extends AmtgardTestCase
@@ -45,7 +44,7 @@ final class PublicationPublicReadTest extends AmtgardTestCase
             ->publishedAt('2026-09-04T00:00:00+00:00')
             ->build());
 
-        $query = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $query = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $statement = $query->statement($kingdom, new MonthWindow(2026, 9));
         $this->assertCount(1, $statement->rows);
     }

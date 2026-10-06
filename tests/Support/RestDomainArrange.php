@@ -26,6 +26,7 @@ final class RestDomainArrange
         self::run(ApplicationTest::class, 'testRoleAdminSettingsEnrollmentSyncAndWebhooks');
         self::run(ApplicationTest::class, 'testDirectoryQueueWorkerAndHttpClients');
         self::exercisePublicationDomain();
+        self::exercisePublicationPipeline();
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPublicReadTest::class, 'testPublicStatementOmitsUnpublishedTransactions');
 
         MonthWindow::current(new \DateTimeImmutable('2026-09-15'));
@@ -59,6 +60,14 @@ final class RestDomainArrange
         $calculator->publishableAfter('2026-09-09', 3, $now, true);
         (new PublicationSettingsValidator())->clampEmbargoDays(99);
         KingdomRecordRebuilder::from(KingdomRecord::builder()->orkKingdomId(1)->name('Alpha')->slug('alpha')->build());
+    }
+
+    private static function exercisePublicationPipeline(): void
+    {
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testEmbargoStageDropsLinesBeforePublishableAfter');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testPublicationStatusStageDropsUnpublishedLines');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testManagerQueryIncludesUnpublishedLines');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testPublicPipelineRunsFullStageChain');
     }
 
     /**

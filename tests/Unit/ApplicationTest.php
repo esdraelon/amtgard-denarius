@@ -44,7 +44,7 @@ use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Ledger\DailySweep;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
@@ -291,7 +291,7 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertFalse($verifier->verify('body', 't=' . ($now - 500), $now));
         $this->assertFalse((new TellerWebhookVerifier(''))->verify('body', $signature, $now));
 
-        $page = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $page = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $kingdomRow = $kingdoms->findByOrkId(4);
         $statement = $page->statement($kingdomRow, new MonthWindow(2026, 9));
         $this->assertEmpty($statement->rows);

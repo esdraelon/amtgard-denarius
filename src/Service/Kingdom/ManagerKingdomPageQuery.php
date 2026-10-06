@@ -14,12 +14,12 @@ use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
-/** Public read path: month statements from the public publication pipeline only. */
-final class KingdomPageQuery implements MonthReader
+/** Manager read path: full ledger candidates through the manager pipeline (no publish gate). */
+final class ManagerKingdomPageQuery implements MonthReader
 {
     public function __construct(
         private readonly KingdomPublicationLineSource $lines,
-        private readonly PublicationPipeline $publicPipeline,
+        private readonly PublicationPipeline $managerPipeline,
         private readonly MonthStatementBuilder $builder,
         private readonly \DateTimeImmutable $asOf,
     ) {
@@ -37,7 +37,7 @@ final class KingdomPageQuery implements MonthReader
                 $this->asOf,
                 $this->lines->candidates($kingdom),
             );
-            $envelope = $this->publicPipeline->run($envelope);
+            $envelope = $this->managerPipeline->run($envelope);
 
             return $this->builder->build($envelope->toLedgerLines(), $mode, $month);
         });
