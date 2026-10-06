@@ -19,7 +19,7 @@ final class PublicationPipelineFactory
         return DenariusLog::trace(__METHOD__, function (): PublicationPipeline {
             return new PublicationPipeline([
                 new EmbargoStage(),
-                new DeferredPublicationStage('pattern_registry'),
+                new HardRedactionStage(),
                 new PublicationStatusStage(),
                 new DeferredPublicationStage('amount_quantization'),
                 new DeferredPublicationStage('line_redaction'),
@@ -34,7 +34,7 @@ final class PublicationPipelineFactory
     {
         return DenariusLog::trace(__METHOD__, function (): PublicationPipeline {
             return new PublicationPipeline([
-                new DeferredPublicationStage('manager_hard_redact'),
+                new HardRedactionStage(),
             ]);
         });
     }
