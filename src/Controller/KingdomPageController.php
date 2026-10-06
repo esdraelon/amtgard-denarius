@@ -64,6 +64,7 @@ final class KingdomPageController
                 'next' => $month->next()->key(),
                 'mode' => DisplayMode::fromStored($kingdom->getDisplayMode())->value,
                 'rows' => $this->rows($statement->rows),
+                'absenceMessage' => $statement->absenceReason?->message(),
                 'disconnected' => $kingdom->getEnrollmentStatus() === 'disconnected',
                 'syncedAt' => $kingdom->getLastSyncedAt(),
             ]);

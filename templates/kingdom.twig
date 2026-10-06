@@ -26,7 +26,11 @@
 {% endembed %}
 
 {% if rows is empty %}
-    <p class="text-body-secondary">No transactions for this month.</p>
+    {% if absenceMessage %}
+        {% include 'components/alert.twig' with { variant: 'info', message: absenceMessage } %}
+    {% else %}
+        <p class="text-body-secondary">No transactions for this month.</p>
+    {% endif %}
 {% elseif mode == 'summarized' %}
     {% include 'components/data-table.twig' with {
         columns: ['Category', 'Transactions', 'Amount'],

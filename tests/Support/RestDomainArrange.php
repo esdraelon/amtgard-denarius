@@ -28,6 +28,12 @@ final class RestDomainArrange
         self::exercisePublicationDomain();
         self::exercisePublicationPipeline();
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPublicReadTest::class, 'testPublicStatementOmitsUnpublishedTransactions');
+        self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonSerializesForCache');
+        self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksUnreviewedWhenEmbargoClearedButUnpublished');
+        self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksStaleWhenMonthActivityStillEmbargoed');
+        self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksNoCurrentSinceWhenMonthIsEmpty');
+        self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonRoundTripsThroughMonthCache');
+        self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testPublicKingdomQueryAttachesAbsenceWhenRowsEmpty');
 
         MonthWindow::current(new \DateTimeImmutable('2026-09-15'));
 

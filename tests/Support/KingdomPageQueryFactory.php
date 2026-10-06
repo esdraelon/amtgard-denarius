@@ -6,6 +6,7 @@ namespace Amtgard\Denarius\Tests\Support;
 
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationPipelineFactory;
+use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
 use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
 use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
@@ -27,6 +28,7 @@ final class KingdomPageQueryFactory
             $source,
             $pipelines->forPublicRead(),
             $builder ?? MonthStatementBuilder::standard(),
+            new StatementAbsenceClassifier(),
             $asOf ?? new \DateTimeImmutable('2026-10-01T12:00:00+00:00'),
         );
     }

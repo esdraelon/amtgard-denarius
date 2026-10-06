@@ -99,6 +99,7 @@ use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
+use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
 use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
@@ -293,10 +294,12 @@ return [
         $c->get(TransactionRepositoryInterface::class),
         $c->get(AccountRepositoryInterface::class),
     ),
+    StatementAbsenceClassifier::class => fn () => new StatementAbsenceClassifier(),
     KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
         $c->get(KingdomPublicationLineSource::class),
         $c->get(PublicationPipelineFactory::class)->forPublicRead(),
         new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
+        $c->get(StatementAbsenceClassifier::class),
         new DateTimeImmutable('now'),
     ),
     ManagerKingdomPageQuery::class => fn (ContainerInterface $c) => new ManagerKingdomPageQuery(

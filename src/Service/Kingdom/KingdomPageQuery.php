@@ -10,6 +10,7 @@ use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationEnvelope;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationPipeline;
+use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
@@ -21,6 +22,7 @@ final class KingdomPageQuery implements MonthReader
         private readonly KingdomPublicationLineSource $lines,
         private readonly PublicationPipeline $publicPipeline,
         private readonly MonthStatementBuilder $builder,
+        private readonly StatementAbsenceClassifier $absence,
         private readonly \DateTimeImmutable $asOf,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
@@ -30,16 +32,26 @@ final class KingdomPageQuery implements MonthReader
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $month): MonthStatement {
             $mode = DisplayMode::fromStored($kingdom->getDisplayMode());
+            $candidates = $this->lines->candidates($kingdom);
             $envelope = new PublicationEnvelope(
                 $kingdom,
                 $month,
                 $mode,
                 $this->asOf,
-                $this->lines->candidates($kingdom),
+                $candidates,
             );
             $envelope = $this->publicPipeline->run($envelope);
+            $statement = $this->builder->build($envelope->toLedgerLines(), $mode, $month);
+            if ($statement->rows !== []) {
+                return $statement;
+            }
 
-            return $this->builder->build($envelope->toLedgerLines(), $mode, $month);
+            return new MonthStatement(
+                $statement->mode,
+                $statement->month,
+                $statement->rows,
+                $this->absence->classify($month, $this->asOf, $candidates),
+            );
         });
     }
 }

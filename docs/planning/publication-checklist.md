@@ -6,7 +6,7 @@ Stack base: `ui-twig-components` @ `dacfa14` (unless a later publication branch 
 
 - [x] **M-01** `transaction-publication-schema` — DB columns, kingdom settings (embargo_days, backfill flags), transaction publish state; public read path excludes unpublished rows
 - [x] **M-02** `publication-pipeline-core` — envelope, stages, manager vs public paths, month cache hook
-- [ ] **M-03** `statement-absence-reasons` — Unreviewed / Stale / No current transactions banners
+- [x] **M-03** `statement-absence-reasons` — Unreviewed / Stale / No current transactions banners
 - [ ] **M-04** `transaction-review-ui` — manage queue, publish/withhold actions
 - [ ] **M-05** `micro-deposit-hard-redact` — pairing + keyword HARD rules at ingest
 - [ ] **M-06** `display-mode-disclosure-tiers` — migrate `all` → `less_redacted`; manage labels; presenters use pipeline only
