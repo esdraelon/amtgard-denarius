@@ -312,7 +312,7 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Branch: `micro-deposit-hard-redact` (stacked on `transaction-review-ui`).
 - Ingest-time HARD flags via `VerificationKeywordHardMatcher` and `MicroDepositPairReconciler`; persisted `publication_flags` JSON; `HardRedactionStage` stubs lines on public and manager pipeline paths (no exact verification amounts).
 - Line coverage: 95.22% (4244/4457).
-- Infection covered MSI: pending `composer infection:ci` confirmation (skip-initial-tests, `--threads=4`).
+- Infection covered MSI: 95% (skip-initial-tests, `build/coverage-xml`, `--threads=4`, ~15m; 170 undetected covered mutants).
 - Log-tested branches: `publication_hard_keyword`, `publication_micro_pair_mark`, `publication_hard_redact`.
 
 ## Transaction review UI
