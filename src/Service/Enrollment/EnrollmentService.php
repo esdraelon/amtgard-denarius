@@ -9,6 +9,7 @@ use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
+use Amtgard\Denarius\Domain\Kingdom\KingdomRecordRebuilder;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
@@ -120,18 +121,11 @@ final class EnrollmentService
     private function copy(KingdomRecord $kingdom, string $enrollmentId, string $institution, string $provider, string $status): KingdomRecord
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $enrollmentId, $institution, $provider, $status): KingdomRecord {
-            return KingdomRecord::builder()
-                ->id($kingdom->getId())
-                ->orkKingdomId($kingdom->getOrkKingdomId())
-                ->name($kingdom->getName())
-                ->slug($kingdom->getSlug())
-                ->visibility($kingdom->getVisibility())
-                ->displayMode($kingdom->getDisplayMode())
+            return KingdomRecordRebuilder::from($kingdom)
                 ->enrollmentId($enrollmentId !== '' ? $enrollmentId : null)
                 ->institutionName($institution !== '' ? $institution : null)
                 ->provider($provider !== '' ? $provider : null)
                 ->enrollmentStatus($status)
-                ->lastSyncedAt($kingdom->getLastSyncedAt())
                 ->build();
         });
     }

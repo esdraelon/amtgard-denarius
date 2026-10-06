@@ -94,6 +94,9 @@ use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
+use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
@@ -255,6 +258,13 @@ return [
         $c->get(KingdomRefreshQueue::class),
         $c->get(MonthInvalidator::class),
     ),
+    PublicationSettingsValidator::class => fn () => new PublicationSettingsValidator(),
+    PublicationEmbargoCalculator::class => fn () => new PublicationEmbargoCalculator(),
+    TransactionPublicationApplier::class => fn (ContainerInterface $c) => new TransactionPublicationApplier(
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(PublicationEmbargoCalculator::class),
+        new DateTimeImmutable('now'),
+    ),
     TransactionSynchronizer::class => fn (ContainerInterface $c) => new TransactionSynchronizer(
         $c->get(KingdomRepositoryInterface::class),
         $c->get(AccountRepositoryInterface::class),
@@ -264,6 +274,7 @@ return [
         $c->get(TokenCipher::class),
         new DateTimeImmutable('now'),
         $c->get(MonthInvalidator::class),
+        $c->get(TransactionPublicationApplier::class),
     ),
     TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier($_ENV['TELLER_WEBHOOK_SECRET'] ?? ''),
     ProviderWebhookHandler::class => fn (ContainerInterface $c) => new ProviderWebhookHandler(
@@ -287,7 +298,10 @@ return [
     StatementPresenterRegistry::class => fn () => StatementPresenterRegistry::standard(),
     VisibilityPolicyRegistry::class => fn () => VisibilityPolicyRegistry::standard(),
     KingdomAccess::class => fn (VisibilityPolicyRegistry $policies) => new KingdomAccess($policies),
-    KingdomSettings::class => fn (KingdomRepositoryInterface $kingdoms) => new KingdomSettings($kingdoms),
+    KingdomSettings::class => fn (ContainerInterface $c) => new KingdomSettings(
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(PublicationSettingsValidator::class),
+    ),
     PrincipalSync::class => fn (PrincipalRepositoryInterface $principals) => new PrincipalSync($principals),
     PostCsrfMiddleware::class => fn () => new PostCsrfMiddleware(new Slim\Psr7\Factory\ResponseFactory()),
     SyncPrincipalMiddleware::class => fn (ContainerInterface $c) => new SyncPrincipalMiddleware(

@@ -38,10 +38,27 @@ class TransactionRepository extends Repository implements EntityRepositoryInterf
             if (!$entity instanceof TransactionEntity) {
                 throw new \RuntimeException('Transaction entity was not created.');
             }
-            $this->fill($entity, $transaction);
+            $this->fill($entity, $transaction, $existing instanceof TransactionEntity);
             $this->persist($entity);
 
             return null;
+        });
+    }
+
+    public function findByTellerTransactionId(string $tellerTransactionId): ?TransactionRecord
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($tellerTransactionId): ?TransactionRecord {
+            return $this->record($this->fetchBy('teller_transaction_id', $tellerTransactionId));
+        });
+    }
+
+    public function forKingdomPublished(int $kingdomId): array
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdomId): array {
+            return array_values(array_filter(
+                $this->forKingdom($kingdomId),
+                static fn (TransactionRecord $row): bool => $row->getPublishedAt() !== null && $row->getPublishedAt() !== '',
+            ));
         });
     }
 
@@ -57,9 +74,9 @@ class TransactionRepository extends Repository implements EntityRepositoryInterf
         });
     }
 
-    private function fill(TransactionEntity $entity, TransactionRecord $transaction): void
+    private function fill(TransactionEntity $entity, TransactionRecord $transaction, bool $existing): void
     {
-        DenariusLog::trace(__METHOD__, function () use ($entity, $transaction): mixed {
+        DenariusLog::trace(__METHOD__, function () use ($entity, $transaction, $existing): mixed {
             $entity->setKingdomId($transaction->getKingdomId());
             $entity->setTellerTransactionId($transaction->getTellerTransactionId());
             $entity->setTellerAccountId($transaction->getTellerAccountId());
@@ -69,6 +86,16 @@ class TransactionRepository extends Repository implements EntityRepositoryInterf
             $entity->setDescription($transaction->getDescription());
             $entity->setCounterparty($transaction->getCounterparty());
             $entity->setStatus($transaction->getStatus());
+            $entity->setPublishableAfter($transaction->getPublishableAfter());
+            if (!$existing) {
+                $entity->setPublishedAt($transaction->getPublishedAt());
+                $entity->setPublicationFlags($transaction->getPublicationFlags());
+            } elseif ($transaction->getPublishedAt() !== null) {
+                $entity->setPublishedAt($transaction->getPublishedAt());
+            }
+            if ($transaction->getPublicationFlags() !== null) {
+                $entity->setPublicationFlags($transaction->getPublicationFlags());
+            }
 
             return null;
         });
@@ -92,6 +119,9 @@ class TransactionRepository extends Repository implements EntityRepositoryInterf
                 ->description((string) $entity->getDescription())
                 ->counterparty((string) $entity->getCounterparty())
                 ->status((string) $entity->getStatus())
+                ->publishedAt($entity->getPublishedAt())
+                ->publishableAfter($entity->getPublishableAfter())
+                ->publicationFlags($entity->getPublicationFlags())
                 ->build();
         });
     }

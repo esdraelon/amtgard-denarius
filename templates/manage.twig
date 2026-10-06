@@ -31,6 +31,13 @@
                 selected: kingdom.displayMode,
                 max_width: '28rem'
             } %}
+            {% include 'components/form-field-select.twig' with {
+                name: 'embargo_days',
+                label: 'Publication embargo (days after posted date)',
+                options: ['1', '2', '3', '4', '5', '6', '7'],
+                selected: kingdom.embargoDays ~ '',
+                max_width: '28rem'
+            } %}
             {{ ui.submit('Save') }}
         </form>
         <p class="mt-3 small text-body-secondary mb-0">Enrollment status: <span class="fw-semibold">{{ kingdom.enrollmentStatus }}</span></p>

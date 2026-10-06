@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Persistence\Record;
 
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationPlatformLimits;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Traits\Builder\Builder;
 use Amtgard\Traits\Builder\Data;
@@ -25,6 +26,8 @@ final class KingdomRecord
         private ?string $provider = null,
         private string $enrollmentStatus = 'none',
         private ?string $lastSyncedAt = null,
+        private int $embargoDays = PublicationPlatformLimits::DEFAULT_EMBARGO_DAYS,
+        private ?string $initialBackfillCompletedAt = null,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -47,6 +50,8 @@ final class KingdomRecord
                 'provider' => $this->getProvider(),
                 'enrollmentStatus' => $this->getEnrollmentStatus(),
                 'lastSyncedAt' => $this->getLastSyncedAt(),
+                'embargoDays' => $this->getEmbargoDays(),
+                'initialBackfillCompletedAt' => $this->getInitialBackfillCompletedAt(),
             ];
         });
     }

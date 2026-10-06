@@ -88,8 +88,8 @@ final class ServiceWorkerArrange
         $ignoredCommand->name();
         $ignoredCommand->execute($roleAdmin, $body);
 
-        $settings = new KingdomSettings($kingdoms);
-        $updated = $settings->update($saved, \Amtgard\Denarius\Domain\Access\Visibility::Public, DisplayMode::All);
+        $settings = Strategies::kingdomSettings($kingdoms);
+        $updated = $settings->update($saved, \Amtgard\Denarius\Domain\Access\Visibility::Public, DisplayMode::All, 3);
 
         $secrets = new MemorySecrets();
         $accounts = new MemoryAccounts();
@@ -120,7 +120,7 @@ final class ServiceWorkerArrange
         $accounts->save(AccountRecord::builder()->kingdomId((int) $connected->getId())->tellerAccountId('acc_1')->name('Checking')->published(true)->build());
 
         $transactions = new MemoryTransactions();
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
+        $sync = Strategies::synchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
         $sync->sync(4);
         $sync->sync(99);
 

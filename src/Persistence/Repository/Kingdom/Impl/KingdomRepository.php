@@ -122,6 +122,8 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
             $entity->setProvider($kingdom->getProvider());
             $entity->setEnrollmentStatus($kingdom->getEnrollmentStatus());
             $entity->setLastSyncedAt($kingdom->getLastSyncedAt());
+            $entity->setEmbargoDays($kingdom->getEmbargoDays());
+            $entity->setInitialBackfillCompletedAt($kingdom->getInitialBackfillCompletedAt());
 
             return null;
         });
@@ -146,6 +148,8 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
                 ->provider($entity->getProvider())
                 ->enrollmentStatus((string) ($entity->getEnrollmentStatus() ?? 'none'))
                 ->lastSyncedAt($entity->getLastSyncedAt())
+                ->embargoDays((int) ($entity->getEmbargoDays() ?? 3))
+                ->initialBackfillCompletedAt($entity->getInitialBackfillCompletedAt())
                 ->build();
         });
     }

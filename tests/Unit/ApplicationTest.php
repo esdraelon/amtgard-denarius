@@ -216,8 +216,8 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertCount(5, $grants->rows);
         $this->assertThrows(\InvalidArgumentException::class, fn () => $admin->grantManager('9', 1, 'admin'));
 
-        $settings = new KingdomSettings($kingdoms);
-        $updated = $settings->update($saved, Visibility::Public, DisplayMode::All);
+        $settings = Strategies::kingdomSettings($kingdoms);
+        $updated = $settings->update($saved, Visibility::Public, DisplayMode::All, 3);
         $this->assertSame('public', $updated->getVisibility());
         $this->assertSame('all', $updated->getDisplayMode());
 
@@ -247,7 +247,7 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertThrows(\RuntimeException::class, fn () => $cipher->decrypt(base64_encode('short')));
 
         $transactions = new MemoryTransactions();
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
+        $sync = Strategies::synchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
         $enrollment->setPublished($kingdoms->findByOrkId(4), ['acc_1' => true]);
         $kingdoms->save(KingdomRecord::builder()
             ->id($connected->getId())
@@ -292,8 +292,26 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertFalse((new TellerWebhookVerifier(''))->verify('body', $signature, $now));
 
         $page = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
-        $statement = $page->statement($kingdoms->findByOrkId(4), new MonthWindow(2026, 9));
-        $this->assertNotEmpty($statement->rows);
+        $kingdomRow = $kingdoms->findByOrkId(4);
+        $statement = $page->statement($kingdomRow, new MonthWindow(2026, 9));
+        $this->assertEmpty($statement->rows);
+        $synced = $transactions->forKingdom((int) $kingdomRow->getId())[0];
+        $transactions->upsert(TransactionRecord::builder()
+            ->id($synced->getId())
+            ->kingdomId($synced->getKingdomId())
+            ->tellerTransactionId($synced->getTellerTransactionId())
+            ->tellerAccountId($synced->getTellerAccountId())
+            ->postedOn($synced->getPostedOn())
+            ->amountCents($synced->getAmountCents())
+            ->category($synced->getCategory())
+            ->description($synced->getDescription())
+            ->counterparty($synced->getCounterparty())
+            ->status($synced->getStatus())
+            ->publishedAt('2026-09-03T12:00:00+00:00')
+            ->publishableAfter($synced->getPublishableAfter())
+            ->build());
+        $this->assertNotEmpty($page->statement($kingdomRow, new MonthWindow(2026, 9))->rows);
+        $this->assertNotNull($kingdoms->findByOrkId(4)->getInitialBackfillCompletedAt());
 
         $principals = new MemoryPrincipals();
         $syncPrincipal = new PrincipalSync($principals);
@@ -319,7 +337,7 @@ final class ApplicationTest extends AmtgardTestCase
         $refresh->publishLedger(4);
         $this->assertSame('ledger:4', $messages->published[0]['key']);
 
-        $sync = new TransactionSynchronizer(
+        $sync = Strategies::synchronizer(
             new MemoryKingdoms(),
             new MemoryAccounts(),
             new MemorySecrets(),
@@ -577,6 +595,8 @@ final class MemoryKingdoms implements KingdomRepositoryInterface
             ->provider($kingdom->getProvider())
             ->enrollmentStatus($kingdom->getEnrollmentStatus())
             ->lastSyncedAt($kingdom->getLastSyncedAt())
+            ->embargoDays($kingdom->getEmbargoDays())
+            ->initialBackfillCompletedAt($kingdom->getInitialBackfillCompletedAt())
             ->build();
         $this->rows[$id] = $saved;
         return $saved;
@@ -667,17 +687,40 @@ final class MemoryAccounts implements AccountRepositoryInterface
 
 final class MemoryTransactions implements TransactionRepositoryInterface
 {
+    /** @var array<string, TransactionRecord> */
+    public array $rowsByTellerId = [];
+
     /** @var array<int, list<TransactionRecord>> */
     public array $rows = [];
+
     public function upsert(TransactionRecord $transaction): void
     {
-        $list = $this->rows[$transaction->getKingdomId()] ?? [];
-        $list[] = $transaction;
+        $this->rowsByTellerId[$transaction->getTellerTransactionId()] = $transaction;
+        $list = [];
+        foreach ($this->rowsByTellerId as $row) {
+            if ($row->getKingdomId() === $transaction->getKingdomId()) {
+                $list[] = $row;
+            }
+        }
         $this->rows[$transaction->getKingdomId()] = $list;
     }
+
+    public function findByTellerTransactionId(string $tellerTransactionId): ?TransactionRecord
+    {
+        return $this->rowsByTellerId[$tellerTransactionId] ?? null;
+    }
+
     public function forKingdom(int $kingdomId): array
     {
         return $this->rows[$kingdomId] ?? [];
+    }
+
+    public function forKingdomPublished(int $kingdomId): array
+    {
+        return array_values(array_filter(
+            $this->forKingdom($kingdomId),
+            static fn (TransactionRecord $row): bool => $row->getPublishedAt() !== null && $row->getPublishedAt() !== '',
+        ));
     }
 }
 
