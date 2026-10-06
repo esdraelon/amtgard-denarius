@@ -2,86 +2,104 @@
 {% import "macros.twig" as ui %}
 
 {% block title %}Manage {{ kingdom.name }}{% endblock %}
-{% block container_class %}max-w-4xl{% endblock %}
+{% block container_class %}container-lg{% endblock %}
 
 {% block content %}
-<h1 class="text-3xl font-serif font-bold text-secondary mb-2">Manage {{ kingdom.name }}</h1>
-<p class="mb-6">{{ ui.btn_secondary('Public statement', '/' ~ kingdom.slug) }}</p>
+{% embed 'components/page-header.twig' with { title: 'Manage ' ~ kingdom.name } %}
+    {% import "macros.twig" as ui %}
+    {% block header_actions %}
+        <p class="mb-0">{{ ui.btn_secondary('Public statement', '/' ~ kingdom.slug) }}</p>
+    {% endblock %}
+{% endembed %}
 
-<section class="mb-8 pb-6 border-b border-gray-200">
-    <h2 class="text-xl font-serif font-semibold text-tertiary mb-3">Statement settings</h2>
-    <form method="post" action="/manage/{{ kingdom.slug }}/settings">
-        <input type="hidden" name="csrf" value="{{ csrf }}">
-        <label class="block mb-3 text-sm font-semibold text-tertiary">Visibility
-            <select name="visibility" class="mt-1 block w-full max-w-md border border-gray-300 rounded px-3 py-2 font-normal">
-            {% for value in ['public', 'registered', 'kingdom_only'] %}
-                <option value="{{ value }}" {% if kingdom.visibility == value %}selected{% endif %}>{{ value }}</option>
-            {% endfor %}
-            </select>
-        </label>
-        <label class="block mb-3 text-sm font-semibold text-tertiary">Display
-            <select name="display_mode" class="mt-1 block w-full max-w-md border border-gray-300 rounded px-3 py-2 font-normal">
-            {% for value in ['all', 'redacted', 'summarized'] %}
-                <option value="{{ value }}" {% if kingdom.displayMode == value %}selected{% endif %}>{{ value }}</option>
-            {% endfor %}
-            </select>
-        </label>
-        {{ ui.submit('Save') }}
-    </form>
-    <p class="mt-3 text-sm text-gray-600">Enrollment status: <span class="font-semibold">{{ kingdom.enrollmentStatus }}</span></p>
-    {% if kingdom.enrollmentStatus == 'disconnected' %}
-        <p class="mt-2 text-sm text-amber-800">Bank access was disconnected. Use Add bank below to connect again.</p>
-    {% endif %}
-</section>
-
-<section class="mb-8 pb-6 border-b border-gray-200">
-    <h2 class="text-xl font-serif font-semibold text-tertiary mb-3">Bank connection</h2>
-    {% if not connect.available %}
-        <form method="post" action="/manage/{{ kingdom.slug }}/connect">
+{% embed 'components/section-card.twig' with { title: 'Statement settings' } %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        <form method="post" action="/manage/{{ kingdom.slug }}/settings">
             <input type="hidden" name="csrf" value="{{ csrf }}">
-            {% for id in connect.skipped %}
-                <input type="hidden" name="skipped[]" value="{{ id }}">
-            {% endfor %}
-            {{ ui.submit('Add bank') }}
+            {% include 'components/form-field-select.twig' with {
+                name: 'visibility',
+                label: 'Visibility',
+                options: ['public', 'registered', 'kingdom_only'],
+                selected: kingdom.visibility,
+                max_width: '28rem'
+            } %}
+            {% include 'components/form-field-select.twig' with {
+                name: 'display_mode',
+                label: 'Display',
+                options: ['all', 'redacted', 'summarized'],
+                selected: kingdom.displayMode,
+                max_width: '28rem'
+            } %}
+            {{ ui.submit('Save') }}
         </form>
-        {% if connect.reason == 'exhausted' %}
-            <p class="mt-2 text-sm text-amber-800">No configured provider is available. Contact the Denarius administrator.</p>
+        <p class="mt-3 small text-body-secondary mb-0">Enrollment status: <span class="fw-semibold">{{ kingdom.enrollmentStatus }}</span></p>
+        {% if kingdom.enrollmentStatus == 'disconnected' %}
+            {% include 'components/alert.twig' with {
+                variant: 'warning',
+                message: 'Bank access was disconnected. Use Add bank below to connect again.'
+            } %}
         {% endif %}
-    {% else %}
-        <div class="space-y-2">
-            {% include 'connect/' ~ connect.provider ~ '.twig' %}
-        </div>
-        <form method="post" action="/manage/{{ kingdom.slug }}/connect" class="mt-3">
-            <input type="hidden" name="csrf" value="{{ csrf }}">
-            {% for id in connect.skipped %}
-                <input type="hidden" name="skipped[]" value="{{ id }}">
-            {% endfor %}
-            <input type="hidden" name="current" value="{{ connect.provider }}">
-            <button type="submit" name="skip" value="1" class="border border-gray-400 hover:border-gray-600 text-gray-700 py-2 px-4 rounded text-sm cursor-pointer bg-white">Try another provider</button>
-        </form>
-    {% endif %}
-</section>
+    {% endblock %}
+{% endembed %}
 
-<form id="enrollment-form" method="post" action="/manage/{{ kingdom.slug }}/enrollment" class="hidden">
+{% embed 'components/section-card.twig' with { title: 'Bank connection' } %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        {% if not connect.available %}
+            <form method="post" action="/manage/{{ kingdom.slug }}/connect">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                {% for id in connect.skipped %}
+                    <input type="hidden" name="skipped[]" value="{{ id }}">
+                {% endfor %}
+                {{ ui.submit('Add bank') }}
+            </form>
+            {% if connect.reason == 'exhausted' %}
+                {% include 'components/alert.twig' with {
+                    variant: 'warning',
+                    message: 'No configured provider is available. Contact the Denarius administrator.'
+                } %}
+            {% endif %}
+        {% else %}
+            <div class="vstack gap-2">
+                {% include 'connect/' ~ connect.provider ~ '.twig' %}
+            </div>
+            <form method="post" action="/manage/{{ kingdom.slug }}/connect" class="mt-3">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                {% for id in connect.skipped %}
+                    <input type="hidden" name="skipped[]" value="{{ id }}">
+                {% endfor %}
+                <input type="hidden" name="current" value="{{ connect.provider }}">
+                <button type="submit" name="skip" value="1" class="btn btn-outline-secondary btn-sm">Try another provider</button>
+            </form>
+        {% endif %}
+    {% endblock %}
+{% endembed %}
+
+<form id="enrollment-form" method="post" action="/manage/{{ kingdom.slug }}/enrollment" class="d-none">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="enrollment" id="enrollment-json">
 </form>
 
-<section>
-    <h2 class="text-xl font-serif font-semibold text-tertiary mb-3">Published accounts</h2>
-    <form method="post" action="/manage/{{ kingdom.slug }}/accounts">
-        <input type="hidden" name="csrf" value="{{ csrf }}">
-        <div class="space-y-2 mb-3">
-        {% for account in accounts %}
-            <label class="flex items-center gap-2 text-gray-700">
-                <input type="checkbox" name="published[]" value="{{ account.tellerAccountId }}" {% if account.published %}checked{% endif %} class="rounded">
-                {{ account.name }} ({{ account.type }})
-            </label>
-        {% endfor %}
-        </div>
-        {{ ui.submit('Save accounts') }}
-    </form>
-</section>
+{% embed 'components/section-card.twig' with { title: 'Published accounts' } %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        <form method="post" action="/manage/{{ kingdom.slug }}/accounts">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <div class="vstack gap-2 mb-3">
+            {% for account in accounts %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="published[]" value="{{ account.tellerAccountId }}" id="pub-{{ account.tellerAccountId }}" {% if account.published %}checked{% endif %}>
+                    <label class="form-check-label" for="pub-{{ account.tellerAccountId }}">
+                        {{ account.name }} ({{ account.type }})
+                    </label>
+                </div>
+            {% endfor %}
+            </div>
+            {{ ui.submit('Save accounts') }}
+        </form>
+    {% endblock %}
+{% endembed %}
 {% endblock %}
 
 {% block scripts %}
