@@ -36,7 +36,7 @@ final class KingdomPageQuery implements MonthReader
             }
 
             $lines = [];
-            foreach ($this->transactions->forKingdom((int) $kingdom->getId()) as $transaction) {
+            foreach ($this->transactions->forKingdomPublished((int) $kingdom->getId()) as $transaction) {
                 if (!isset($names[$transaction->getTellerAccountId()])) {
                     continue;
                 }

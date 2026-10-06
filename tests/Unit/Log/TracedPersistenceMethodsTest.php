@@ -97,7 +97,7 @@ final class TracedPersistenceMethodsTest extends AmtgardTestCase
         PersistenceStoreArrange::exerciseRepositories();
 
         $scope = $this->methodsInScope();
-        $this->assertCount(58, $scope);
+        $this->assertCount(60, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

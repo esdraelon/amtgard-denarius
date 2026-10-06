@@ -307,6 +307,16 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Transaction publication schema
+
+- Branch: `transaction-publication-schema` (stacked on `ui-twig-components`).
+- Phinx migration adds kingdom `embargo_days` (default 3) and `initial_backfill_completed_at`, plus transaction `published_at`, `publishable_after`, and `publication_flags`; kingdom audit columns match.
+- `PublicationEmbargoCalculator` and `TransactionPublicationApplier` set `publishable_after` on sync (standard embargo and first-sync backfill amnesty); `KingdomPageQuery` reads only manager-published rows via `forKingdomPublished`.
+- Manage settings include embargo days (1–7); public statements stay empty until M-04 publish actions.
+- Line coverage: 95.44% (3684/3860).
+- Infection covered MSI: 95% (skip-initial-tests, `--threads=4`, ~15m).
+- Log-tested branches: `embargo_standard`, `embargo_backfill_amnesty`, `embargo_days_clamped`, `ledger_sync_backfill_amnesty`, `ledger_backfill_completed`.
+
 ## UI Twig components
 
 - Branch: `ui-twig-components` (stacked on `ui-idp-design`).

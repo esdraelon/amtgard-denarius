@@ -28,7 +28,15 @@ use Amtgard\Denarius\Service\Admin\Impl\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeManagerCommand;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
+use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
+use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
+use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
+use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerWebhookVerifier;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
@@ -120,5 +128,44 @@ final class Strategies
         return new RefreshJobRegistry([
             new LedgerRefreshJob($synchronizer),
         ]);
+    }
+
+    public static function kingdomSettings(KingdomRepositoryInterface $kingdoms): KingdomSettings
+    {
+        return new KingdomSettings($kingdoms, new PublicationSettingsValidator());
+    }
+
+    public static function publicationApplier(
+        TransactionRepositoryInterface $transactions,
+        ?\DateTimeImmutable $now = null,
+    ): TransactionPublicationApplier {
+        return new TransactionPublicationApplier(
+            $transactions,
+            new PublicationEmbargoCalculator(),
+            $now ?? new \DateTimeImmutable('2026-09-01'),
+        );
+    }
+
+    public static function synchronizer(
+        KingdomRepositoryInterface $kingdoms,
+        AccountRepositoryInterface $accounts,
+        SecretRepositoryInterface $secrets,
+        TransactionRepositoryInterface $transactions,
+        LedgerProviderRegistry $providers,
+        TokenCipher $cipher,
+        \DateTimeImmutable $now,
+        MonthInvalidator $months,
+    ): TransactionSynchronizer {
+        return new TransactionSynchronizer(
+            $kingdoms,
+            $accounts,
+            $secrets,
+            $transactions,
+            $providers,
+            $cipher,
+            $now,
+            $months,
+            self::publicationApplier($transactions, $now),
+        );
     }
 }

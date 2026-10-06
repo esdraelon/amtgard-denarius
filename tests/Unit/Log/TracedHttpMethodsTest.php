@@ -99,7 +99,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $accounts = new MemoryAccounts();
         $accounts->save(AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->published(true)->build());
         $transactions = new MemoryTransactions();
-        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->build());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->publishedAt('2026-09-03T00:00:00+00:00')->build());
         $pages = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
         $page = new KingdomPageController($kingdoms, $pages, KingdomAccess::standard(), $auth, $twig);
         $page->show($this->request('GET', '/missing'), new Response(), 'missing');
@@ -163,20 +163,20 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             $permissions,
             $kingdoms,
             $accounts,
-            new KingdomSettings($kingdoms),
+            Strategies::kingdomSettings($kingdoms),
             new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
             $queue,
             $twig,
             $connects,
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(),
         );
-        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession()))
+        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession()))
             ->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/missing'), new Response(), 'missing');
         $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->connect($this->request('POST', '/manage/golden-plains/connect', [], ['csrf' => 'token']), new Response(), 'golden-plains');
         $manager->connectGet($this->request('GET', '/manage/golden-plains/connect'), new Response(), 'golden-plains');
-        $manager->settings($this->request('POST', '/manage/golden-plains/settings', [], ['csrf' => 'token', 'visibility' => 'public', 'display_mode' => 'all']), new Response(), 'golden-plains');
+        $manager->settings($this->request('POST', '/manage/golden-plains/settings', [], ['csrf' => 'token', 'visibility' => 'public', 'display_mode' => 'all', 'embargo_days' => '3']), new Response(), 'golden-plains');
         $manager->enrollment($this->request('POST', '/manage/golden-plains/enrollment', [], ['csrf' => 'token', 'enrollment' => json_encode(['accessToken' => 'tok', 'id' => 'enr_9'])]), new Response(), 'golden-plains');
         $manager->accounts($this->request('POST', '/manage/golden-plains/accounts', [], ['csrf' => 'token', 'published' => ['acc']]), new Response(), 'golden-plains');
         $manager->refresh($this->request('POST', '/manage/golden-plains/refresh', [], ['csrf' => 'token']), new Response(), 'golden-plains');

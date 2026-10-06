@@ -49,4 +49,13 @@ class TransactionEntity extends RepositoryEntity
 
     #[Field('status')]
     private ?string $status = null;
+
+    #[Field('published_at')]
+    private ?string $publishedAt = null;
+
+    #[Field('publishable_after')]
+    private ?string $publishableAfter = null;
+
+    #[Field('publication_flags')]
+    private ?string $publicationFlags = null;
 }

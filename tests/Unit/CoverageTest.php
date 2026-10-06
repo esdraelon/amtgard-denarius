@@ -161,7 +161,7 @@ PHP);
         $accounts->save(AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->published(true)->build());
         $accounts->save(AccountRecord::builder()->kingdomId(1)->tellerAccountId('hidden')->name('Savings')->published(false)->build());
         $transactions = new MemoryTransactions();
-        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->build());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->publishedAt('2026-09-03T00:00:00+00:00')->build());
         $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('h')->tellerAccountId('hidden')->postedOn('2026-09-02')->amountCents(10)->category('fuel')->build());
         $page = new KingdomPageController($kingdoms, new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard()), KingdomAccess::standard(), $auth, $twig);
         $shown = $page->show((new ServerRequestFactory())->createServerRequest('GET', '/golden-plains')->withQueryParams(['month' => '2026-09']), new Response(), 'golden-plains');
@@ -170,9 +170,9 @@ PHP);
 
         $queue = new MemoryRefresh();
         $connects = new BankConnect(Strategies::providers(Strategies::teller()));
-        $manager = new ManagerController($auth, $permissions, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession());
+        $manager = new ManagerController($auth, $permissions, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession());
         $this->assertSame(404, $manager->show((new ServerRequestFactory())->createServerRequest('GET', '/manage/missing'), new Response(), 'missing')->getStatusCode());
-        $guest = new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession());
+        $guest = new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession());
         $this->assertSame(302, $guest->show((new ServerRequestFactory())->createServerRequest('GET', '/manage/golden-plains'), new Response(), 'golden-plains')->getStatusCode());
         $this->assertSame(400, $manager->enrollment((new ServerRequestFactory())->createServerRequest('POST', '/e')->withParsedBody(['csrf' => 'token', 'enrollment' => '{']), new Response(), 'golden-plains')->getStatusCode());
 
@@ -201,7 +201,7 @@ PHP);
                 return 0;
             }
         };
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, new MemorySecrets(), $transactions, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new \DateTimeImmutable('2026-09-01'), Strategies::months());
+        $sync = Strategies::synchronizer($kingdoms, $accounts, new MemorySecrets(), $transactions, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new \DateTimeImmutable('2026-09-01'), Strategies::months());
         $worker = new LedgerWorker($messages, Strategies::jobs($sync), 1);
         $this->assertSame(0, $worker->run(1));
         $this->assertCount(1, $messages->published);

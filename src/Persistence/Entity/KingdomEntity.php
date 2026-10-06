@@ -52,4 +52,10 @@ class KingdomEntity extends RepositoryEntity
 
     #[Field('last_synced_at')]
     private ?string $lastSyncedAt = null;
+
+    #[Field('embargo_days')]
+    private ?int $embargoDays = null;
+
+    #[Field('initial_backfill_completed_at')]
+    private ?string $initialBackfillCompletedAt = null;
 }

@@ -124,9 +124,11 @@ final class PersistenceStoreArrange
         $secrets->saveCiphertext((int) $saved->getId(), 'cipher-2');
 
         $transactions = Orm::repository(TransactionRepository::class);
-        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-100)->category('office')->description('paper')->counterparty('Shop')->status('posted')->build());
-        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn')->tellerAccountId('acc')->postedOn('2026-09-03')->amountCents(-200)->category('fuel')->description('gas')->counterparty('Station')->status('posted')->build());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-100)->category('office')->description('paper')->counterparty('Shop')->status('posted')->publishableAfter('2026-09-05T23:59:59+00:00')->build());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn')->tellerAccountId('acc')->postedOn('2026-09-03')->amountCents(-200)->category('fuel')->description('gas')->counterparty('Station')->status('posted')->publishedAt('2026-09-04T00:00:00+00:00')->publishableAfter('2026-09-06T23:59:59+00:00')->build());
+        $transactions->findByTellerTransactionId('txn');
         $transactions->forKingdom((int) $saved->getId());
+        $transactions->forKingdomPublished((int) $saved->getId());
 
         $grants = Orm::repository(RoleGrantRepository::class);
         $grants->append(RoleGrantRecord::builder()->actorIdpUserId('15')->targetIdpUserId('9')->action('grant')->resource('Denarius/Admin')->createdAt('2026-09-01T00:00:00+00:00')->build());

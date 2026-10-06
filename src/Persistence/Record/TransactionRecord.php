@@ -24,6 +24,9 @@ final class TransactionRecord
         private string $description = '',
         private string $counterparty = '',
         private string $status = '',
+        private ?string $publishedAt = null,
+        private ?string $publishableAfter = null,
+        private ?string $publicationFlags = null,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }

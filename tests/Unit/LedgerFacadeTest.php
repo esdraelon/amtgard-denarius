@@ -91,7 +91,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
         $this->assertSame('other-token', $cipher->decrypt((string) $secrets->findCiphertext((int) $connected->getId())));
         $this->assertSame('9999', $accounts->forKingdom((int) $connected->getId())[0]->getLastFour());
 
-        $sync = new TransactionSynchronizer(
+        $sync = Strategies::synchronizer(
             $kingdoms,
             $accounts,
             $secrets,

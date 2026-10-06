@@ -135,7 +135,7 @@ final class ControllerTest extends AmtgardTestCase
             $permissions,
             $kingdoms,
             $accounts,
-            new KingdomSettings($kingdoms),
+            Strategies::kingdomSettings($kingdoms),
             new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
             $queue,
             $twig,

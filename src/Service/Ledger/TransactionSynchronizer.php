@@ -6,6 +6,7 @@ namespace Amtgard\Denarius\Service\Ledger;
 
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\LedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Kingdom\KingdomRecordRebuilder;
 use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
@@ -29,13 +30,16 @@ final class TransactionSynchronizer
         private readonly TokenCipher $cipher,
         private readonly \DateTimeImmutable $now,
         private readonly MonthInvalidator $months,
+        private readonly TransactionPublicationApplier $publication,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
 
     public function sync(int $orkKingdomId): bool
     {
-        return DenariusLog::trace(__METHOD__, function () use ($orkKingdomId): bool {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $orkKingdomId): bool {
             $kingdom = $this->kingdoms->findByOrkId($orkKingdomId);
             if ($kingdom === null || $kingdom->getEnrollmentStatus() !== 'connected' || $kingdom->getId() === null) {
                 return false;
@@ -46,37 +50,45 @@ final class TransactionSynchronizer
                 return false;
             }
 
+            $backfillAmnesty = $kingdom->getInitialBackfillCompletedAt() === null;
+            if ($backfillAmnesty) {
+                DenariusLog::debugBranch('ledger_sync_backfill_amnesty', $method, [
+                    'ork_kingdom_id' => $orkKingdomId,
+                ]);
+            }
+
             $token = $this->cipher->decrypt($ciphertext);
             $provider = $this->providers->find($this->providerId($kingdom));
             foreach ($this->accounts->forKingdom($kingdom->getId()) as $account) {
                 if (!$account->getPublished()) {
                     continue;
                 }
-                $this->pullAccount($provider, $kingdom, $token, $account->getTellerAccountId(), $account->getName());
+                $this->pullAccount($provider, $kingdom, $token, $account->getTellerAccountId(), $backfillAmnesty);
             }
 
-            $this->kingdoms->save(KingdomRecord::builder()
-                ->id($kingdom->getId())
-                ->orkKingdomId($kingdom->getOrkKingdomId())
-                ->name($kingdom->getName())
-                ->slug($kingdom->getSlug())
-                ->visibility($kingdom->getVisibility())
-                ->displayMode($kingdom->getDisplayMode())
-                ->enrollmentId($kingdom->getEnrollmentId())
-                ->institutionName($kingdom->getInstitutionName())
-                ->provider($kingdom->getProvider())
-                ->enrollmentStatus($kingdom->getEnrollmentStatus())
-                ->lastSyncedAt($this->now->format('c'))
-                ->build());
+            $saved = KingdomRecordRebuilder::from($kingdom)
+                ->lastSyncedAt($this->now->format('c'));
+            if ($backfillAmnesty) {
+                $saved = $saved->initialBackfillCompletedAt($this->now->format('c'));
+                DenariusLog::infoBranch('ledger_backfill_completed', $method, [
+                    'kingdom_id' => $kingdom->getId(),
+                ]);
+            }
+            $this->kingdoms->save($saved->build());
             $this->months->forget((int) $kingdom->getId());
 
             return true;
         });
     }
 
-    private function pullAccount(LedgerProvider $provider, KingdomRecord $kingdom, string $token, string $accountId, string $accountName): void
-    {
-        DenariusLog::trace(__METHOD__, function () use ($provider, $kingdom, $token, $accountId): mixed {
+    private function pullAccount(
+        LedgerProvider $provider,
+        KingdomRecord $kingdom,
+        string $token,
+        string $accountId,
+        bool $backfillAmnesty,
+    ): void {
+        DenariusLog::trace(__METHOD__, function () use ($provider, $kingdom, $token, $accountId, $backfillAmnesty): mixed {
             $fromId = null;
             $seen = [];
             do {
@@ -84,7 +96,7 @@ final class TransactionSynchronizer
                 if ($page === []) {
                     return null;
                 }
-                $lastId = $this->storePage($kingdom, $accountId, $page, $seen);
+                $lastId = $this->storePage($kingdom, $accountId, $page, $seen, $backfillAmnesty);
                 if ($lastId === null || $lastId === $fromId) {
                     return null;
                 }
@@ -97,9 +109,14 @@ final class TransactionSynchronizer
      * @param list<\Amtgard\Denarius\Domain\Bank\Enrollment\ProviderTransaction> $page
      * @param array<string, true> $seen
      */
-    private function storePage(KingdomRecord $kingdom, string $accountId, array $page, array &$seen): ?string
-    {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $accountId, $page, &$seen): ?string {
+    private function storePage(
+        KingdomRecord $kingdom,
+        string $accountId,
+        array $page,
+        array &$seen,
+        bool $backfillAmnesty,
+    ): ?string {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $accountId, $page, &$seen, $backfillAmnesty): ?string {
             $lastId = null;
             foreach ($page as $row) {
                 if ($row->id === '' || isset($seen[$row->id])) {
@@ -107,7 +124,8 @@ final class TransactionSynchronizer
                 }
                 $seen[$row->id] = true;
                 $lastId = $row->id;
-                $this->transactions->upsert($this->record($kingdom, $accountId, $row));
+                $incoming = $this->record($kingdom, $accountId, $row);
+                $this->transactions->upsert($this->publication->apply($kingdom, $incoming, $backfillAmnesty));
             }
 
             return $lastId;

@@ -96,6 +96,7 @@ final class ManagerController
                 $kingdom,
                 Visibility::fromStored((string) ($body['visibility'] ?? '')),
                 DisplayMode::fromStored((string) ($body['display_mode'] ?? '')),
+                (int) ($body['embargo_days'] ?? 3),
             );
 
             return $response->withHeader('Location', '/manage/' . $kingdom->getSlug())->withStatus(302);
