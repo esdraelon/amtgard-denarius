@@ -88,6 +88,70 @@
     <input type="hidden" name="enrollment" id="enrollment-json">
 </form>
 
+{% embed 'components/section-card.twig' with { title: 'Transaction review' } %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        <p class="small text-body-secondary">Publish eligible rows to the public statement or withhold rows that were published by mistake. Embargoed rows appear for visibility but cannot be published until the embargo ends.</p>
+        {% if reviewQueue is empty %}
+            {% include 'components/alert.twig' with {
+                variant: 'info',
+                message: 'No transactions on published accounts yet.'
+            } %}
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-striped align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Posted</th>
+                            <th scope="col">Account</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Amount</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in reviewQueue %}
+                            <tr>
+                                <td>{{ row.postedOn }}</td>
+                                <td>{{ row.accountName }}</td>
+                                <td>{{ row.description }}</td>
+                                <td>{{ row.amount }}</td>
+                                <td>
+                                    {% if row.status == 'pending' %}
+                                        <span class="badge text-bg-warning">Ready to publish</span>
+                                    {% elseif row.status == 'embargoed' %}
+                                        <span class="badge text-bg-secondary">Embargo</span>
+                                    {% else %}
+                                        <span class="badge text-bg-success">Published</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if row.status == 'pending' %}
+                                        <form method="post" action="/manage/{{ kingdom.slug }}/transactions/publish" class="d-inline">
+                                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                                            <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
+                                            <button type="submit" class="btn btn-primary btn-sm">Publish</button>
+                                        </form>
+                                    {% elseif row.status == 'published' %}
+                                        <form method="post" action="/manage/{{ kingdom.slug }}/transactions/withhold" class="d-inline">
+                                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                                            <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">Withhold</button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-body-secondary small">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    {% endblock %}
+{% endembed %}
+
 {% embed 'components/section-card.twig' with { title: 'Published accounts' } %}
     {% import "macros.twig" as ui %}
     {% block section_body %}

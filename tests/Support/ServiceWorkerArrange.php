@@ -150,6 +150,24 @@ final class ServiceWorkerArrange
         KingdomPageQueryFactory::managerReview($transactions, $accounts)
             ->statement($kingdoms->findByOrkId(4), new MonthWindow(2026, 9));
 
+        $reviewKingdom = $kingdoms->findByOrkId(4);
+        if ($reviewKingdom !== null) {
+            $accounts->save(AccountRecord::builder()->kingdomId((int) $reviewKingdom->getId())->tellerAccountId('acc_review')->name('Review')->published(true)->build());
+            $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()
+                ->kingdomId((int) $reviewKingdom->getId())
+                ->tellerTransactionId('review-tx')
+                ->tellerAccountId('acc_review')
+                ->postedOn('2026-09-02')
+                ->amountCents(-100)
+                ->category('general')
+                ->publishableAfter('2026-09-01T00:00:00+00:00')
+                ->build());
+            $reviews = Strategies::reviewService($transactions, $accounts, Strategies::months($cache), new \DateTimeImmutable('2026-10-01'));
+            $reviews->publish($reviewKingdom, 'review-tx');
+            $reviews->withhold($reviewKingdom, 'review-tx');
+            Strategies::reviewQueue($transactions, $accounts, new \DateTimeImmutable('2026-10-01'))->rowsForManage($reviewKingdom);
+        }
+
         $connect = new BankConnect(Strategies::providers($teller));
         $connect->blank('  ');
         $connect->offer('golden-plains', ['institution' => 'First Bank', 'skipped' => 'teller', 'current' => 'simplefin', 'skip' => '1']);

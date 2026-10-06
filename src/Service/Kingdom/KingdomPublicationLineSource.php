@@ -61,6 +61,7 @@ final class KingdomPublicationLineSource
     {
         return DenariusLog::trace(__METHOD__, function () use ($transaction, $accountName): PublicationCandidateLine {
             return PublicationCandidateLine::builder()
+                ->tellerTransactionId($transaction->getTellerTransactionId())
                 ->postedOn($transaction->getPostedOn())
                 ->amountCents($transaction->getAmountCents())
                 ->category($transaction->getCategory())

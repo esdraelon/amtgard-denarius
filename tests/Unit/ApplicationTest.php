@@ -722,6 +722,24 @@ final class MemoryTransactions implements TransactionRepositoryInterface
             static fn (TransactionRecord $row): bool => $row->getPublishedAt() !== null && $row->getPublishedAt() !== '',
         ));
     }
+
+    public function markPublished(int $kingdomId, string $tellerTransactionId, string $publishedAt): void
+    {
+        $row = $this->findByTellerTransactionId($tellerTransactionId);
+        if ($row === null || $row->getKingdomId() !== $kingdomId) {
+            throw new \InvalidArgumentException('Transaction not found.');
+        }
+        $this->upsert(\Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder::from($row)->publishedAt($publishedAt)->build());
+    }
+
+    public function markUnpublished(int $kingdomId, string $tellerTransactionId): void
+    {
+        $row = $this->findByTellerTransactionId($tellerTransactionId);
+        if ($row === null || $row->getKingdomId() !== $kingdomId) {
+            throw new \InvalidArgumentException('Transaction not found.');
+        }
+        $this->upsert(\Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder::from($row)->publishedAt(null)->build());
+    }
 }
 
 final class MemoryPrincipals implements PrincipalRepositoryInterface

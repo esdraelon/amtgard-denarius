@@ -62,6 +62,42 @@ class TransactionRepository extends Repository implements EntityRepositoryInterf
         });
     }
 
+    public function markPublished(int $kingdomId, string $tellerTransactionId, string $publishedAt): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdomId, $tellerTransactionId, $publishedAt): mixed {
+            $record = $this->findByTellerTransactionId($tellerTransactionId);
+            if ($record === null || $record->getKingdomId() !== $kingdomId) {
+                throw new \InvalidArgumentException('Transaction not found.');
+            }
+            $entity = $this->fetchBy('teller_transaction_id', $tellerTransactionId);
+            if (!$entity instanceof TransactionEntity) {
+                throw new \RuntimeException('Transaction entity was not loaded.');
+            }
+            $entity->setPublishedAt($publishedAt);
+            $this->persist($entity);
+
+            return null;
+        });
+    }
+
+    public function markUnpublished(int $kingdomId, string $tellerTransactionId): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdomId, $tellerTransactionId): mixed {
+            $record = $this->findByTellerTransactionId($tellerTransactionId);
+            if ($record === null || $record->getKingdomId() !== $kingdomId) {
+                throw new \InvalidArgumentException('Transaction not found.');
+            }
+            $entity = $this->fetchBy('teller_transaction_id', $tellerTransactionId);
+            if (!$entity instanceof TransactionEntity) {
+                throw new \RuntimeException('Transaction entity was not loaded.');
+            }
+            $entity->setPublishedAt(null);
+            $this->persist($entity);
+
+            return null;
+        });
+    }
+
     public function forKingdom(int $kingdomId): array
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdomId): array {

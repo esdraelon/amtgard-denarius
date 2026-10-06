@@ -16,6 +16,7 @@ final class PublicationCandidateLine
     use Data;
 
     private function __construct(
+        private string $tellerTransactionId = '',
         private string $postedOn = '',
         private int $amountCents = 0,
         private string $category = '',

@@ -77,6 +77,7 @@ final class ManageConnectTest extends AmtgardTestCase
                 }
             }, new AlwaysReady(), new PreviousMonthWindow(new DateTimeImmutable('2026-09-28')), new SimpleFinApplicationConfig('amtgard_denarius_dev', 'token', 'https://bridge.simplefin.org/simplefin')),
         ]);
+        $transactions = new MemoryTransactions();
         $this->manager = new ManagerController(
             new SessionAuthStore('test_session'),
             $permissions,
@@ -88,6 +89,8 @@ final class ManageConnectTest extends AmtgardTestCase
             new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
             new BankConnect($providers),
             new SimpleFinConnectSession(),
+            Strategies::reviewQueue($transactions, $accounts),
+            Strategies::reviewService($transactions, $accounts),
         );
     }
 
@@ -129,17 +132,21 @@ final class ManageConnectTest extends AmtgardTestCase
 
         $this->assertSame(403, $this->manager->connect($this->request('POST', '/connect', ['csrf' => 'nope']), new Response(), 'golden-plains')->getStatusCode());
         $this->assertSame(404, $this->manager->connect($this->request('POST', '/missing', ['csrf' => 'token']), new Response(), 'missing')->getStatusCode());
+        $guestTransactions = new MemoryTransactions();
+        $guestAccounts = new MemoryAccounts();
         $guest = new ManagerController(
             new SessionAuthStore('empty'),
             new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null)),
             new MemoryKingdoms(),
-            new MemoryAccounts(),
+            $guestAccounts,
             Strategies::kingdomSettings(new MemoryKingdoms()),
-            new EnrollmentService(new MemoryKingdoms(), new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months()),
+            new EnrollmentService(new MemoryKingdoms(), new MemorySecrets(), $guestAccounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months()),
             new MemoryRefresh(),
             new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
             new BankConnect(Strategies::providers(Strategies::teller())),
             new SimpleFinConnectSession(),
+            Strategies::reviewQueue($guestTransactions, $guestAccounts),
+            Strategies::reviewService($guestTransactions, $guestAccounts),
         );
         $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), 'golden-plains')->getStatusCode());
     }
@@ -160,6 +167,7 @@ final class ManageConnectTest extends AmtgardTestCase
             'csrf' => 'token',
             'kingdom' => $kingdom,
             'accounts' => [],
+            'reviewQueue' => [],
             'connect' => [
                 'available' => true,
                 'autostart' => true,
@@ -182,6 +190,7 @@ final class ManageConnectTest extends AmtgardTestCase
             'csrf' => 'token',
             'kingdom' => $kingdom,
             'accounts' => [],
+            'reviewQueue' => [],
             'connect' => [
                 'available' => true,
                 'autostart' => true,

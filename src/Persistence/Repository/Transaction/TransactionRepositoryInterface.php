@@ -23,4 +23,8 @@ interface TransactionRepositoryInterface
      * @return list<TransactionRecord>
      */
     public function forKingdomPublished(int $kingdomId): array;
+
+    public function markPublished(int $kingdomId, string $tellerTransactionId, string $publishedAt): void;
+
+    public function markUnpublished(int $kingdomId, string $tellerTransactionId): void;
 }

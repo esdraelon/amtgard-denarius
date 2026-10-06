@@ -130,6 +130,7 @@ final class ControllerTest extends AmtgardTestCase
         $this->assertSame(403, $bad->getStatusCode());
 
         $queue = new MemoryRefresh();
+        $transactions = new MemoryTransactions();
         $manager = new ManagerController(
             $auth,
             $permissions,
@@ -141,6 +142,8 @@ final class ControllerTest extends AmtgardTestCase
             $twig,
             new \Amtgard\Denarius\Service\Enrollment\BankConnect(Strategies::providers(Strategies::teller())),
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(),
+            Strategies::reviewQueue($transactions, $accounts),
+            Strategies::reviewService($transactions, $accounts),
         );
         $manage = $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $this->assertStringContainsString('manage golden-plains', (string) $manage->getBody());

@@ -40,6 +40,8 @@ return function (App $app): void {
         $group->post('/manage/{slug}/enrollment', [ManagerController::class, 'enrollment']);
         $group->post('/manage/{slug}/accounts', [ManagerController::class, 'accounts']);
         $group->post('/manage/{slug}/refresh', [ManagerController::class, 'refresh']);
+        $group->post('/manage/{slug}/transactions/publish', [ManagerController::class, 'publishTransaction']);
+        $group->post('/manage/{slug}/transactions/withhold', [ManagerController::class, 'withholdTransaction']);
         $group->get('/bank/simplefin/return', [SimpleFinReturnController::class, 'show']);
         $group->post('/bank/simplefin/return', [SimpleFinReturnController::class, 'submit']);
     })->add(SessionMiddleware::class)->add(SyncPrincipalMiddleware::class);

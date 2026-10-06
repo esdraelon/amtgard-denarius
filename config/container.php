@@ -101,6 +101,8 @@ use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
 use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
 use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
+use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
+use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
@@ -320,6 +322,16 @@ return [
         $c->get(KingdomRepositoryInterface::class),
         $c->get(PublicationSettingsValidator::class),
     ),
+    TransactionReviewQueue::class => fn (ContainerInterface $c) => new TransactionReviewQueue(
+        $c->get(KingdomPublicationLineSource::class),
+        new DateTimeImmutable('now'),
+    ),
+    TransactionReviewService::class => fn (ContainerInterface $c) => new TransactionReviewService(
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
+        $c->get(MonthInvalidator::class),
+        new DateTimeImmutable('now'),
+    ),
     PrincipalSync::class => fn (PrincipalRepositoryInterface $principals) => new PrincipalSync($principals),
     PostCsrfMiddleware::class => fn () => new PostCsrfMiddleware(new Slim\Psr7\Factory\ResponseFactory()),
     SyncPrincipalMiddleware::class => fn (ContainerInterface $c) => new SyncPrincipalMiddleware(
@@ -429,6 +441,8 @@ return [
         $c->get(TwigHtmlRenderer::class),
         $c->get(BankConnect::class),
         $c->get(SimpleFinConnectSession::class),
+        $c->get(TransactionReviewQueue::class),
+        $c->get(TransactionReviewService::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(
