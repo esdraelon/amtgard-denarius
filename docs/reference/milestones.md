@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Micro-deposit hard redact
+
+- Branch: `micro-deposit-hard-redact` (stacked on `transaction-review-ui`).
+- Ingest-time HARD flags via `VerificationKeywordHardMatcher` and `MicroDepositPairReconciler`; persisted `publication_flags` JSON; `HardRedactionStage` stubs lines on public and manager pipeline paths (no exact verification amounts).
+- Line coverage: 95.22% (4244/4457).
+- Infection covered MSI: pending `composer infection:ci` confirmation (skip-initial-tests, `--threads=4`).
+- Log-tested branches: `publication_hard_keyword`, `publication_micro_pair_mark`, `publication_hard_redact`.
+
 ## Transaction review UI
 
 - Branch: `transaction-review-ui` (stacked on `statement-absence-reasons`).

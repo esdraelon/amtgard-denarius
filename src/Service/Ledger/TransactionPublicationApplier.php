@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Ledger;
 
+use Amtgard\Denarius\Domain\Statement\Publication\Ingest\TransactionHardRedactAnnotator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
@@ -17,6 +18,7 @@ final class TransactionPublicationApplier
     public function __construct(
         private readonly TransactionRepositoryInterface $transactions,
         private readonly PublicationEmbargoCalculator $embargo,
+        private readonly TransactionHardRedactAnnotator $hardRedact,
         private readonly \DateTimeImmutable $now,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
@@ -50,7 +52,7 @@ final class TransactionPublicationApplier
             Optional::ofNullable($existing?->getPublishedAt())->ifPresent(static fn (string $at) => $builder->publishedAt($at));
             Optional::ofNullable($existing?->getPublicationFlags())->ifPresent(static fn (string $flags) => $builder->publicationFlags($flags));
 
-            return $builder->build();
+            return $this->hardRedact->annotate($builder->build());
         });
     }
 

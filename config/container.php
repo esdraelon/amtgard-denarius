@@ -97,6 +97,9 @@ use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler;
+use Amtgard\Denarius\Domain\Statement\Publication\Ingest\TransactionHardRedactAnnotator;
+use Amtgard\Denarius\Domain\Statement\Publication\Ingest\VerificationKeywordHardMatcher;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
 use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
@@ -266,9 +269,17 @@ return [
     ),
     PublicationSettingsValidator::class => fn () => new PublicationSettingsValidator(),
     PublicationEmbargoCalculator::class => fn () => new PublicationEmbargoCalculator(),
+    VerificationKeywordHardMatcher::class => fn () => new VerificationKeywordHardMatcher(),
+    TransactionHardRedactAnnotator::class => fn (ContainerInterface $c) => new TransactionHardRedactAnnotator(
+        $c->get(VerificationKeywordHardMatcher::class),
+    ),
+    MicroDepositPairReconciler::class => fn (ContainerInterface $c) => new MicroDepositPairReconciler(
+        $c->get(TransactionRepositoryInterface::class),
+    ),
     TransactionPublicationApplier::class => fn (ContainerInterface $c) => new TransactionPublicationApplier(
         $c->get(TransactionRepositoryInterface::class),
         $c->get(PublicationEmbargoCalculator::class),
+        $c->get(TransactionHardRedactAnnotator::class),
         new DateTimeImmutable('now'),
     ),
     TransactionSynchronizer::class => fn (ContainerInterface $c) => new TransactionSynchronizer(
@@ -281,6 +292,7 @@ return [
         new DateTimeImmutable('now'),
         $c->get(MonthInvalidator::class),
         $c->get(TransactionPublicationApplier::class),
+        $c->get(MicroDepositPairReconciler::class),
     ),
     TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier($_ENV['TELLER_WEBHOOK_SECRET'] ?? ''),
     ProviderWebhookHandler::class => fn (ContainerInterface $c) => new ProviderWebhookHandler(

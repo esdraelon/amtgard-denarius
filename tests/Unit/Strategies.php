@@ -170,6 +170,9 @@ final class Strategies
         return new TransactionPublicationApplier(
             $transactions,
             new PublicationEmbargoCalculator(),
+            new \Amtgard\Denarius\Domain\Statement\Publication\Ingest\TransactionHardRedactAnnotator(
+                new \Amtgard\Denarius\Domain\Statement\Publication\Ingest\VerificationKeywordHardMatcher(),
+            ),
             $now ?? new \DateTimeImmutable('2026-09-01'),
         );
     }
@@ -194,6 +197,7 @@ final class Strategies
             $now,
             $months,
             self::publicationApplier($transactions, $now),
+            new \Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler($transactions),
         );
     }
 }

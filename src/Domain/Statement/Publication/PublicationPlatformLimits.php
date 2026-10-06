@@ -13,6 +13,12 @@ final class PublicationPlatformLimits
 
     public const int DEFAULT_EMBARGO_DAYS = 3;
 
+    public const int MIN_PAIR_WINDOW_DAYS = 7;
+
+    public const int MAX_PAIR_WINDOW_DAYS = 21;
+
+    public const int DEFAULT_PAIR_WINDOW_DAYS = 14;
+
     private function __construct()
     {
     }

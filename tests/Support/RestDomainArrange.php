@@ -30,6 +30,7 @@ final class RestDomainArrange
         self::run(ApplicationTest::class, 'testDirectoryQueueWorkerAndHttpClients');
         self::exercisePublicationDomain();
         self::exercisePublicationPipeline();
+        self::exercisePublicationHardRedact();
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPublicReadTest::class, 'testPublicStatementOmitsUnpublishedTransactions');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonSerializesForCache');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksUnreviewedWhenEmbargoClearedButUnpublished');
@@ -92,6 +93,15 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testPublicationStatusStageDropsUnpublishedLines');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testManagerQueryIncludesUnpublishedLines');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testPublicPipelineRunsFullStageChain');
+    }
+
+    private static function exercisePublicationHardRedact(): void
+    {
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testVerifyBrandKeywordMarksHard');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testKeywordIngestMarksHardFlags');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testMicroDepositPairReconcilerMarksCluster');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testHardRedactionStageStubsLine');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testPublicationFlagsRoundTrip');
     }
 
     /**

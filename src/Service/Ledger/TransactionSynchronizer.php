@@ -11,6 +11,7 @@ use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
+use Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler;
 use Amtgard\Denarius\Domain\Statement\Line\Money;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
@@ -31,6 +32,7 @@ final class TransactionSynchronizer
         private readonly \DateTimeImmutable $now,
         private readonly MonthInvalidator $months,
         private readonly TransactionPublicationApplier $publication,
+        private readonly MicroDepositPairReconciler $microPairs,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -63,7 +65,9 @@ final class TransactionSynchronizer
                 if (!$account->getPublished()) {
                     continue;
                 }
-                $this->pullAccount($provider, $kingdom, $token, $account->getTellerAccountId(), $backfillAmnesty);
+                $accountId = $account->getTellerAccountId();
+                $this->pullAccount($provider, $kingdom, $token, $accountId, $backfillAmnesty);
+                $this->microPairs->reconcileAccount($kingdom, $accountId);
             }
 
             $saved = KingdomRecordRebuilder::from($kingdom)
