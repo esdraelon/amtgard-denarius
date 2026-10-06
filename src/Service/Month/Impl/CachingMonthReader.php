@@ -12,6 +12,7 @@ use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
+use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceReason;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
@@ -61,11 +62,16 @@ final class CachingMonthReader implements MonthReader
                 $rows[] = $row instanceof CategoryTotal ? $this->total($row) : $this->line($row);
             }
 
-            return json_encode([
+            $payload = [
                 'mode' => $statement->mode->value,
                 'month' => $statement->month->key(),
                 'rows' => $rows,
-            ], JSON_THROW_ON_ERROR);
+            ];
+            if ($statement->absenceReason !== null) {
+                $payload['absence'] = $statement->absenceReason->toCache();
+            }
+
+            return json_encode($payload, JSON_THROW_ON_ERROR);
         });
     }
 
@@ -114,7 +120,11 @@ final class CachingMonthReader implements MonthReader
                 return null;
             }
 
-            return new MonthStatement($mode, $month, $this->rows($decoded['rows'] ?? []));
+            $absence = is_array($decoded['absence'] ?? null)
+                ? StatementAbsenceReason::fromCache($decoded['absence'])
+                : null;
+
+            return new MonthStatement($mode, $month, $this->rows($decoded['rows'] ?? []), $absence);
         });
     }
 

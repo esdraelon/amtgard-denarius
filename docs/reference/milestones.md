@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Statement absence reasons
+
+- Branch: `statement-absence-reasons` (stacked on `publication-pipeline-core`).
+- `StatementAbsenceClassifier` chooses **Unreviewed**, **Stale transactions**, or **No current transactions since {date}** when the public month statement has no rows; `kingdom.twig` shows an info alert via `absenceMessage`.
+- Line coverage: 95.62% (3910/4089).
+- Infection covered MSI: 95% (skip-initial-tests, Unit coverage XML, `--threads=4`, ~22m).
+- Log-tested branches: absence classification branches on `StatementAbsenceClassifier` (see `StatementAbsenceTest`).
+
 ## Publication pipeline core
 
 - Branch: `publication-pipeline-core` (stacked on `transaction-publication-schema`).
