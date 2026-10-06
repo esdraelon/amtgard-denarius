@@ -129,6 +129,8 @@ final class PersistenceStoreArrange
         $transactions->findByTellerTransactionId('txn');
         $transactions->forKingdom((int) $saved->getId());
         $transactions->forKingdomPublished((int) $saved->getId());
+        $transactions->markPublished((int) $saved->getId(), 'txn', '2026-09-05T12:00:00+00:00');
+        $transactions->markUnpublished((int) $saved->getId(), 'txn');
 
         $grants = Orm::repository(RoleGrantRepository::class);
         $grants->append(RoleGrantRecord::builder()->actorIdpUserId('15')->targetIdpUserId('9')->action('grant')->resource('Denarius/Admin')->createdAt('2026-09-01T00:00:00+00:00')->build());

@@ -169,8 +169,10 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             $twig,
             $connects,
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(),
+            Strategies::reviewQueue($transactions, $accounts),
+            Strategies::reviewService($transactions, $accounts),
         );
-        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession()))
+        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts)))
             ->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/missing'), new Response(), 'missing');
         $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
@@ -180,6 +182,11 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $manager->enrollment($this->request('POST', '/manage/golden-plains/enrollment', [], ['csrf' => 'token', 'enrollment' => json_encode(['accessToken' => 'tok', 'id' => 'enr_9'])]), new Response(), 'golden-plains');
         $manager->accounts($this->request('POST', '/manage/golden-plains/accounts', [], ['csrf' => 'token', 'published' => ['acc']]), new Response(), 'golden-plains');
         $manager->refresh($this->request('POST', '/manage/golden-plains/refresh', [], ['csrf' => 'token']), new Response(), 'golden-plains');
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('pub-me')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('general')->publishableAfter('2026-09-01T00:00:00+00:00')->build());
+        $manager->publishTransaction($this->request('POST', '/manage/golden-plains/transactions/publish', [], ['csrf' => 'token', 'teller_transaction_id' => 'pub-me']), new Response(), 'golden-plains');
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('pub-me')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('general')->publishedAt('2026-09-03T00:00:00+00:00')->build());
+        $manager->withholdTransaction($this->request('POST', '/manage/golden-plains/transactions/withhold', [], ['csrf' => 'token', 'teller_transaction_id' => 'pub-me']), new Response(), 'golden-plains');
+        $manager->publishTransaction($this->request('POST', '/manage/golden-plains/transactions/publish', [], ['csrf' => 'nope', 'teller_transaction_id' => 'pub-me']), new Response(), 'golden-plains');
         $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), 'golden-plains');
 
         $_ENV['APP_PUBLIC_URL'] = 'http://localhost:37180';
@@ -263,7 +270,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'https://idp.example.test/resources/client/service-format'));
 
         $scope = $this->methodsInScope();
-        $this->assertCount(61, $scope);
+        $this->assertCount(64, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

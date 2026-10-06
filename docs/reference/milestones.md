@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Transaction review UI
+
+- Branch: `transaction-review-ui` (stacked on `statement-absence-reasons`).
+- Manage **Transaction review** queue with publish/withhold POST actions; sets `published_at` via `TransactionReviewService` and busts month cache.
+- Line coverage: 95.18% (4072/4278).
+- Infection covered MSI: (run `composer infection:ci` on this branch).
+- Log-tested branches: `transaction_review_published`, `transaction_review_withheld`, `transaction_review_rejected_embargo`, `transaction_review_queue_loaded`, and related reject paths.
+
 ## Statement absence reasons
 
 - Branch: `statement-absence-reasons` (stacked on `publication-pipeline-core`).

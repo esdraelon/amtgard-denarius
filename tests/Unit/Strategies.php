@@ -34,7 +34,10 @@ use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
+use Amtgard\Denarius\Service\Kingdom\KingdomPublicationLineSource;
 use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
+use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
+use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
@@ -133,6 +136,31 @@ final class Strategies
     public static function kingdomSettings(KingdomRepositoryInterface $kingdoms): KingdomSettings
     {
         return new KingdomSettings($kingdoms, new PublicationSettingsValidator());
+    }
+
+    public static function reviewQueue(
+        TransactionRepositoryInterface $transactions,
+        AccountRepositoryInterface $accounts,
+        ?\DateTimeImmutable $now = null,
+    ): TransactionReviewQueue {
+        return new TransactionReviewQueue(
+            new KingdomPublicationLineSource($transactions, $accounts),
+            $now ?? new \DateTimeImmutable('2026-10-01'),
+        );
+    }
+
+    public static function reviewService(
+        TransactionRepositoryInterface $transactions,
+        AccountRepositoryInterface $accounts,
+        ?MonthInvalidator $months = null,
+        ?\DateTimeImmutable $now = null,
+    ): TransactionReviewService {
+        return new TransactionReviewService(
+            $transactions,
+            $accounts,
+            $months ?? self::months(),
+            $now ?? new \DateTimeImmutable('2026-10-01'),
+        );
     }
 
     public static function publicationApplier(

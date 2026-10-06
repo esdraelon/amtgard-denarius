@@ -18,6 +18,8 @@ use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
+use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
+use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
@@ -36,6 +38,8 @@ final class ManagerController
         private readonly TwigHtmlRenderer $html,
         private readonly BankConnect $connects,
         private readonly SimpleFinConnectSession $simplefinSession,
+        private readonly TransactionReviewQueue $reviewQueue,
+        private readonly TransactionReviewService $reviewActions,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -167,6 +171,53 @@ final class ManagerController
         });
     }
 
+    public function publishTransaction(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            return $this->reviewPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
+                $this->reviewActions->publish($kingdom, (string) ($body['teller_transaction_id'] ?? ''));
+            });
+        });
+    }
+
+    public function withholdTransaction(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            return $this->reviewPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
+                $this->reviewActions->withhold($kingdom, (string) ($body['teller_transaction_id'] ?? ''));
+            });
+        });
+    }
+
+    /**
+     * @param callable(KingdomRecord, array<string, mixed>): void $action
+     */
+    private function reviewPost(
+        ServerRequestInterface $request,
+        ResponseInterface $response,
+        string $slug,
+        callable $action,
+    ): ResponseInterface {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug, $action): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
+            if ($kingdom instanceof ResponseInterface) {
+                return $kingdom;
+            }
+            $body = (array) $request->getParsedBody();
+            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
+                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            }
+            try {
+                CurrentActor::set((string) $this->auth->get()->profile->id);
+                $action($kingdom, $body);
+            } catch (\InvalidArgumentException $exception) {
+                return $this->html->html($response, 'message.twig', ['title' => 'Cannot update', 'message' => $exception->getMessage()], 400);
+            }
+
+            return $response->withHeader('Location', '/manage/' . $kingdom->getSlug())->withStatus(302);
+        });
+    }
+
     /**
      * @param array<string, mixed> $connect
      */
@@ -178,6 +229,7 @@ final class ManagerController
                 'kingdom' => $kingdom->view(),
                 'accounts' => $this->accountViews((int) $kingdom->getId()),
                 'connect' => $connect,
+                'reviewQueue' => $this->reviewQueue->rowsForManage($kingdom),
             ]);
         });
     }

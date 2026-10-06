@@ -12,7 +12,10 @@ use Amtgard\Denarius\Domain\Kingdom\KingdomRecordRebuilder;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
+use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
+use Amtgard\Denarius\Domain\Statement\Publication\TransactionReviewRow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Tests\Unit\ApplicationTest;
 use Amtgard\Denarius\Tests\Unit\Log\LoggingCoreTest;
 use Amtgard\Denarius\Tests\Unit\ProviderSetupTest;
@@ -34,6 +37,7 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksNoCurrentSinceWhenMonthIsEmpty');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonRoundTripsThroughMonthCache');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testPublicKingdomQueryAttachesAbsenceWhenRowsEmpty');
+        self::exerciseTransactionReviewDomain();
 
         MonthWindow::current(new \DateTimeImmutable('2026-09-15'));
 
@@ -66,6 +70,20 @@ final class RestDomainArrange
         $calculator->publishableAfter('2026-09-09', 3, $now, true);
         (new PublicationSettingsValidator())->clampEmbargoDays(99);
         KingdomRecordRebuilder::from(KingdomRecord::builder()->orkKingdomId(1)->name('Alpha')->slug('alpha')->build());
+    }
+
+    private static function exerciseTransactionReviewDomain(): void
+    {
+        $stored = TransactionRecord::builder()
+            ->kingdomId(1)
+            ->tellerTransactionId('review-tx')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-02')
+            ->amountCents(-100)
+            ->category('general')
+            ->build();
+        TransactionRecordRebuilder::from($stored)->publishedAt('2026-09-03T00:00:00+00:00')->build();
+        (new TransactionReviewRow('review-tx', '2026-09-02', '-$1.00', 'Supplies', 'Checking', 'pending'))->view();
     }
 
     private static function exercisePublicationPipeline(): void
