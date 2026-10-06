@@ -1,10 +1,10 @@
 {# Placeholder branding copied from Amtgard IDP; replace logos when Denarius assets are ready. #}
-<div class="md:flex md:gap-6 md:items-start">
-    <div class="hidden md:block flex-shrink-0">
-        <a href="/"><img src="/images/idp_logo_small.jpeg" alt="Denarius" class="rounded-lg"></a>
+<div class="row g-4 align-items-start">
+    <div class="col-md-auto d-none d-md-block">
+        <a href="/"><img src="/images/idp_logo_small.jpeg" alt="Denarius" class="rounded"></a>
     </div>
-    <div class="flex-grow min-w-0">
-        <a href="/" class="md:hidden float-left mr-3 mb-1">
+    <div class="col min-w-0">
+        <a href="/" class="d-md-none float-start me-3 mb-2">
             <img src="/images/idp_logo_tiny.jpeg" alt="Denarius" class="rounded">
         </a>
         {% block brand_inner %}{% endblock %}

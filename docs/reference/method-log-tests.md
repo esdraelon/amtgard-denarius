@@ -47,4 +47,4 @@ Gates: `composer test` line coverage of `src/` at least 95%, `composer infection
 
 After M-07, `TracedMethodCatalogGateTest` fails when any catalog entry is missing from `TracedMethodCoverageManifest` (M-02–M-07 scopes and their `Traced*MethodsTest` classes). Add a scope row when you introduce trace sites in a new area.
 
-Each milestone checks its box here and appends to `docs/milestones.md`.
+Each milestone checks its box here and appends to [milestones.md](milestones.md).

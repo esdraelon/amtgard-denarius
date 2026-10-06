@@ -1,111 +1,120 @@
 {% extends "base.twig" %}
+{% import "macros.twig" as ui %}
 
 {% block title %}Denarius admin{% endblock %}
-{% block container_class %}max-w-4xl{% endblock %}
+{% block container_class %}container-lg{% endblock %}
 
 {% block content %}
-<h1 class="text-3xl font-serif font-bold text-secondary mb-4">Roles</h1>
-<form method="get" action="/admin" class="mb-6 flex flex-wrap items-end gap-3" id="admin-principal-form">
+<h1 class="font-serif display-6 text-denarius-secondary mb-4">Roles</h1>
+<form method="get" action="/admin" class="mb-4 row g-3 align-items-end" id="admin-principal-form">
     <input type="hidden" name="perm_email" value="{{ perm_email }}">
     <input type="hidden" name="perm_kingdom" value="{{ perm_kingdom }}">
-    <div class="relative flex-1 min-w-[20rem] max-w-2xl">
-        <label for="admin-email" class="block text-sm font-semibold text-tertiary mb-1">Email</label>
+    <div class="col-lg flex-grow-1 position-relative" style="min-width: 20rem;">
+        <label for="admin-email" class="form-label fw-semibold text-denarius-tertiary">Email</label>
         <input
             id="admin-email"
             name="email"
             type="text"
             value="{{ email }}"
             autocomplete="off"
-            class="block w-full border border-gray-300 rounded px-3 py-2 font-normal text-base"
+            class="form-control"
         >
-        <ul id="admin-email-suggestions" class="admin-typeahead hidden absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded border border-gray-300 bg-white py-1 shadow-lg" role="listbox"></ul>
+        <ul id="admin-email-suggestions" class="admin-typeahead list-group position-absolute w-100 shadow-sm d-none" style="z-index: 10; max-height: 15rem; overflow-y: auto;" role="listbox"></ul>
     </div>
-    <button type="submit" class="bg-primary hover:bg-primary-dark text-white py-2 px-5 rounded transition-colors duration-200 cursor-pointer border-0 shrink-0">Select</button>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Select</button>
+    </div>
 </form>
 {% for principal in principals %}
-    <section class="mb-8 pb-6 border-b border-gray-200 last:border-0">
-        <h2 class="text-xl font-serif font-semibold text-tertiary mb-3">{{ principal.email }} <span class="text-sm font-sans text-gray-500">({{ principal.idpUserId }})</span></h2>
-        <form method="post" action="/admin/grant" class="mb-3 flex flex-wrap gap-2">
+    <section class="mb-4 pb-4 border-bottom">
+        <h2 class="font-serif h4 text-denarius-tertiary mb-3">{{ principal.email }} <span class="small font-sans text-body-secondary">({{ principal.idpUserId }})</span></h2>
+        <form method="post" action="/admin/grant" class="mb-3 d-flex flex-wrap gap-2">
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <input type="hidden" name="idp_user_id" value="{{ principal.idpUserId }}">
             <input type="hidden" name="target_email" value="{{ principal.email }}">
-            <button name="action" value="grant-admin" type="submit" class="bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded text-sm border-0 cursor-pointer">Grant admin</button>
-            <button name="action" value="revoke-admin" type="submit" class="border border-gray-400 hover:border-gray-600 text-gray-700 py-2 px-4 rounded text-sm cursor-pointer bg-white">Revoke admin</button>
+            <button name="action" value="grant-admin" type="submit" class="btn btn-primary btn-sm">Grant admin</button>
+            <button name="action" value="revoke-admin" type="submit" class="btn btn-outline-secondary btn-sm">Revoke admin</button>
         </form>
-        <form method="post" action="/admin/grant" class="flex flex-wrap items-end gap-3">
+        <form method="post" action="/admin/grant" class="row g-3 align-items-end">
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <input type="hidden" name="idp_user_id" value="{{ principal.idpUserId }}">
             <input type="hidden" name="target_email" value="{{ principal.email }}">
-            <label class="text-sm font-semibold text-tertiary">Kingdom
-                <select name="ork_kingdom_id" class="ork-kingdom mt-1 block min-w-[12rem] border border-gray-300 rounded px-3 py-2 font-normal"></select>
-            </label>
-            <p class="ork-kingdom-hint hidden w-full text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-0">
-                No ORK kingdom directory loaded. Import a GetKingdoms snapshot with <code class="text-xs">bin/ork-kingdoms-import.php</code> (see script header).
+            <div class="col-auto">
+                <label class="form-label fw-semibold text-denarius-tertiary">Kingdom
+                    <select name="ork_kingdom_id" class="form-select ork-kingdom mt-1" style="min-width: 12rem;"></select>
+                </label>
+            </div>
+            <p class="ork-kingdom-hint alert alert-warning d-none w-100 mb-0">
+                No ORK kingdom directory loaded. Import a GetKingdoms snapshot with <code class="small">bin/ork-kingdoms-import.php</code> (see script header).
             </p>
             <input type="hidden" name="kingdom_name" value="">
-            <button name="action" value="grant-manager" type="submit" class="bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded text-sm border-0 cursor-pointer">Grant kingdom manager</button>
-            <button name="action" value="revoke-manager" type="submit" class="border border-gray-400 hover:border-gray-600 text-gray-700 py-2 px-4 rounded text-sm cursor-pointer bg-white">Revoke kingdom manager</button>
+            <div class="col-auto d-flex flex-wrap gap-2">
+                <button name="action" value="grant-manager" type="submit" class="btn btn-primary btn-sm">Grant kingdom manager</button>
+                <button name="action" value="revoke-manager" type="submit" class="btn btn-outline-secondary btn-sm">Revoke kingdom manager</button>
+            </div>
         </form>
     </section>
 {% endfor %}
 
-<section class="mt-10 pt-8 border-t border-gray-300">
-    <h2 class="text-2xl font-serif font-semibold text-secondary mb-4">Granted permissions</h2>
-    <form method="get" action="/admin" class="mb-4 flex flex-wrap items-end gap-3" id="admin-permissions-filter">
+<section class="mt-5 pt-4 border-top">
+    <h2 class="font-serif h3 text-denarius-secondary mb-4">Granted permissions</h2>
+    <form method="get" action="/admin" class="mb-4 row g-3 align-items-end" id="admin-permissions-filter">
         <input type="hidden" name="email" value="{{ email }}">
-        <div class="flex-1 min-w-[14rem]">
-            <label for="perm-email" class="block text-sm font-semibold text-tertiary mb-1">Filter by email</label>
+        <div class="col-md">
+            <label for="perm-email" class="form-label fw-semibold text-denarius-tertiary">Filter by email</label>
             <input
                 id="perm-email"
                 name="perm_email"
                 type="text"
                 value="{{ perm_email }}"
                 autocomplete="off"
-                class="block w-full border border-gray-300 rounded px-3 py-2 font-normal text-base"
+                class="form-control"
             >
         </div>
-        <div class="flex-1 min-w-[14rem]">
-            <label for="perm-kingdom" class="block text-sm font-semibold text-tertiary mb-1">Filter by kingdom</label>
+        <div class="col-md">
+            <label for="perm-kingdom" class="form-label fw-semibold text-denarius-tertiary">Filter by kingdom</label>
             <input
                 id="perm-kingdom"
                 name="perm_kingdom"
                 type="text"
                 value="{{ perm_kingdom }}"
                 autocomplete="off"
-                class="block w-full border border-gray-300 rounded px-3 py-2 font-normal text-base"
+                class="form-control"
             >
         </div>
-        <button type="submit" class="bg-primary hover:bg-primary-dark text-white py-2 px-5 rounded transition-colors duration-200 cursor-pointer border-0 shrink-0">Filter</button>
-        {% if perm_email or perm_kingdom %}
-            <a href="/admin{% if email %}?email={{ email|url_encode }}{% endif %}" class="text-sm text-primary hover:underline py-2">Clear filters</a>
-        {% endif %}
+        <div class="col-auto d-flex flex-wrap align-items-center gap-2">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            {% if perm_email or perm_kingdom %}
+                <a href="/admin{% if email %}?email={{ email|url_encode }}{% endif %}" class="small">Clear filters</a>
+            {% endif %}
+        </div>
     </form>
     {% if grantedPermissions is empty %}
-        <p class="text-gray-700">No active grants match the current filters.</p>
+        <p class="text-body-secondary">No active grants match the current filters.</p>
     {% else %}
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead>
-                    <tr class="bg-gray-100 text-left">
-                        <th class="p-2 border">Email</th>
-                        <th class="p-2 border">Permission</th>
-                        <th class="p-2 border">Kingdom</th>
-                        <th class="p-2 border">Granted</th>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered table-striped align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Email</th>
+                        <th scope="col">Permission</th>
+                        <th scope="col">Kingdom</th>
+                        <th scope="col">Granted</th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for row in grantedPermissions %}
-                    <tr class="odd:bg-gray-50">
-                        <td class="p-2 border">
+                    <tr>
+                        <td>
                             {% if row.email %}
-                                {{ row.email }}<span class="block text-xs text-gray-500">{{ row.idpUserId }}</span>
+                                {{ row.email }}<span class="d-block small text-body-secondary">{{ row.idpUserId }}</span>
                             {% else %}
-                                <span class="text-gray-500">{{ row.idpUserId }}</span>
+                                <span class="text-body-secondary">{{ row.idpUserId }}</span>
                             {% endif %}
                         </td>
-                        <td class="p-2 border">{{ row.permission }}</td>
-                        <td class="p-2 border">{{ row.kingdomName }}</td>
-                        <td class="p-2 border">{{ row.grantedAt }}</td>
+                        <td>{{ row.permission }}</td>
+                        <td>{{ row.kingdomName }}</td>
+                        <td>{{ row.grantedAt }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>
@@ -121,7 +130,7 @@
 jQuery(function ($) {
     function fillKingdomSelects(kingdoms) {
         if (!kingdoms.length) {
-            $('.ork-kingdom-hint').removeClass('hidden');
+            $('.ork-kingdom-hint').removeClass('d-none');
             return;
         }
         kingdoms.forEach(function (kingdom) {
@@ -140,7 +149,7 @@ jQuery(function ($) {
     var $list = $('#admin-email-suggestions');
 
     function hideSuggestions() {
-        $list.addClass('hidden').empty();
+        $list.addClass('d-none').empty();
     }
 
     function showSuggestions(items) {
@@ -151,14 +160,14 @@ jQuery(function ($) {
         }
         items.forEach(function (item) {
             var $li = $('<li>', {
-                class: 'cursor-pointer px-3 py-2 text-sm hover:bg-gray-100',
+                class: 'list-group-item list-group-item-action small',
                 role: 'option',
                 text: item.email + ' (' + item.idpUserId + ')'
             });
             $li.data('email', item.email);
             $list.append($li);
         });
-        $list.removeClass('hidden');
+        $list.removeClass('d-none');
     }
 
     $email.on('input', function () {

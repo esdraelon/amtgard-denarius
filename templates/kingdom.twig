@@ -2,58 +2,51 @@
 {% import "macros.twig" as ui %}
 
 {% block title %}{{ kingdom.name }}{% endblock %}
-{% block container_class %}max-w-6xl{% endblock %}
+{% block container_class %}container-xl{% endblock %}
 
 {% block content %}
-    <h1 class="text-3xl font-serif font-bold text-secondary mb-2">{{ kingdom.name }}</h1>
-    <p class="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
-        {{ ui.btn_secondary('Previous month', '/' ~ kingdom.slug ~ '?month=' ~ previous) }}
-        <span class="font-semibold text-tertiary">{{ month }}</span>
-        {{ ui.btn_secondary('Next month', '/' ~ kingdom.slug ~ '?month=' ~ next) }}
-    </p>
-    {% if disconnected %}<p class="mb-3 text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-2">The bank connection needs to be repaired.</p>{% endif %}
-    {% if syncedAt %}<p class="mb-4 text-sm text-gray-500">Last synced {{ syncedAt }}.</p>{% endif %}
-    {% if rows is empty %}
-        <p class="text-gray-700">No transactions for this month.</p>
-    {% elseif mode == 'summarized' %}
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead><tr class="bg-gray-100 text-left"><th class="p-2 border">Category</th><th class="p-2 border">Transactions</th><th class="p-2 border">Amount</th></tr></thead>
-                <tbody>
-                {% for row in rows %}
-                    <tr class="odd:bg-gray-50"><td class="p-2 border">{{ row.category }}</td><td class="p-2 border">{{ row.count }}</td><td class="p-2 border">{{ row.amount }}</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
+{% embed 'components/page-header.twig' with { title: kingdom.name } %}
+    {% import "macros.twig" as ui %}
+    {% block header_meta %}
+        <div class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary mb-2">
+            {{ ui.btn_secondary('Previous month', '/' ~ kingdom.slug ~ '?month=' ~ previous) }}
+            <span class="fw-semibold text-denarius-tertiary">{{ month }}</span>
+            {{ ui.btn_secondary('Next month', '/' ~ kingdom.slug ~ '?month=' ~ next) }}
         </div>
-    {% elseif mode == 'redacted' %}
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead><tr class="bg-gray-100 text-left"><th class="p-2 border">Date</th><th class="p-2 border">Category</th><th class="p-2 border">Amount</th></tr></thead>
-                <tbody>
-                {% for row in rows %}
-                    <tr class="odd:bg-gray-50"><td class="p-2 border">{{ row.postedOn }}</td><td class="p-2 border">{{ row.category }}</td><td class="p-2 border">{{ row.amount }}</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead><tr class="bg-gray-100 text-left"><th class="p-2 border">Date</th><th class="p-2 border">Account</th><th class="p-2 border">Category</th><th class="p-2 border">Counterparty</th><th class="p-2 border">Description</th><th class="p-2 border">Amount</th></tr></thead>
-                <tbody>
-                {% for row in rows %}
-                    <tr class="odd:bg-gray-50">
-                        <td class="p-2 border">{{ row.postedOn }}</td>
-                        <td class="p-2 border">{{ row.account }}</td>
-                        <td class="p-2 border">{{ row.category }}</td>
-                        <td class="p-2 border">{{ row.counterparty }}</td>
-                        <td class="p-2 border">{{ row.description }}</td>
-                        <td class="p-2 border">{{ row.amount }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% endif %}
+        {% if disconnected %}
+            {% include 'components/alert.twig' with {
+                variant: 'warning',
+                message: 'The bank connection needs to be repaired.'
+            } %}
+        {% endif %}
+        {% if syncedAt %}
+            <p class="small text-body-secondary mb-0">Last synced {{ syncedAt }}.</p>
+        {% endif %}
+    {% endblock %}
+{% endembed %}
+
+{% if rows is empty %}
+    <p class="text-body-secondary">No transactions for this month.</p>
+{% elseif mode == 'summarized' %}
+    {% include 'components/data-table.twig' with {
+        columns: ['Category', 'Transactions', 'Amount'],
+        fields: ['category', 'count', 'amount'],
+        rows: rows,
+        empty_message: 'No transactions for this month.'
+    } %}
+{% elseif mode == 'redacted' %}
+    {% include 'components/data-table.twig' with {
+        columns: ['Date', 'Category', 'Amount'],
+        fields: ['postedOn', 'category', 'amount'],
+        rows: rows,
+        empty_message: 'No transactions for this month.'
+    } %}
+{% else %}
+    {% include 'components/data-table.twig' with {
+        columns: ['Date', 'Account', 'Category', 'Counterparty', 'Description', 'Amount'],
+        fields: ['postedOn', 'account', 'category', 'counterparty', 'description', 'amount'],
+        rows: rows,
+        empty_message: 'No transactions for this month.'
+    } %}
+{% endif %}
 {% endblock %}

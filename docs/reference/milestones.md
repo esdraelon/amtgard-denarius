@@ -1,6 +1,6 @@
 # Denarius milestones
 
-Work is stacked with git-branchless. Each milestone is one branch. A milestone is committed after `composer test` (`src/` line coverage at least 95%) and `composer infection:ci` (MSI and covered MSI at least 80%). The `infection:ci` script runs PHPUnit once for PCOV coverage XML, copies JUnit beside it, then runs Infection with `--skip-initial-tests` so the duplicate PHPUnit pass is not killed (exit 143) under PCOV.
+Work uses **stacked git branches** (one branch per milestone, each stacked on the prior). git-branchless or other stacked-branch tooling is optional. Each milestone is one branch. A milestone is committed after `composer test` (`src/` line coverage at least 95%) and `composer infection:ci` (MSI and covered MSI at least 80%). The `infection:ci` script runs PHPUnit once for PCOV coverage XML, copies JUnit beside it, then runs Infection with `--skip-initial-tests` so the duplicate PHPUnit pass is not killed (exit 143) under PCOV.
 
 ## Baseline
 
@@ -226,7 +226,7 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 ## Log test support
 
 - Branch: `log-test-support`
-- `MethodLogAssert` helpers (`reset`, `assertTraced`, `assertConstructorEntered`, `assertAnyOfTraced`) on the bootstrap `RecordingMethodLog`; `TracedMethodCatalog` scans `src/` for `DenariusLog::trace` / `enter` call sites; unit tests in `MethodLogAssertTest` and `TracedMethodCatalogTest`. Documented catalog workflow in `docs/method-log-tests.md`.
+- `MethodLogAssert` helpers (`reset`, `assertTraced`, `assertConstructorEntered`, `assertAnyOfTraced`) on the bootstrap `RecordingMethodLog`; `TracedMethodCatalog` scans `src/` for `DenariusLog::trace` / `enter` call sites; unit tests in `MethodLogAssertTest` and `TracedMethodCatalogTest`. Documented catalog workflow in [method-log-tests.md](method-log-tests.md).
 - Line coverage: 98.23% (2885/2937).
 - Infection covered MSI: 94%.
 
@@ -282,7 +282,7 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 ## Branch logging
 
 - Branch: `branch-logging`
-- `DenariusLog::debugBranch` / `infoBranch` / `warnBranch`, `BranchLogLevel`, and branch lines on `StderrMethodLog`; `PostCsrfMiddleware` replaces the inline CSRF closure; decision branches for CSRF reject, principal sync, webhook auth denial, and admin auth (`BranchLoggingTest` asserts branch records). Documented in `docs/logging-spike.md` (M-08).
+- `DenariusLog::debugBranch` / `infoBranch` / `warnBranch`, `BranchLogLevel`, and branch lines on `StderrMethodLog`; `PostCsrfMiddleware` replaces the inline CSRF closure; decision branches for CSRF reject, principal sync, webhook auth denial, and admin auth (`BranchLoggingTest` asserts branch records). Documented in [logging-spike.md](logging-spike.md) (M-08).
 - Line coverage: 98.63% (2959/3000).
 - Infection covered MSI: 99% (`composer infection:ci`, `--threads=4`).
 - Log-tested branches: `csrf_reject`, `csrf_skip`, `csrf_ok`, `principal_sync_session`, `principal_sync_guest`, `webhook_auth_denied`, `auth_login_required`, `auth_admin_denied`.
@@ -290,14 +290,14 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 ## Infection reliable
 
 - Branch: `infection-reliable`
-- `composer infection:ci` generates `build/coverage-xml` and JUnit once, then runs Infection with `--skip-initial-tests` and `--threads=4` so PCOV does not kill the second PHPUnit pass (exit 143). Documented in this file’s gate paragraph and `docs/method-log-tests.md`.
+- `composer infection:ci` generates `build/coverage-xml` and JUnit once, then runs Infection with `--skip-initial-tests` and `--threads=4` so PCOV does not kill the second PHPUnit pass (exit 143). Documented in this file’s gate paragraph and [method-log-tests.md](method-log-tests.md).
 - Line coverage: 98.57% (2895/2937).
 - Infection covered MSI: 99% (`composer infection:ci`).
 
 ## Log test catalog gate
 
 - Branch: `log-test-catalog-gate`
-- `TracedMethodCoverageManifest` maps each `TracedMethodCatalog` entry to an M-02–M-07 `Traced*MethodsTest` scope; `TracedMethodCatalogGateTest` fails when a trace site is unmapped. Documented in `docs/method-log-tests.md` (M-08).
+- `TracedMethodCoverageManifest` maps each `TracedMethodCatalog` entry to an M-02–M-07 `Traced*MethodsTest` scope; `TracedMethodCatalogGateTest` fails when a trace site is unmapped. Documented in [method-log-tests.md](method-log-tests.md) (M-08).
 - Line coverage: 98.57% (2895/2937).
 - Infection covered MSI: 99% (skip-initial-tests with `build/coverage-xml`, `--threads=4`).
 
@@ -306,3 +306,37 @@ Work is stacked with git-branchless. Each milestone is one branch. A milestone i
 - Branch: `ui-idp-design` (stacked on `app-bootstrap-wiring`).
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
+
+## UI Twig components
+
+- Branch: `ui-twig-components` (stacked on `ui-idp-design`).
+- Bootstrap 5 (CDN) replaces Tailwind for grid, forms, tables, and alerts; IDP primary color via `--bs-primary`. Shared Twig pieces under `templates/components/` (page-header, section-card, alert, form-field-select, data-table). Home, manage, and kingdom refactored; connect and admin markup normalized. [ui-conventions.md](../planning/ui-conventions.md). Docs tree: `docs/planning/`, `docs/reference/`, [INDEX.md](../INDEX.md).
+- Line coverage: 95.40% (3589/3762).
+- Infection covered MSI: not re-run (Twig-only diff; parent stack reported 99% on `log-test-catalog-gate`).
+
+## Planned: transaction publication
+
+Threat model and pattern registry spec: [../planning/publication-threat-model.md](../planning/publication-threat-model.md) (research spike [Bank disclosure threat research](f7663302-ee4e-4964-8b2d-3b7ac6d9173a)). Doc index: [../README.md](../README.md), [../INDEX.md](../INDEX.md).
+
+Product locks:
+
+- Embargo from **`posted_on`**, kingdom **`embargo_days`** 1–7, before review/public release. **First onboarding backfill:** on initial ~90-day import, rows with `posted_on` older than `embargo_days` are review-eligible immediately; only the recent tail waits (see threat model).
+- **Hard redact** micro-deposit verification patterns (including descriptor/`ACCTVERIFY` flows) for all roles; managers reconcile in the bank portal.
+- **Pending review** never auto-publishes; public kingdom page shows **Unreviewed**, **Stale transactions**, or **No current transactions since {date}** when the statement body is empty.
+- **No wide-open public tier:** replace `display_mode=all` with **`summarized`** (financial summary / future balance sheet & I&E), **`redacted`** (fully redacted lines), **`less_redacted`** (limited fields, quantized amounts). Public paths never emit raw provider cents.
+- **Balance + transaction coupling:** **`balance_quantum`** fixed or **calculated from `n` lines since last published balance** (floor/ceiling configurable); **`EnvelopeReviewStage`** ensures balance jumps match quantized line nets ([../planning/publication-threat-model.md](../planning/publication-threat-model.md) §2.1, §6).
+- **Extensibility:** versioned **`PublicationPattern`** ids + ordered **`PublicationPipeline`** stages (chain of responsibility).
+- **Kingdom-tunable magic numbers** (embargo, amount/balance quantum floor/ceiling/**k**, pair window) with **platform minimums** so managers cannot publish cent-exact or overly fine balances (see threat model §5.1).
+
+Suggested stack (one branch each):
+
+1. `transaction-publication-schema` — columns, embargo, unpublished excluded from public read path
+2. `publication-pipeline-core` — envelope, stages, manager vs public paths, cache hook
+3. `statement-absence-reasons` — visibility-side reason banners
+4. `transaction-review-ui` — manage queue, publish/withhold
+5. `micro-deposit-hard-redact` — pairing + keyword HARD rules at ingest
+6. `display-mode-disclosure-tiers` — migrate `all` → `less_redacted`; manage labels; presenters use pipeline output only
+7. `amount-and-balance-quantization` — `amount_quantum`, `balance_quantum`, pull-round vs last published balance
+8. `publication-envelope-review` — holistic leak tests (balance vs line sum, partial redaction windows)
+9. `publication-pattern-registry` — versioned SOFT patterns, ruleset reprocess, treasurer alerts
+10. `publication-docs-privacy` — manage and privacy copy

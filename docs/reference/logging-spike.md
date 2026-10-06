@@ -52,4 +52,4 @@ Skip interfaces with no body. After M-07, every remaining method under `src/` ei
 
 - [x] M-08 `branch-logging` — Branch helpers on `DenariusLog`, `PostCsrfMiddleware`, CSRF/auth/webhook/principal decision branches at info/warn/debug, and `BranchLoggingTest` assertions. Gates: `composer test`, `composer infection:ci`.
 
-Each milestone appends a section to `docs/milestones.md`: branch, what changed, line-coverage fraction, Infection covered MSI. Check the box here in the same commit.
+Each milestone appends a section to [milestones.md](milestones.md): branch, what changed, line-coverage fraction, Infection covered MSI. Check the box here in the same commit.

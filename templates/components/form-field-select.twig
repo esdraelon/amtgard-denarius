@@ -1,0 +1,14 @@
+{# name, label, options (list of values), selected (optional), select_class (optional) #}
+<div class="mb-3">
+    <label class="form-label fw-semibold text-denarius-tertiary" for="{{ id|default(name) }}">{{ label }}</label>
+    <select
+        name="{{ name }}"
+        id="{{ id|default(name) }}"
+        class="form-select {{ select_class|default('') }}"
+        {% if max_width is defined %}style="max-width: {{ max_width }};"{% endif %}
+    >
+        {% for value in options %}
+            <option value="{{ value }}" {% if selected is defined and selected == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+    </select>
+</div>
