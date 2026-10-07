@@ -21,6 +21,7 @@ final class PublicationPipelineFactory
                 new EmbargoStage(),
                 new HardRedactionStage(),
                 new PublicationStatusStage(),
+                new PatternRegistryStage(),
                 new AmountQuantizationStage(),
                 new LineRedactionStage(),
                 new DeferredPublicationStage('aggregate'),
