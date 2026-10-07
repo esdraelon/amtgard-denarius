@@ -314,6 +314,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Line coverage: 95.26% (4558/4785).
 - Infection covered MSI: not re-run (Twig-only diff; parent stack at 95% covered MSI).
 
+## Review category override (M-TAX-04)
+
+- Branch: `review-category-override` (stacked on `ingest-categorizer` @ `8e85e81`).
+- Manage review gains category metadata on queue rows, type-ahead search (`TaxonomyCategorySearch`), manager overrides (`TransactionReviewService::update`), uncategorized publish gate (HARD exempt), bulk same-counterparty/month, and pattern-create route stub. UI: `CategoryTypeahead` + `/manage/{slug}/taxonomy/categories` JSON.
+- Line coverage: 95.02% (5453/5739).
+- Infection covered MSI: 94% (skip-initial-tests, `build/coverage-xml`, `--threads=4`, ~16m).
+- Log-tested branches: `transaction_review_rejected_category`, `transaction_review_rejected_uncategorized`, `transaction_review_category_set`, `taxonomy_category_search`.
+
 ## Ingest categorizer (M-TAX-03)
 
 - Branch: `ingest-categorizer` (stacked on `transaction-category-schema` @ `a5497bc`).

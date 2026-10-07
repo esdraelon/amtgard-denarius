@@ -160,13 +160,28 @@ final class ServiceWorkerArrange
                 ->tellerAccountId('acc_review')
                 ->postedOn('2026-09-02')
                 ->amountCents(-100)
-                ->category('uncategorized')
+                ->category('expense.feast_groceries')
+                ->categorySource('shared_rule')
+                ->categoryConfidence(85)
                 ->publishableAfter('2026-09-01T00:00:00+00:00')
                 ->build());
             $reviews = Strategies::reviewService($transactions, $accounts, Strategies::months($cache), new \DateTimeImmutable('2026-10-01'));
             $reviews->publish($reviewKingdom, 'review-tx');
             $reviews->withhold($reviewKingdom, 'review-tx');
-            Strategies::reviewQueue($transactions, $accounts, new \DateTimeImmutable('2026-10-01'))->rowsForManage($reviewKingdom);
+            $reviews->update($reviewKingdom, 'review-tx', 'expense.site_rental', false, false);
+            $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()
+                ->kingdomId((int) $reviewKingdom->getId())
+                ->tellerTransactionId('hard-review')
+                ->tellerAccountId('acc_review')
+                ->postedOn('2026-09-03')
+                ->amountCents(25)
+                ->category('uncategorized')
+                ->publicationFlags('{"hard":true,"pattern_ids":["ingest.test_hard"]}')
+                ->publishableAfter('2026-09-01T00:00:00+00:00')
+                ->build());
+            $reviews->publish($reviewKingdom, 'hard-review');
+            Strategies::reviewQueue($transactions, $accounts, new \DateTimeImmutable('2026-10-01'))->rowsForManage($reviewKingdom, true);
+            Strategies::categorySearch()->search('site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
         }
 
         $connect = new BankConnect(Strategies::providers($teller));

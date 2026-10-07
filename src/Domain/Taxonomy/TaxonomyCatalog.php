@@ -114,4 +114,22 @@ final class TaxonomyCatalog
             return str_ends_with($categorySlug, '.other');
         });
     }
+
+    /**
+     * @return list<TaxonomyCategoryDefinition>
+     */
+    public function assignableDefinitions(): array
+    {
+        return DenariusLog::trace(__METHOD__, function (): array {
+            $list = [];
+            foreach ($this->categories as $definition) {
+                if (str_starts_with($definition->slug, 'system.')) {
+                    continue;
+                }
+                $list[] = $definition;
+            }
+
+            return $list;
+        });
+    }
 }

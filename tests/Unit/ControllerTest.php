@@ -144,6 +144,7 @@ final class ControllerTest extends AmtgardTestCase
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(),
             Strategies::reviewQueue($transactions, $accounts),
             Strategies::reviewService($transactions, $accounts),
+            Strategies::categorySearch(),
         );
         $manage = $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $this->assertStringContainsString('manage golden-plains', (string) $manage->getBody());

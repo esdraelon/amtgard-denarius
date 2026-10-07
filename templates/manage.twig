@@ -101,7 +101,14 @@
 {% embed 'components/section-card.twig' with { title: 'Transaction review' } %}
     {% import "macros.twig" as ui %}
     {% block section_body %}
-        <p class="small text-body-secondary">Publish eligible rows to the public statement or withhold rows that were published by mistake. Embargoed rows appear for visibility but cannot be published until the embargo ends.</p>
+        <p class="small text-body-secondary">Assign a category before publishing. Auto-matched rows (confidence ≥ 70) can publish directly. Optional patterns never block save or publish.</p>
+        <p class="mb-2">
+            {% if uncategorizedOnly %}
+                <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}">Show all rows</a>
+            {% else %}
+                <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}?uncategorized=1">Uncategorized only (least confident first)</a>
+            {% endif %}
+        </p>
         {% if reviewQueue is empty %}
             {% include 'components/alert.twig' with {
                 variant: 'info',
@@ -116,6 +123,7 @@
                             <th scope="col">Account</th>
                             <th scope="col">Description</th>
                             <th scope="col">Amount</th>
+                            <th scope="col">Category</th>
                             <th scope="col">Status</th>
                             <th scope="col">Action</th>
                         </tr>
@@ -127,6 +135,39 @@
                                 <td>{{ row.accountName }}</td>
                                 <td>{{ row.description }}</td>
                                 <td>{{ row.amount }}</td>
+                                <td style="min-width: 14rem;">
+                                    {% set flow = row.amountCents > 0 ? 'income' : (row.amountCents < 0 ? 'expense' : 'transfer') %}
+                                    <form method="post" action="/manage/{{ kingdom.slug }}/transactions/update" class="review-category-form">
+                                        <input type="hidden" name="csrf" value="{{ csrf }}">
+                                        <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
+                                        {% include 'components/category-typeahead.twig' with {
+                                            inputId: 'cat-' ~ row.tellerTransactionId,
+                                            listId: 'cat-list-' ~ row.tellerTransactionId,
+                                            inputName: 'category_display',
+                                            hiddenName: 'category',
+                                            selectedSlug: row.prefillSlug,
+                                            displayValue: row.prefillDisplay,
+                                            flow: flow,
+                                            searchUrl: '/manage/' ~ kingdom.slug ~ '/taxonomy/categories'
+                                        } %}
+                                        <div class="form-check form-check-inline mt-1">
+                                            <input class="form-check-input" type="checkbox" name="bulk_counterparty" value="1" id="bulk-{{ row.tellerTransactionId }}">
+                                            <label class="form-check-label small" for="bulk-{{ row.tellerTransactionId }}">Same counterparty this month</label>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1 mt-1">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">Save category</button>
+                                            {% if row.status == 'pending' %}
+                                                <button type="submit" name="publish" value="1" class="btn btn-primary btn-sm">Save &amp; publish</button>
+                                            {% endif %}
+                                        </div>
+                                        <p class="small mb-0 mt-1">
+                                            <a href="/manage/{{ kingdom.slug }}/patterns/new?counterparty={{ row.counterparty|url_encode }}&amp;description={{ row.description|url_encode }}&amp;category={{ row.category|url_encode }}">Create pattern…</a>
+                                            {% if row.categoryConfidence > 0 %}
+                                                <span class="text-body-secondary">· confidence {{ row.categoryConfidence }}</span>
+                                            {% endif %}
+                                        </p>
+                                    </form>
+                                </td>
                                 <td>
                                     {% if row.status == 'pending' %}
                                         <span class="badge text-bg-warning">Ready to publish</span>
@@ -184,6 +225,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/js/category-typeahead.js"></script>
 {% if connect.available %}
 <script>
 function denariusEnrollment(extra) {

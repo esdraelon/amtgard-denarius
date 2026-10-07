@@ -172,9 +172,19 @@ final class Strategies
         AccountRepositoryInterface $accounts,
         ?\DateTimeImmutable $now = null,
     ): TransactionReviewQueue {
+        $catalog = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog();
+
         return new TransactionReviewQueue(
             new KingdomPublicationLineSource($transactions, $accounts),
+            $catalog,
             $now ?? new \DateTimeImmutable('2026-10-01'),
+        );
+    }
+
+    public static function categorySearch(): \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch
+    {
+        return new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch(
+            \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
         );
     }
 
@@ -184,10 +194,14 @@ final class Strategies
         ?MonthInvalidator $months = null,
         ?\DateTimeImmutable $now = null,
     ): TransactionReviewService {
+        $catalog = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog();
+
         return new TransactionReviewService(
             $transactions,
             $accounts,
             $months ?? self::months(),
+            new \Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator($catalog),
+            $catalog,
             $now ?? new \DateTimeImmutable('2026-10-01'),
         );
     }
