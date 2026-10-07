@@ -41,7 +41,7 @@ final class KingdomPageQuery implements MonthReader
                 $candidates,
             );
             $envelope = $this->publicPipeline->run($envelope);
-            $statement = $this->builder->build($envelope->toLedgerLines(), $mode, $month);
+            $statement = $this->builder->build($envelope->toLedgerLines(), $mode, $month, $kingdom);
             if ($statement->rows !== []) {
                 return $statement;
             }

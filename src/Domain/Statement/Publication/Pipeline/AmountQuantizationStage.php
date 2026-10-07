@@ -41,6 +41,7 @@ final class AmountQuantizationStage implements PublicationStage
                     ->postedOn($line->getPostedOn())
                     ->amountCents($after)
                     ->category($line->getCategory())
+                    ->categoryFlow($line->getCategoryFlow())
                     ->description($line->getDescription())
                     ->counterparty($line->getCounterparty())
                     ->status($line->getStatus())

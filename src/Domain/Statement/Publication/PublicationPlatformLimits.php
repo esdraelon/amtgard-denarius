@@ -43,6 +43,12 @@ final class PublicationPlatformLimits
 
     public const int DEFAULT_BALANCE_QUANTUM_STEP_CENTS = 0;
 
+    public const int MIN_SUMMARIZED_CATEGORY_MIN_LINES = 2;
+
+    public const int MAX_SUMMARIZED_CATEGORY_MIN_LINES = 10;
+
+    public const int DEFAULT_SUMMARIZED_CATEGORY_MIN_LINES = 2;
+
     private function __construct()
     {
     }

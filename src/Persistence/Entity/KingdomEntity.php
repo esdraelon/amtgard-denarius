@@ -70,4 +70,7 @@ class KingdomEntity extends RepositoryEntity
 
     #[Field('balance_quantum_step_cents')]
     private ?int $balanceQuantumStepCents = null;
+
+    #[Field('summarized_category_min_lines')]
+    private ?int $summarizedCategoryMinLines = null;
 }

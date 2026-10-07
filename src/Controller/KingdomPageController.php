@@ -97,6 +97,7 @@ final class KingdomPageController
                 'kind' => 'line',
                 'postedOn' => $row->getPostedOn(),
                 'category' => $row->getCategory(),
+                'categoryFlow' => $row->getCategoryFlow(),
                 'description' => $row->getDescription(),
                 'counterparty' => $row->getCounterparty(),
                 'amount' => \Amtgard\Denarius\Domain\Statement\Line\Money::format($row->getAmountCents()),
@@ -111,12 +112,20 @@ final class KingdomPageController
     private function total(CategoryTotal $row): array
     {
         return DenariusLog::trace(__METHOD__, function () use ($row): array {
-            return [
+            $payload = [
                 'kind' => 'total',
                 'category' => $row->category,
                 'count' => $row->count,
                 'amount' => \Amtgard\Denarius\Domain\Statement\Line\Money::format($row->amountCents),
             ];
+            if ($row->flowSection !== null) {
+                $payload['flowSection'] = $row->flowSection->value;
+            }
+            if ($row->isNetTotal) {
+                $payload['isNetTotal'] = true;
+            }
+
+            return $payload;
         });
     }
 

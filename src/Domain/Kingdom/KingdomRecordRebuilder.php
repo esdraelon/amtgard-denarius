@@ -30,7 +30,8 @@ final class KingdomRecordRebuilder
                 ->amountQuantumCents($kingdom->getAmountQuantumCents())
                 ->balanceQuantumFloorCents($kingdom->getBalanceQuantumFloorCents())
                 ->balanceQuantumCeilingCents($kingdom->getBalanceQuantumCeilingCents())
-                ->balanceQuantumStepCents($kingdom->getBalanceQuantumStepCents());
+                ->balanceQuantumStepCents($kingdom->getBalanceQuantumStepCents())
+                ->summarizedCategoryMinLines($kingdom->getSummarizedCategoryMinLines());
         });
     }
 }

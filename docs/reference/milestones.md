@@ -314,6 +314,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Line coverage: 95.26% (4558/4785).
 - Infection covered MSI: not re-run (Twig-only diff; parent stack at 95% covered MSI).
 
+## Public category presentation (M-TAX-05)
+
+- Branch: `public-category-presentation` (stacked on `review-category-override` @ `d4b0a2a`).
+- `CategoryLabelStage` on the public pipeline maps slugs to taxonomy labels, forces `system.bank_verification` on HARD rows, and logs unknown slugs. `SummarizedStatementComposer` adds flow sections, transfer-excluding net, and kingdom `summarized_category_min_lines` rollup (platform floor 2). Soft-sensitive categories use parent labels on redacted/summarized tiers. Public payload tests exclude manager category metadata; manage/kingdom copy and threat model bumped to `threat-model/v3`.
+- Line coverage: 95.09% (5632/5923).
+- Infection covered MSI: 95% (skip-initial-tests, `build/coverage-xml`, `--threads=4`, ~16m).
+- Log-tested branches: `publication_category_unknown_slug`, `summarized_category_min_lines_clamped` (`PublicCategoryPresentationTest`).
+
 ## Review category override (M-TAX-04)
 
 - Branch: `review-category-override` (stacked on `ingest-categorizer` @ `8e85e81`).

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Taxonomy;
 
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 /** Repository: immutable in-memory view of a validated taxonomy pack. */
@@ -45,6 +46,50 @@ final class TaxonomyCatalog
 
             return $this->categories[$resolved]->label;
         });
+    }
+
+    public function publicLabel(string $slug, DisplayMode $tier): string
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($slug, $tier): string {
+            $resolved = $this->resolveSlug($slug);
+            $definition = $this->categories[$resolved] ?? null;
+            if (! $definition instanceof TaxonomyCategoryDefinition) {
+                return 'Uncategorized';
+            }
+            if ($definition->isSoftSensitive() && $this->usesSoftParentLabel($tier)) {
+                return $definition->summaryParentLabel ?? $definition->label;
+            }
+
+            return $definition->label;
+        });
+    }
+
+    public function flowForSlug(string $slug, int $amountCents): TransactionFlow
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($slug, $amountCents): TransactionFlow {
+            $resolved = $this->resolveSlug($slug);
+            if (! isset($this->categories[$resolved])) {
+                return TransactionFlow::defaultFromSignedCents($amountCents);
+            }
+            $flows = $this->categories[$resolved]->flows;
+            if ($flows === []) {
+                return TransactionFlow::defaultFromSignedCents($amountCents);
+            }
+            if (count($flows) === 1) {
+                return $flows[0];
+            }
+            $signed = TransactionFlow::defaultFromSignedCents($amountCents);
+            if ($this->permitsFlow($resolved, $signed)) {
+                return $signed;
+            }
+
+            return $flows[0];
+        });
+    }
+
+    private function usesSoftParentLabel(DisplayMode $tier): bool
+    {
+        return $tier === DisplayMode::Redacted || $tier === DisplayMode::Summarized;
     }
 
     public function resolveSlug(string $slug): string

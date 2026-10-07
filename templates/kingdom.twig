@@ -33,8 +33,8 @@
     {% endif %}
 {% elseif mode == 'summarized' %}
     {% include 'components/data-table.twig' with {
-        columns: ['Category', 'Transactions', 'Amount'],
-        fields: ['category', 'count', 'amount'],
+        columns: ['Section', 'Category', 'Transactions', 'Amount'],
+        fields: ['flowSection', 'category', 'count', 'amount'],
         rows: rows,
         empty_message: 'No transactions for this month.'
     } %}
@@ -54,6 +54,6 @@
     } %}
 {% endif %}
 <p class="small text-body-secondary mt-3 mb-0">
-    Amounts are rounded for public disclosure. Sensitive verification activity is withheld from this view; kingdom treasurers reconcile those items in the bank portal.
+    Categories use the shared kingdom taxonomy (closed labels only—never raw bank categories). Amounts are rounded for public disclosure. Small categories may roll into an “Other” bucket; transfers are shown separately and excluded from net. Sensitive verification activity is withheld from this view; kingdom treasurers reconcile those items in the bank portal.
 </p>
 {% endblock %}

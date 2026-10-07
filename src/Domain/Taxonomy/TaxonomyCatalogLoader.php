@@ -149,7 +149,14 @@ final class TaxonomyCatalogLoader
                 if (isset($categories[$slug])) {
                     throw new TaxonomyCatalogValidationException(sprintf('Duplicate category slug %s.', $slug));
                 }
-                $categories[$slug] = new TaxonomyCategoryDefinition($slug, $label, $flows);
+                $sensitivity = $this->parseSensitivity($row, $slug);
+                $summaryParentLabel = $this->optionalString($row, 'summaryParentLabel');
+                if ($sensitivity === CategorySensitivity::Soft && ($summaryParentLabel === null || $summaryParentLabel === '')) {
+                    throw new TaxonomyCatalogValidationException(
+                        sprintf('Category %s declares sensitivity soft but missing summaryParentLabel.', $slug),
+                    );
+                }
+                $categories[$slug] = new TaxonomyCategoryDefinition($slug, $label, $flows, $sensitivity, $summaryParentLabel);
             }
 
             foreach (['uncategorized', 'system.bank_verification'] as $required) {
@@ -440,5 +447,48 @@ final class TaxonomyCatalogLoader
         }
 
         return ['token', '', [], strtoupper(trim($token))];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function parseSensitivity(array $row, string $slug): ?CategorySensitivity
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($row, $slug): ?CategorySensitivity {
+            if (! array_key_exists('sensitivity', $row)) {
+                return null;
+            }
+            $value = $row['sensitivity'];
+            if (! is_string($value)) {
+                throw new TaxonomyCatalogValidationException(sprintf('Category %s sensitivity must be a string.', $slug));
+            }
+            $parsed = CategorySensitivity::tryFrom($value);
+            if ($parsed === null) {
+                throw new TaxonomyCatalogValidationException(sprintf('Category %s has unknown sensitivity %s.', $slug, $value));
+            }
+
+            return $parsed;
+        });
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function optionalString(array $row, string $key): ?string
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($row, $key): ?string {
+            if (! array_key_exists($key, $row)) {
+                return null;
+            }
+            $value = $row[$key];
+            if ($value === null) {
+                return null;
+            }
+            if (! is_string($value)) {
+                throw new TaxonomyCatalogValidationException(sprintf('Field %s must be a string when present.', $key));
+            }
+
+            return $value;
+        });
     }
 }

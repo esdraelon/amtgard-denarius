@@ -15,6 +15,7 @@ use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
+use Amtgard\Denarius\Tests\Support\TaxonomyCatalogFixture;
 use Amtgard\Denarius\Tests\Support\MethodLogAssert;
 use Amtgard\Denarius\Tests\Support\RecordingMethodLog;
 use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
@@ -81,7 +82,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
         $kingdoms = new MemoryKingdoms();
         $accounts = new MemoryAccounts();
         $transactions = new MemoryTransactions();
-        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(1)->name('Test')->slug('test')->build());
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(1)->name('Test')->slug('test')->displayMode('redacted')->build());
         $accounts->save(AccountRecord::builder()->kingdomId((int) $kingdom->getId())->tellerAccountId('acc')->name('Checking')->type('depository')->published(true)->build());
         $transactions->upsert(TransactionRecord::builder()
             ->kingdomId((int) $kingdom->getId())
@@ -123,7 +124,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
             [$line],
         );
 
-        $result = PublicationPipelineFactory::standard()->forPublicRead()->run($envelope);
+        $result = PublicationPipelineFactory::standard(TaxonomyCatalogFixture::load())->forPublicRead()->run($envelope);
         $result->kingdom();
         $result->month();
         $result->disclosureTier();

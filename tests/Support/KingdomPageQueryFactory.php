@@ -22,7 +22,7 @@ final class KingdomPageQueryFactory
         ?\DateTimeImmutable $asOf = null,
     ): KingdomPageQuery {
         $source = new KingdomPublicationLineSource($transactions, $accounts);
-        $pipelines = PublicationPipelineFactory::standard();
+        $pipelines = PublicationPipelineFactory::standard(TaxonomyCatalogFixture::load());
 
         return new KingdomPageQuery(
             $source,

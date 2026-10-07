@@ -39,7 +39,7 @@ final class ManagerKingdomPageQuery implements MonthReader
             );
             $envelope = $this->managerPipeline->run($envelope);
 
-            return $this->builder->build($envelope->toLedgerLines(), $mode, $month);
+            return $this->builder->build($envelope->toLedgerLines(), $mode, $month, $kingdom);
         });
     }
 }

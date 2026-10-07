@@ -13,7 +13,7 @@ Research spike for kingdom treasury bank transactions published to members at **
 
 Implementation uses a **`PublicationPipeline`** (chain of responsibility) plus an extensible **`PublicationPattern` registry**. See [../reference/milestones.md](../reference/milestones.md) (planned stack at end), [../README.md](../README.md), and [../INDEX.md](../INDEX.md).
 
-**Document version:** `threat-model/v2` (extend via new pattern ids and pipeline stages; do not fork ad hoc logic in presenters).
+**Document version:** `threat-model/v3` (extend via new pattern ids and pipeline stages; do not fork ad hoc logic in presenters).
 
 ---
 
@@ -168,6 +168,7 @@ All “magic numbers” are **per-kingdom** where noted, stored with the kingdom
 | **`balance_quantum_step_cents`** (**k**) | Extra coarsening per txn since last balance publish | $0–$25 | 0 |
 | **`pair_window_calendar_days`** | Micro-deposit pairing | 7–21 | 7 |
 | **`disclosure_tier`** | summarized / redacted / less_redacted | enum | cannot select removed `all` |
+| **`summarized_category_min_lines`** | Roll sparse summarized buckets into per-flow “Other” | 2–10 | **2** |
 
 **Foot-gun rules:**
 

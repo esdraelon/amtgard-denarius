@@ -31,6 +31,7 @@ final class HardRedactionStage implements PublicationStage
                     ->postedOn($line->getPostedOn())
                     ->amountCents(0)
                     ->category($line->getCategory())
+                    ->categoryFlow($line->getCategoryFlow())
                     ->description(PublicationHardRedactCopy::LINE_DESCRIPTION)
                     ->counterparty('')
                     ->status($line->getStatus())

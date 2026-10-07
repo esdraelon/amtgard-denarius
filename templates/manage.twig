@@ -36,11 +36,11 @@
                 <strong>Disclosure tier</strong> controls what members see after the publication pipeline runs.
             </p>
             <ul class="small text-body-secondary mb-3">
-                <li><strong>Summarized</strong> — category totals only; no individual transactions.</li>
-                <li><strong>Redacted</strong> — dated lines with category and <em>quantized</em> amounts (no description or counterparty).</li>
+                <li><strong>Summarized</strong> — category totals by income, expense, and transfer (net excludes transfers); sparse buckets may roll up per kingdom settings.</li>
+                <li><strong>Redacted</strong> — dated lines with taxonomy labels and <em>quantized</em> amounts (no description or counterparty).</li>
                 <li><strong>Less redacted</strong> — adds account name and limited narrative fields; amounts stay quantized; verification and payroll-style rows may be further scrubbed.</li>
             </ul>
-            <p class="small text-body-secondary">Public paths never show raw bank cents. Managers review and publish in the queue before rows appear here.</p>
+            <p class="small text-body-secondary">Public paths never show raw bank cents or provider category hints—only closed taxonomy labels after the publication pipeline. Managers review and publish in the queue before rows appear here.</p>
             {% include 'components/form-field-select.twig' with {
                 name: 'embargo_days',
                 label: 'Publication embargo (days after posted date)',
