@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Publication envelope review
+
+- Branch: `publication-envelope-review` (stacked on `amount-and-balance-quantization`).
+- `EnvelopeReviewStage` compares quantized line sums to the coarsened balance delta and fail-closes by withholding the published balance when tolerance is exceeded.
+- Line coverage: 95.24% (4484/4708).
+- Infection covered MSI: 95% (skip-initial-tests, `--threads=4`).
+- Log-tested branches: `publication_envelope_leak`, `publication_envelope_ok`.
+
 ## Amount and balance quantization
 
 - Branch: `amount-and-balance-quantization` (stacked on `display-mode-disclosure-tiers`).

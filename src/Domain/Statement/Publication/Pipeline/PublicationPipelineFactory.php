@@ -25,7 +25,7 @@ final class PublicationPipelineFactory
                 new LineRedactionStage(),
                 new DeferredPublicationStage('aggregate'),
                 new BalanceCoarseningStage(),
-                new DeferredPublicationStage('envelope_review'),
+                new EnvelopeReviewStage(),
             ]);
         });
     }
