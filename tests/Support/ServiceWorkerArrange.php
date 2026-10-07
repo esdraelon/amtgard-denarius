@@ -13,6 +13,7 @@ use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
+use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
 use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
@@ -242,10 +243,11 @@ final class ServiceWorkerArrange
                 );
             }
         };
-        $reader = new CachingMonthReader($origin, $cache);
+        $catalog = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog();
+        $reader = new CachingMonthReader($origin, $cache, $catalog);
         $reader->statement($kingdomRow, $month);
         $reader->statement($kingdomRow, $month);
-        $cache->set('denarius:month:4:0:all:2026-09', 'not-json', 10);
+        $cache->set('denarius:month:4:0:all:2026-09:taxonomy/v1', 'not-json', 10);
         $reader->statement($kingdomRow, $month);
 
         $summaryKingdom = KingdomRecord::builder()->id(5)->orkKingdomId(8)->name('Golden Plains')->slug('golden-plains')->displayMode('summarized')->build();
@@ -259,7 +261,7 @@ final class ServiceWorkerArrange
                 );
             }
         };
-        $cachedSummary = new CachingMonthReader($summaryOrigin, $cache);
+        $cachedSummary = new CachingMonthReader($summaryOrigin, $cache, $catalog);
         $cachedSummary->statement($summaryKingdom, $month);
         $cachedSummary->statement($summaryKingdom, $month);
 
@@ -268,8 +270,33 @@ final class ServiceWorkerArrange
         $sweep = new DailySweep($kingdoms, $queue);
         $sweep->enqueueConnected();
 
+        $categoryApplier = Strategies::categoryApplier(Strategies::providers($teller));
+        $existingTxn = $transactions->findByTellerTransactionId('txn_1');
+        if ($existingTxn !== null) {
+            $resync = TransactionRecord::builder()
+                ->kingdomId((int) $saved->getId())
+                ->tellerTransactionId('txn_1')
+                ->tellerAccountId('acc')
+                ->postedOn('2026-09-02')
+                ->amountCents(-325)
+                ->description($existingTxn->getDescription())
+                ->status('posted')
+                ->providerCategory('food')
+                ->build();
+            $categoryApplier->apply($saved, $resync, $existingTxn);
+        }
+
+        $recategorizer = Strategies::recategorizer($kingdoms, $transactions, Strategies::providers($teller));
+        $recategorizer->recategorizeKingdom($saved);
+        $recategorizer->recategorizeAll();
+        (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle(['orkKingdomId' => 4]);
+        (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle([]);
+        (new \Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver(Strategies::providers($teller)))->forKingdom($saved);
+        (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->statement(4, 0, 'all', '2026-09', 'taxonomy/v1');
+        (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->taxonomyNamespace();
+
         $messages = new MemoryMessages();
-        $worker = new LedgerWorker($messages, Strategies::jobs($sync), 1);
+        $worker = new LedgerWorker($messages, Strategies::jobs($sync, $recategorizer), 1);
         $worker->handle('not-json');
         $worker->handle(json_encode(['type' => 'ledger', 'orkKingdomId' => 4]));
         $worker->handle(json_encode(['type' => 'other']));

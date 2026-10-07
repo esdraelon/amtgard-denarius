@@ -314,6 +314,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Line coverage: 95.26% (4558/4785).
 - Infection covered MSI: not re-run (Twig-only diff; parent stack at 95% covered MSI).
 
+## Ingest categorizer (M-TAX-03)
+
+- Branch: `ingest-categorizer` (stacked on `transaction-category-schema` @ `a5497bc`).
+- Matcher chain (`ManagerLockMatcher` → `ProviderHintMatcher` → `KeywordRuleMatcher` → `FallbackMatcher`), `TransactionCategorizer`, and `TransactionCategoryApplier` run in `TransactionSynchronizer` before publication apply. `TransactionRecategorizeJob`, `bin/recategorize-transactions.php`, and month cache keys include `taxonomy_version`.
+- Line coverage: 95.14% (5245/5513).
+- Infection covered MSI: 95% (skip-initial-tests, `--threads=4`, ~15m).
+- Log-tested branches: `transaction_categorized`, `transaction_category_locked`, `transaction_category_fallback`, `transaction_recategorize_completed` (no description/counterparty in log context).
+
 ## Transaction category schema (M-TAX-02)
 
 - Branch: `transaction-category-schema` (stacked on `taxonomy-catalog` @ `85e8ab5`).

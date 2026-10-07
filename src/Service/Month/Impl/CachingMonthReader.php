@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Month\Impl;
 
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Service\Month\MonthCacheKeys;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
@@ -21,6 +22,7 @@ final class CachingMonthReader implements MonthReader
     public function __construct(
         private readonly MonthReader $origin,
         private readonly KeyValueStore $store,
+        private readonly TaxonomyCatalog $catalog,
         private readonly MonthCacheKeys $keys = new MonthCacheKeys(),
         private readonly int $ttlSeconds = 86400,
     ) {
@@ -50,7 +52,13 @@ final class CachingMonthReader implements MonthReader
             $kingdomId = (int) $kingdom->getId();
             $generation = (int) ($this->store->get($this->keys->generation($kingdomId)) ?? '0');
 
-            return $this->keys->statement($kingdomId, $generation, $mode->value, $month->key());
+            return $this->keys->statement(
+                $kingdomId,
+                $generation,
+                $mode->value,
+                $month->key(),
+                $this->catalog->taxonomyVersion(),
+            );
         });
     }
 

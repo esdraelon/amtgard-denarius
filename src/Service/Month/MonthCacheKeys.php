@@ -15,10 +15,17 @@ final class MonthCacheKeys
         });
     }
 
-    public function statement(int $kingdomId, int $generation, string $mode, string $month): string
+    public function statement(int $kingdomId, int $generation, string $mode, string $month, string $taxonomyVersion): string
     {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdomId, $generation, $mode, $month): string {
-            return sprintf('denarius:month:%d:%d:%s:%s', $kingdomId, $generation, $mode, $month);
+        return DenariusLog::trace(__METHOD__, function () use ($kingdomId, $generation, $mode, $month, $taxonomyVersion): string {
+            return sprintf('denarius:month:%d:%d:%s:%s:%s', $kingdomId, $generation, $mode, $month, $taxonomyVersion);
+        });
+    }
+
+    public function taxonomyNamespace(): string
+    {
+        return DenariusLog::trace(__METHOD__, function (): string {
+            return 'taxonomy_version';
         });
     }
 }
