@@ -314,6 +314,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Line coverage: 95.26% (4558/4785).
 - Infection covered MSI: not re-run (Twig-only diff; parent stack at 95% covered MSI).
 
+## Transaction category schema (M-TAX-02)
+
+- Branch: `transaction-category-schema` (stacked on `taxonomy-catalog` @ `85e8ab5`).
+- Phinx migration adds `provider_category`, `category_source`, `category_rule_id`, `category_confidence`, `category_suggested`, and `taxonomy_version`, with legacy `general`/unknown categories normalized to `uncategorized`. `TransactionRecordRebuilder` centralizes builder copies; ingest stores provider hints on `provider_category` and defaults taxonomy slug to `uncategorized`.
+- Line coverage: 95.02% (4899/5156).
+- Infection covered MSI: 95% (skip-initial-tests, `--threads=4`, ~24m).
+- Log-tested branches: `transaction_provider_hint_recorded`, `transaction_category_schema_migrated`.
+
 ## Taxonomy catalog (M-TAX-01)
 
 - Branch: `taxonomy-catalog` (stacked on `publication-docs-privacy` @ `c01b259`).

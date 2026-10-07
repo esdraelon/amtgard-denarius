@@ -212,7 +212,7 @@ final class PlaidLedgerProvider implements LedgerProvider
                 $id,
                 $postedOn,
                 $this->amount($row['amount'] ?? 0),
-                $category !== '' ? $category : 'general',
+                $category,
                 $this->text($row['name'] ?? null),
                 $this->text($row['merchant_name'] ?? null),
                 ($row['pending'] ?? false) === true ? 'pending' : 'posted',

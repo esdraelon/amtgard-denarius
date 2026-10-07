@@ -35,7 +35,7 @@ final class PublicationPatternRegistryTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-500)
-            ->category('general')
+            ->category('uncategorized')
             ->description('ADP Payroll deposit')
             ->counterparty('ADP')
             ->publicationFlags($hardFlags)

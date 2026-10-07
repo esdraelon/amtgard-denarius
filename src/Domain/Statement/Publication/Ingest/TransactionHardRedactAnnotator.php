@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Domain\Statement\Publication\Ingest;
 
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
+use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
@@ -26,19 +27,7 @@ final class TransactionHardRedactAnnotator
             }
             $encoded = $flags->encode();
 
-            return TransactionRecord::builder()
-                ->id($built->getId())
-                ->kingdomId($built->getKingdomId())
-                ->tellerTransactionId($built->getTellerTransactionId())
-                ->tellerAccountId($built->getTellerAccountId())
-                ->postedOn($built->getPostedOn())
-                ->amountCents($built->getAmountCents())
-                ->category($built->getCategory())
-                ->description($built->getDescription())
-                ->counterparty($built->getCounterparty())
-                ->status($built->getStatus())
-                ->publishedAt($built->getPublishedAt())
-                ->publishableAfter($built->getPublishableAfter())
+            return TransactionRecordRebuilder::from($built)
                 ->publicationFlags($encoded ?? $built->getPublicationFlags())
                 ->build();
         });

@@ -193,7 +193,7 @@ PHP);
         $this->assertSame('-1.50', $rows[1]->amount);
         $this->assertSame('Rocket', $rows[0]->description);
         $this->assertSame('posted', $rows[0]->status);
-        $this->assertSame('general', $rows[0]->category);
+        $this->assertSame('', $rows[0]->category);
         $this->assertSame([], $provider->transactions('cus_1', 'fca_1', 'fctxn_1'));
         $this->assertSame($api->window[0], (new PreviousMonthWindow(new \DateTimeImmutable('@' . self::NOW)))->startsAt());
 

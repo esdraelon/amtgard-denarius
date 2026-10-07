@@ -54,7 +54,9 @@ final class StoreTest extends AmtgardTestCase
         $this->assertGreaterThan(0, (int) $audit);
         $this->assertGreaterThan(0, (int) $pdo->query('SELECT COUNT(*) FROM published_accounts_audit')->fetchColumn());
         $this->assertSame('cipher-2', $pdo->query('SELECT ciphertext FROM enrollment_secrets LIMIT 1')->fetchColumn());
-        $this->assertSame(-200, (int) $pdo->query('SELECT amount_cents FROM transactions LIMIT 1')->fetchColumn());
+        $this->assertSame('RENT', $pdo->query("SELECT provider_category FROM transactions WHERE teller_transaction_id = 'txn-rent'")->fetchColumn());
+        $this->assertSame(70, (int) $pdo->query("SELECT category_confidence FROM transactions WHERE teller_transaction_id = 'txn-rent'")->fetchColumn());
+        $this->assertSame(-200, (int) $pdo->query("SELECT amount_cents FROM transactions WHERE teller_transaction_id = 'txn-grocery'")->fetchColumn());
         $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM role_grants')->fetchColumn());
     }
 }

@@ -6,6 +6,7 @@ namespace Amtgard\Denarius\Service\Ledger;
 
 use Amtgard\Denarius\Domain\Statement\Publication\Ingest\TransactionHardRedactAnnotator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
+use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
@@ -36,21 +37,21 @@ final class TransactionPublicationApplier
                 $backfillAmnesty,
             );
 
-            $builder = TransactionRecord::builder()
-                ->kingdomId($incoming->getKingdomId())
-                ->tellerTransactionId($incoming->getTellerTransactionId())
-                ->tellerAccountId($incoming->getTellerAccountId())
-                ->postedOn($incoming->getPostedOn())
-                ->amountCents($incoming->getAmountCents())
-                ->category($incoming->getCategory())
-                ->description($incoming->getDescription())
-                ->counterparty($incoming->getCounterparty())
-                ->status($incoming->getStatus())
-                ->publishableAfter($publishableAfter);
+            $builder = TransactionRecordRebuilder::from($incoming)->publishableAfter($publishableAfter);
 
             Optional::ofNullable($existing?->getId())->ifPresent(static fn (int $id) => $builder->id($id));
             Optional::ofNullable($existing?->getPublishedAt())->ifPresent(static fn (string $at) => $builder->publishedAt($at));
             Optional::ofNullable($existing?->getPublicationFlags())->ifPresent(static fn (string $flags) => $builder->publicationFlags($flags));
+
+            if ($existing !== null) {
+                $builder
+                    ->category($existing->getCategory())
+                    ->categorySource($existing->getCategorySource())
+                    ->categoryRuleId($existing->getCategoryRuleId())
+                    ->categoryConfidence($existing->getCategoryConfidence())
+                    ->categorySuggested($existing->getCategorySuggested())
+                    ->taxonomyVersion($existing->getTaxonomyVersion());
+            }
 
             return $this->hardRedact->annotate($builder->build());
         });

@@ -40,7 +40,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-01')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->publishedAt('2026-09-02T00:00:00+00:00')
             ->publishableAfter('2026-09-10T00:00:00+00:00')
             ->build();
@@ -62,7 +62,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
         MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
         $month = new MonthWindow(2026, 9);
-        $line = PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-100)->category('general')->build();
+        $line = PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-100)->category('uncategorized')->build();
         $envelope = new PublicationEnvelope(
             $kingdom,
             $month,
@@ -89,7 +89,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')
@@ -110,7 +110,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-500)
-            ->category('general')
+            ->category('uncategorized')
             ->accountName('Checking')
             ->publishedAt('2026-09-03T00:00:00+00:00')
             ->publishableAfter('2026-09-01T00:00:00+00:00')

@@ -29,7 +29,7 @@ final class PublicationEnvelopeReviewTest extends AmtgardTestCase
     {
         MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
-        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->category('general')->build();
+        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->category('uncategorized')->build();
         $envelope = new PublicationEnvelope(
             $kingdom,
             new MonthWindow(2026, 9),
@@ -50,7 +50,7 @@ final class PublicationEnvelopeReviewTest extends AmtgardTestCase
     {
         MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
-        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->category('general')->build();
+        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->category('uncategorized')->build();
         $envelope = new PublicationEnvelope(
             $kingdom,
             new MonthWindow(2026, 9),

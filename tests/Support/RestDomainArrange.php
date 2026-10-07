@@ -75,6 +75,24 @@ final class RestDomainArrange
         \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::fromStored('transfer');
         \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::defaultFromSignedCents(250);
         (new \Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer())->normalize('POS DEBIT TEST');
+        $pack = $root . '/data/taxonomy/taxonomy.json';
+        \Amtgard\Denarius\Domain\Taxonomy\TransactionCategoryLegacyNormalizer::fromTaxonomyJson($pack)->normalize('general');
+        \Amtgard\Denarius\Domain\Taxonomy\TransactionCategoryLegacyResolver::fromTaxonomyJson($pack)->normalizeStoredCategory('FOOD_AND_DRINK');
+        TransactionRecordRebuilder::from(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('a')->postedOn('2026-09-01')->amountCents(1)->build())->build();
+        $migrationStore = new class implements \Amtgard\Denarius\Domain\Taxonomy\TransactionCategoryMigrationStore {
+            public function legacyRows(): array
+            {
+                return [];
+            }
+
+            public function writeNormalized(int|string $id, string $category, ?string $providerCategory, string $categorySource): void
+            {
+            }
+        };
+        (new \Amtgard\Denarius\Domain\Taxonomy\TransactionCategorySchemaMigrator(
+            \Amtgard\Denarius\Domain\Taxonomy\TransactionCategoryLegacyNormalizer::fromTaxonomyJson($pack),
+            $migrationStore,
+        ))->migrate();
         $registry = new \Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry(
             ['plaid' => new \Amtgard\Denarius\Domain\Taxonomy\PlaidProviderAmountSign()],
             new \Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign(),
@@ -114,7 +132,7 @@ final class RestDomainArrange
         $line = \Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-500)
-            ->category('general')
+            ->category('uncategorized')
             ->build();
         $envelope = new \Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationEnvelope(
             $kingdom,
@@ -143,7 +161,7 @@ final class RestDomainArrange
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->build();
         TransactionRecordRebuilder::from($stored)->publishedAt('2026-09-03T00:00:00+00:00')->build();
         (new TransactionReviewRow('review-tx', '2026-09-02', '-$1.00', 'Supplies', 'Checking', 'pending'))->view();

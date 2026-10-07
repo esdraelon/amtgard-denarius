@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Domain\Statement\Publication\Ingest;
 
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
+use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationPlatformLimits;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
@@ -95,19 +96,7 @@ final class MicroDepositPairReconciler
                     'teller_transaction_id' => $transaction->getTellerTransactionId(),
                 ]);
             }
-            $updated = TransactionRecord::builder()
-                ->id($transaction->getId())
-                ->kingdomId($transaction->getKingdomId())
-                ->tellerTransactionId($transaction->getTellerTransactionId())
-                ->tellerAccountId($transaction->getTellerAccountId())
-                ->postedOn($transaction->getPostedOn())
-                ->amountCents($transaction->getAmountCents())
-                ->category($transaction->getCategory())
-                ->description($transaction->getDescription())
-                ->counterparty($transaction->getCounterparty())
-                ->status($transaction->getStatus())
-                ->publishedAt($transaction->getPublishedAt())
-                ->publishableAfter($transaction->getPublishableAfter())
+            $updated = TransactionRecordRebuilder::from($transaction)
                 ->publicationFlags($flags->encode())
                 ->build();
             $this->transactions->upsert($updated);

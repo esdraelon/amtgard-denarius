@@ -18,12 +18,15 @@ use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Tests\Support\MethodLogAssert;
+use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class LedgerFacadeTest extends AmtgardTestCase
 {
     public function testANonTellerProviderDrivesEnrollmentAndSync(): void
     {
+        MethodLogAssert::reset();
         $kingdoms = new MemoryKingdoms();
         $secrets = new MemorySecrets();
         $accounts = new MemoryAccounts();
@@ -102,7 +105,15 @@ final class LedgerFacadeTest extends AmtgardTestCase
             Strategies::months(),
         );
         $this->assertTrue($sync->sync(8));
-        $this->assertCount(1, $transactions->forKingdom((int) $connected->getId()));
+        $stored = $transactions->forKingdom((int) $connected->getId());
+        $this->assertCount(1, $stored);
+        $this->assertSame('uncategorized', $stored[0]->getCategory());
+        $this->assertSame('food', $stored[0]->getProviderCategory());
+        MethodLogAssert::assertBranchLogged(
+            BranchLogLevel::Debug,
+            'transaction_provider_hint_recorded',
+            TransactionSynchronizer::class . '::record',
+        );
 
         $handler = new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment));
         $this->assertSame('X-Bank-Signature', $handler->signatureHeader('other'));
@@ -124,7 +135,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
 
         $rows = $provider->transactions('token', 'acc', null);
         $this->assertCount(2, $rows);
-        $this->assertSame('general', $rows[0]->category);
+        $this->assertSame('', $rows[0]->category);
         $this->assertSame('', $rows[0]->counterparty);
         $this->assertSame('', $rows[1]->counterparty);
 
