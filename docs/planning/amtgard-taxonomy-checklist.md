@@ -2,7 +2,7 @@
 
 Source: [amtgard-transaction-taxonomy.md](amtgard-transaction-taxonomy.md), [publication-threat-model.md](publication-threat-model.md).
 
-Stack base: `publication-docs-privacy` @ `c01b259`, or the current publication tip if a later branch exists. The working tree has substantial uncommitted work (month cache, site nav, kingdom sync status). Commit it to its own branch before starting M-TAX-01.
+Stack base for **M-TAX-02+:** `taxonomy-catalog` @ `3b8ce61` (M-TAX-01 complete: catalog `e0063b4`, product decisions doc `3b8ce61`). Pre-taxonomy WIP remains in git stash `wip-pre-taxonomy` if you need month-cache / site-nav work back.
 
 **Gates for every milestone** (from the development rules):
 
