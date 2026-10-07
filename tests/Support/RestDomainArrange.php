@@ -34,6 +34,7 @@ final class RestDomainArrange
         self::exercisePublicationHardRedact();
         self::exerciseDisplayModeDisclosure();
         self::exercisePublicationQuantization();
+        self::exercisePublicationEnvelopeReview();
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPublicReadTest::class, 'testPublicStatementOmitsUnpublishedTransactions');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonSerializesForCache');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksUnreviewedWhenEmbargoClearedButUnpublished');
@@ -144,6 +145,12 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testBalanceQuantumGrowsWithLineCountWhenStepConfigured');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testAmountQuantizerPreservesSignForSubQuantumDebits');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testBalancePullRounderUsesQuantumBuckets');
+    }
+
+    private static function exercisePublicationEnvelopeReview(): void
+    {
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationEnvelopeReviewTest::class, 'testEnvelopeReviewWithholdsBalanceWhenLineSumLeaks');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationEnvelopeReviewTest::class, 'testEnvelopeReviewPassesWhenLineSumMatchesBalanceDelta');
     }
 
     private static function exercisePublicationHardRedact(): void

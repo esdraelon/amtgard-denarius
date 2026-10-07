@@ -115,7 +115,7 @@ final class PublicationEnvelope
         });
     }
 
-    public function withPublishedBalanceCents(int $publishedBalanceCents): self
+    public function withPublishedBalanceCents(?int $publishedBalanceCents): self
     {
         return DenariusLog::trace(__METHOD__, function () use ($publishedBalanceCents): self {
             return new self(
