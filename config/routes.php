@@ -42,6 +42,9 @@ return function (App $app): void {
         $group->post('/manage/{slug}/refresh', [ManagerController::class, 'refresh']);
         $group->post('/manage/{slug}/transactions/publish', [ManagerController::class, 'publishTransaction']);
         $group->post('/manage/{slug}/transactions/withhold', [ManagerController::class, 'withholdTransaction']);
+        $group->post('/manage/{slug}/transactions/update', [ManagerController::class, 'updateTransaction']);
+        $group->get('/manage/{slug}/taxonomy/categories', [ManagerController::class, 'categorySearch']);
+        $group->get('/manage/{slug}/patterns/new', [ManagerController::class, 'patternNew']);
         $group->get('/bank/simplefin/return', [SimpleFinReturnController::class, 'show']);
         $group->post('/bank/simplefin/return', [SimpleFinReturnController::class, 'submit']);
     })->add(SessionMiddleware::class)->add(SyncPrincipalMiddleware::class);

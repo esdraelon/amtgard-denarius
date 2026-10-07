@@ -18,8 +18,11 @@ use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch;
+use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
+use Amtgard\Denarius\Utilities\Http\JsonBody;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
@@ -40,6 +43,7 @@ final class ManagerController
         private readonly SimpleFinConnectSession $simplefinSession,
         private readonly TransactionReviewQueue $reviewQueue,
         private readonly TransactionReviewService $reviewActions,
+        private readonly TaxonomyCategorySearch $categorySearch,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -51,8 +55,9 @@ final class ManagerController
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
+            $uncategorizedOnly = ($request->getQueryParams()['uncategorized'] ?? '') === '1';
 
-            return $this->page($response, $kingdom, $this->connects->idle());
+            return $this->page($response, $kingdom, $this->connects->idle(), $uncategorizedOnly);
         });
     }
 
@@ -189,6 +194,65 @@ final class ManagerController
         });
     }
 
+    public function updateTransaction(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            return $this->reviewPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
+                $this->reviewActions->update(
+                    $kingdom,
+                    (string) ($body['teller_transaction_id'] ?? ''),
+                    (string) ($body['category'] ?? ''),
+                    ($body['publish'] ?? '') === '1',
+                    ($body['bulk_counterparty'] ?? '') === '1',
+                );
+            });
+        });
+    }
+
+    public function categorySearch(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
+            if ($kingdom instanceof ResponseInterface) {
+                return $kingdom;
+            }
+            $query = (string) ($request->getQueryParams()['q'] ?? '');
+            $flowRaw = (string) ($request->getQueryParams()['flow'] ?? '');
+            $flow = $flowRaw !== '' ? TransactionFlow::fromStored($flowRaw) : null;
+            $results = $this->categorySearch->search($query, $flow);
+
+            return JsonBody::write($response, ['results' => $results]);
+        });
+    }
+
+    public function patternNew(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
+            if ($kingdom instanceof ResponseInterface) {
+                return $kingdom;
+            }
+            $params = $request->getQueryParams();
+
+            $prefill = [
+                'counterparty' => (string) ($params['counterparty'] ?? ''),
+                'description' => (string) ($params['description'] ?? ''),
+                'category' => (string) ($params['category'] ?? ''),
+            ];
+
+            return $this->html->html($response, 'message.twig', [
+                'title' => 'Create pattern (preview)',
+                'message' => sprintf(
+                    'Pattern editor stub for %s. Counterparty: %s. Description: %s. Category: %s.',
+                    $kingdom->getName(),
+                    $prefill['counterparty'],
+                    $prefill['description'],
+                    $prefill['category'],
+                ),
+            ]);
+        });
+    }
+
     /**
      * @param callable(KingdomRecord, array<string, mixed>): void $action
      */
@@ -221,15 +285,23 @@ final class ManagerController
     /**
      * @param array<string, mixed> $connect
      */
-    private function page(ResponseInterface $response, KingdomRecord $kingdom, array $connect): ResponseInterface
-    {
-        return DenariusLog::trace(__METHOD__, function () use ($response, $kingdom, $connect): ResponseInterface {
+    /**
+     * @param array<string, mixed> $connect
+     */
+    private function page(
+        ResponseInterface $response,
+        KingdomRecord $kingdom,
+        array $connect,
+        bool $uncategorizedOnly = false,
+    ): ResponseInterface {
+        return DenariusLog::trace(__METHOD__, function () use ($response, $kingdom, $connect, $uncategorizedOnly): ResponseInterface {
             return $this->html->html($response, 'manage.twig', [
                 'csrf' => CsrfToken::issue(),
                 'kingdom' => $kingdom->view(),
                 'accounts' => $this->accountViews((int) $kingdom->getId()),
                 'connect' => $connect,
-                'reviewQueue' => $this->reviewQueue->rowsForManage($kingdom),
+                'reviewQueue' => $this->reviewQueue->rowsForManage($kingdom, $uncategorizedOnly),
+                'uncategorizedOnly' => $uncategorizedOnly,
             ]);
         });
     }

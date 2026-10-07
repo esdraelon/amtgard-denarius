@@ -91,6 +91,7 @@ final class ManageConnectTest extends AmtgardTestCase
             new SimpleFinConnectSession(),
             Strategies::reviewQueue($transactions, $accounts),
             Strategies::reviewService($transactions, $accounts),
+            Strategies::categorySearch(),
         );
     }
 
@@ -147,6 +148,7 @@ final class ManageConnectTest extends AmtgardTestCase
             new SimpleFinConnectSession(),
             Strategies::reviewQueue($guestTransactions, $guestAccounts),
             Strategies::reviewService($guestTransactions, $guestAccounts),
+            Strategies::categorySearch(),
         );
         $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), 'golden-plains')->getStatusCode());
     }

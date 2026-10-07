@@ -239,7 +239,27 @@ final class RestDomainArrange
             ->category('uncategorized')
             ->build();
         TransactionRecordRebuilder::from($stored)->publishedAt('2026-09-03T00:00:00+00:00')->build();
-        (new TransactionReviewRow('review-tx', '2026-09-02', '-$1.00', 'Supplies', 'Checking', 'pending'))->view();
+        (new TransactionReviewRow(
+            'review-tx',
+            '2026-09-02',
+            '-$1.00',
+            -100,
+            'Supplies',
+            'Shop',
+            'Checking',
+            'pending',
+            'uncategorized',
+            'Uncategorized',
+            'fallback',
+            null,
+            0,
+            'uncategorized',
+            'Expense · Uncategorized',
+        ))->view();
+        $catalog = (new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader(dirname(__DIR__, 2), 'data/taxonomy'))->load();
+        $catalog->assignableDefinitions();
+        (new \Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator($catalog))->assertAssignable('expense.feast_groceries', -100);
+        (new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch($catalog))->search('site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
     }
 
     private static function exercisePublicationPipeline(): void

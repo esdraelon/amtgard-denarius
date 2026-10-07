@@ -49,8 +49,10 @@ use Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\ProviderHintMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
+use Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
@@ -379,14 +381,23 @@ return [
         $c->get(KingdomRepositoryInterface::class),
         $c->get(PublicationSettingsValidator::class),
     ),
+    ReviewCategoryValidator::class => fn (ContainerInterface $c) => new ReviewCategoryValidator(
+        $c->get(TaxonomyCatalog::class),
+    ),
+    TaxonomyCategorySearch::class => fn (ContainerInterface $c) => new TaxonomyCategorySearch(
+        $c->get(TaxonomyCatalog::class),
+    ),
     TransactionReviewQueue::class => fn (ContainerInterface $c) => new TransactionReviewQueue(
         $c->get(KingdomPublicationLineSource::class),
+        $c->get(TaxonomyCatalog::class),
         new DateTimeImmutable('now'),
     ),
     TransactionReviewService::class => fn (ContainerInterface $c) => new TransactionReviewService(
         $c->get(TransactionRepositoryInterface::class),
         $c->get(AccountRepositoryInterface::class),
         $c->get(MonthInvalidator::class),
+        $c->get(ReviewCategoryValidator::class),
+        $c->get(TaxonomyCatalog::class),
         new DateTimeImmutable('now'),
     ),
     PrincipalSync::class => fn (PrincipalRepositoryInterface $principals) => new PrincipalSync($principals),
@@ -500,6 +511,7 @@ return [
         $c->get(SimpleFinConnectSession::class),
         $c->get(TransactionReviewQueue::class),
         $c->get(TransactionReviewService::class),
+        $c->get(TaxonomyCategorySearch::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(
