@@ -327,7 +327,7 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Branch: `publication-envelope-review` (stacked on `amount-and-balance-quantization`).
 - `EnvelopeReviewStage` compares quantized line sums to the coarsened balance delta and fail-closes by withholding the published balance when tolerance is exceeded.
 - Line coverage: 95.24% (4484/4708).
-- Infection covered MSI: 95% (skip-initial-tests, `--threads=4`).
+- Infection covered MSI: 95% (skip-initial-tests, `build/coverage-xml`, `--threads=4`, ~15m).
 - Log-tested branches: `publication_envelope_leak`, `publication_envelope_ok`.
 
 ## Amount and balance quantization
