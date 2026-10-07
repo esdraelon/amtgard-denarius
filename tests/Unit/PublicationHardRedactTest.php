@@ -31,7 +31,6 @@ final class PublicationHardRedactTest extends AmtgardTestCase
         $active = \Amtgard\Denarius\Tests\Support\MethodLogRecorder::active();
         $this->assertInstanceOf(RecordingMethodLog::class, $active);
         $this->recorder = $active;
-        MethodLogAssert::reset();
     }
 
     public function testVerifyBrandKeywordMarksHard(): void
@@ -56,6 +55,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
 
     public function testKeywordIngestMarksHardFlags(): void
     {
+        MethodLogAssert::reset();
         $transactions = new MemoryTransactions();
         $kingdom = KingdomRecord::builder()->id(1)->orkKingdomId(1)->name('K')->slug('k')->build();
         $incoming = TransactionRecord::builder()
@@ -83,6 +83,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
 
     public function testMicroDepositPairReconcilerMarksCluster(): void
     {
+        MethodLogAssert::reset();
         $transactions = new MemoryTransactions();
         $kingdom = KingdomRecord::builder()->id(1)->orkKingdomId(1)->name('K')->slug('k')->build();
         $transactions->upsert(TransactionRecord::builder()
@@ -135,6 +136,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
 
     public function testHardRedactionStageStubsLine(): void
     {
+        MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
         $flags = PublicationFlags::empty()->withHardPattern(PublicationHardPatternIds::VERIFY_KEYWORD)->encode();
         $line = PublicationCandidateLine::builder()

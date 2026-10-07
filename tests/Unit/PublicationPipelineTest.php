@@ -30,11 +30,11 @@ final class PublicationPipelineTest extends AmtgardTestCase
         $active = \Amtgard\Denarius\Tests\Support\MethodLogRecorder::active();
         $this->assertInstanceOf(RecordingMethodLog::class, $active);
         $this->recorder = $active;
-        MethodLogAssert::reset();
     }
 
     public function testEmbargoStageDropsLinesBeforePublishableAfter(): void
     {
+        MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
         $month = new MonthWindow(2026, 9);
         $line = PublicationCandidateLine::builder()
@@ -59,6 +59,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
 
     public function testPublicationStatusStageDropsUnpublishedLines(): void
     {
+        MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
         $month = new MonthWindow(2026, 9);
         $line = PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-100)->category('general')->build();

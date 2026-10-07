@@ -16,6 +16,12 @@ final class MethodLogAssert
         $recorder->reset();
     }
 
+    public static function resetTraces(): void
+    {
+        $recorder = self::requireRecorder();
+        $recorder->resetTraces();
+    }
+
     public static function assertTraced(string $method): void
     {
         $recorder = self::requireRecorder();

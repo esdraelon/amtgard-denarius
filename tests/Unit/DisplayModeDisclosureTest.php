@@ -25,7 +25,6 @@ final class DisplayModeDisclosureTest extends AmtgardTestCase
         class_exists(ApplicationTest::class);
         $active = \Amtgard\Denarius\Tests\Support\MethodLogRecorder::active();
         $this->assertInstanceOf(RecordingMethodLog::class, $active);
-        MethodLogAssert::reset();
     }
 
     public function testDisplayModeLabelIsTraced(): void
@@ -35,12 +34,14 @@ final class DisplayModeDisclosureTest extends AmtgardTestCase
 
     public function testFromStoredMapsLegacyAllToLessRedacted(): void
     {
+        MethodLogAssert::reset();
         $this->assertSame(DisplayMode::LessRedacted, DisplayMode::fromStored('all'));
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'display_mode_legacy_all', DisplayMode::class . '::fromStored');
     }
 
     public function testCanonicalDisplayModePersistsLessRedacted(): void
     {
+        MethodLogAssert::reset();
         $validator = new PublicationSettingsValidator();
         $this->assertSame(DisplayMode::LessRedacted, $validator->canonicalDisplayMode(DisplayMode::All));
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'display_mode_legacy_all', PublicationSettingsValidator::class . '::canonicalDisplayMode');
@@ -48,6 +49,7 @@ final class DisplayModeDisclosureTest extends AmtgardTestCase
 
     public function testLineRedactionStageStripsFieldsForRedactedTier(): void
     {
+        MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-01')

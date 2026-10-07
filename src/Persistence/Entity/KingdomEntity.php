@@ -58,4 +58,16 @@ class KingdomEntity extends RepositoryEntity
 
     #[Field('initial_backfill_completed_at')]
     private ?string $initialBackfillCompletedAt = null;
+
+    #[Field('amount_quantum_cents')]
+    private ?int $amountQuantumCents = null;
+
+    #[Field('balance_quantum_floor_cents')]
+    private ?int $balanceQuantumFloorCents = null;
+
+    #[Field('balance_quantum_ceiling_cents')]
+    private ?int $balanceQuantumCeilingCents = null;
+
+    #[Field('balance_quantum_step_cents')]
+    private ?int $balanceQuantumStepCents = null;
 }

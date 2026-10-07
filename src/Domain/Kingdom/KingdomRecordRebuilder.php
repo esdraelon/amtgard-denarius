@@ -26,7 +26,11 @@ final class KingdomRecordRebuilder
                 ->enrollmentStatus($kingdom->getEnrollmentStatus())
                 ->lastSyncedAt($kingdom->getLastSyncedAt())
                 ->embargoDays($kingdom->getEmbargoDays())
-                ->initialBackfillCompletedAt($kingdom->getInitialBackfillCompletedAt());
+                ->initialBackfillCompletedAt($kingdom->getInitialBackfillCompletedAt())
+                ->amountQuantumCents($kingdom->getAmountQuantumCents())
+                ->balanceQuantumFloorCents($kingdom->getBalanceQuantumFloorCents())
+                ->balanceQuantumCeilingCents($kingdom->getBalanceQuantumCeilingCents())
+                ->balanceQuantumStepCents($kingdom->getBalanceQuantumStepCents());
         });
     }
 }

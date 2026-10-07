@@ -307,6 +307,15 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Amount and balance quantization
+
+- Branch: `amount-and-balance-quantization` (stacked on `display-mode-disclosure-tiers`).
+- Phinx migration adds kingdom `amount_quantum_cents`, `balance_quantum_floor_cents`, `balance_quantum_ceiling_cents`, and `balance_quantum_step_cents` (defaults per `PublicationPlatformLimits` / threat model §5.1); wired through kingdom record, entity, repository, and rebuilder.
+- `PublicationSettingsValidator` clamps amount and balance quantum settings; `AmountQuantizationStage` and `BalanceCoarseningStage` replace deferred pipeline slots (pull-round vs last published balance on the envelope).
+- Line coverage: 95.24% (4460/4683).
+- Infection covered MSI: 95% (skip-initial-tests, `--threads=4`, ~14m).
+- Log-tested branches: `publication_amount_quantized`, `publication_balance_quantum`, `publication_balance_coarsened`, `amount_quantum_clamped`, `balance_quantum_clamped`.
+
 ## Display mode disclosure tiers
 
 - Branch: `display-mode-disclosure-tiers` (stacked on `micro-deposit-hard-redact`).

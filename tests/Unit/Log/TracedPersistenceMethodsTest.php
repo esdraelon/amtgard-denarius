@@ -39,7 +39,7 @@ final class TracedPersistenceMethodsTest extends AmtgardTestCase
 
     public function testEveryPersistenceTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         $kingdoms = new MemoryKingdoms();

@@ -28,6 +28,10 @@ final class KingdomRecord
         private ?string $lastSyncedAt = null,
         private int $embargoDays = PublicationPlatformLimits::DEFAULT_EMBARGO_DAYS,
         private ?string $initialBackfillCompletedAt = null,
+        private int $amountQuantumCents = PublicationPlatformLimits::DEFAULT_AMOUNT_QUANTUM_CENTS,
+        private int $balanceQuantumFloorCents = PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_FLOOR_CENTS,
+        private int $balanceQuantumCeilingCents = PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_CEILING_CENTS,
+        private int $balanceQuantumStepCents = PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_STEP_CENTS,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -52,6 +56,10 @@ final class KingdomRecord
                 'lastSyncedAt' => $this->getLastSyncedAt(),
                 'embargoDays' => $this->getEmbargoDays(),
                 'initialBackfillCompletedAt' => $this->getInitialBackfillCompletedAt(),
+                'amountQuantumCents' => $this->getAmountQuantumCents(),
+                'balanceQuantumFloorCents' => $this->getBalanceQuantumFloorCents(),
+                'balanceQuantumCeilingCents' => $this->getBalanceQuantumCeilingCents(),
+                'balanceQuantumStepCents' => $this->getBalanceQuantumStepCents(),
             ];
         });
     }

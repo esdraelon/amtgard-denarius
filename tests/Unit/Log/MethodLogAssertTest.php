@@ -21,13 +21,13 @@ final class MethodLogAssertTest extends AmtgardTestCase
         $active = MethodLogRecorder::active();
         $this->assertInstanceOf(RecordingMethodLog::class, $active);
         $this->recorder = $active;
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
     }
 
     public function testResetClearsRecorder(): void
     {
         DenariusLog::trace('Amtgard\\Denarius\\Tests\\Support\\Example::run', static fn (): int => 1);
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         $this->assertSame([], $this->recorder->entered());
     }
 

@@ -11,6 +11,7 @@ use Nyholm\Psr7\Response;
 use Amtgard\Denarius\Domain\Kingdom\KingdomRecordRebuilder;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationPlatformLimits;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionReviewRow;
@@ -32,6 +33,7 @@ final class RestDomainArrange
         self::exercisePublicationPipeline();
         self::exercisePublicationHardRedact();
         self::exerciseDisplayModeDisclosure();
+        self::exercisePublicationQuantization();
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPublicReadTest::class, 'testPublicStatementOmitsUnpublishedTransactions');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonSerializesForCache');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksUnreviewedWhenEmbargoClearedButUnpublished');
@@ -40,6 +42,7 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonRoundTripsThroughMonthCache');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testPublicKingdomQueryAttachesAbsenceWhenRowsEmpty');
         self::exerciseTransactionReviewDomain();
+        self::exercisePublicationEnvelopeBalanceFields();
 
         MonthWindow::current(new \DateTimeImmutable('2026-09-15'));
 
@@ -71,7 +74,35 @@ final class RestDomainArrange
         $calculator->publishableAfter('2026-09-01', 3, $now, true);
         $calculator->publishableAfter('2026-09-09', 3, $now, true);
         (new PublicationSettingsValidator())->clampEmbargoDays(99);
+        (new PublicationSettingsValidator())->clampAmountQuantumCents(PublicationPlatformLimits::DEFAULT_AMOUNT_QUANTUM_CENTS);
         KingdomRecordRebuilder::from(KingdomRecord::builder()->orkKingdomId(1)->name('Alpha')->slug('alpha')->build());
+    }
+
+    private static function exercisePublicationEnvelopeBalanceFields(): void
+    {
+        $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
+        $line = \Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationCandidateLine::builder()
+            ->postedOn('2026-09-02')
+            ->amountCents(-500)
+            ->category('general')
+            ->build();
+        $envelope = new \Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationEnvelope(
+            $kingdom,
+            new MonthWindow(2026, 9),
+            \Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode::Redacted,
+            new \DateTimeImmutable('2026-10-01T12:00:00+00:00'),
+            [$line],
+            10_000,
+            9_500,
+        );
+        $envelope->providerBalanceCents();
+        $envelope->lastPublishedBalanceCents();
+        $envelope->publishedBalanceCents();
+        $envelope->balanceQuantumCents();
+        $envelope->quantizedLineCentsSum();
+        $envelope->withBalanceQuantumCents(500);
+        $envelope->withPublishedBalanceCents(10_000);
+        KingdomRecordRebuilder::from($kingdom);
     }
 
     private static function exerciseTransactionReviewDomain(): void
@@ -103,6 +134,16 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\DisplayModeDisclosureTest::class, 'testCanonicalDisplayModePersistsLessRedacted');
         self::run(\Amtgard\Denarius\Tests\Unit\DisplayModeDisclosureTest::class, 'testLineRedactionStageStripsFieldsForRedactedTier');
         self::run(\Amtgard\Denarius\Tests\Unit\DisplayModeDisclosureTest::class, 'testLessRedactedPresenterUsesPipelineLines');
+    }
+
+    private static function exercisePublicationQuantization(): void
+    {
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testAmountQuantizationStageRoundsToKingdomQuantum');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testBalanceCoarseningPullRoundsProviderBalance');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testPublicationSettingsValidatorClampsQuantumFields');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testBalanceQuantumGrowsWithLineCountWhenStepConfigured');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testAmountQuantizerPreservesSignForSubQuantumDebits');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationQuantizationTest::class, 'testBalancePullRounderUsesQuantumBuckets');
     }
 
     private static function exercisePublicationHardRedact(): void

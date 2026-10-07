@@ -9,6 +9,7 @@ use Amtgard\ActiveRecordOrm\Attribute\RepositoryOf;
 use Amtgard\ActiveRecordOrm\Entity\Repository\Repository;
 use Amtgard\ActiveRecordOrm\Interface\EntityRepositoryInterface;
 use Amtgard\ActiveRecordOrm\Query\OrderBy;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationPlatformLimits;
 use Amtgard\Denarius\Persistence\Entity\KingdomEntity;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Optional\Optional;
@@ -124,6 +125,10 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
             $entity->setLastSyncedAt($kingdom->getLastSyncedAt());
             $entity->setEmbargoDays($kingdom->getEmbargoDays());
             $entity->setInitialBackfillCompletedAt($kingdom->getInitialBackfillCompletedAt());
+            $entity->setAmountQuantumCents($kingdom->getAmountQuantumCents());
+            $entity->setBalanceQuantumFloorCents($kingdom->getBalanceQuantumFloorCents());
+            $entity->setBalanceQuantumCeilingCents($kingdom->getBalanceQuantumCeilingCents());
+            $entity->setBalanceQuantumStepCents($kingdom->getBalanceQuantumStepCents());
 
             return null;
         });
@@ -150,6 +155,10 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
                 ->lastSyncedAt($entity->getLastSyncedAt())
                 ->embargoDays((int) ($entity->getEmbargoDays() ?? 3))
                 ->initialBackfillCompletedAt($entity->getInitialBackfillCompletedAt())
+                ->amountQuantumCents((int) ($entity->getAmountQuantumCents() ?? PublicationPlatformLimits::DEFAULT_AMOUNT_QUANTUM_CENTS))
+                ->balanceQuantumFloorCents((int) ($entity->getBalanceQuantumFloorCents() ?? PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_FLOOR_CENTS))
+                ->balanceQuantumCeilingCents((int) ($entity->getBalanceQuantumCeilingCents() ?? PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_CEILING_CENTS))
+                ->balanceQuantumStepCents((int) ($entity->getBalanceQuantumStepCents() ?? PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_STEP_CENTS))
                 ->build();
         });
     }
