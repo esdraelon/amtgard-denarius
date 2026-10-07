@@ -28,7 +28,7 @@ final class TracedRestMethodsTest extends AmtgardTestCase
         RestDomainArrange::exerciseAll();
 
         $scope = $this->methodsInRestScope();
-        $this->assertCount(184, $scope);
+        $this->assertCount(211, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);
@@ -93,6 +93,7 @@ final class TracedRestMethodsTest extends AmtgardTestCase
     private function isRestScope(string $method): bool
     {
         return str_contains($method, '\\Domain\\Statement\\')
+            || str_contains($method, '\\Domain\\Taxonomy\\')
             || str_contains($method, '\\Domain\\Kingdom\\')
             || str_contains($method, '\\Utilities\\Setup\\')
             || str_contains($method, '\\Utilities\\Queue\\')

@@ -58,6 +58,7 @@ final class TracedMethodCoverageManifest
                 'label' => 'M-07 log-test-rest',
                 'test' => TracedRestMethodsTest::class,
                 'matches' => static fn (string $method): bool => str_contains($method, '\\Domain\\Statement\\')
+                    || str_contains($method, '\\Domain\\Taxonomy\\')
                     || str_contains($method, '\\Domain\\Kingdom\\')
                     || str_contains($method, '\\Utilities\\Setup\\')
                     || str_contains($method, '\\Utilities\\Queue\\')

@@ -39,6 +39,12 @@ use Amtgard\Denarius\Controller\KingdomPageController;
 use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
 use Amtgard\Denarius\Domain\Access\KingdomAccess;
+use Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign;
+use Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer;
+use Amtgard\Denarius\Domain\Taxonomy\PlaidProviderAmountSign;
+use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
@@ -484,4 +490,20 @@ return [
         (require __DIR__ . '/routes.php')($app);
         return $app;
     },
+    DescriptionNormalizer::class => fn () => new DescriptionNormalizer(),
+    TaxonomyCatalog::class => fn () => (new TaxonomyCatalogLoader(
+        dirname(__DIR__),
+        is_string($_ENV['TAXONOMY_DATA_PATH'] ?? null) && trim($_ENV['TAXONOMY_DATA_PATH']) !== ''
+            ? trim($_ENV['TAXONOMY_DATA_PATH'])
+            : 'data/taxonomy',
+    ))->load(),
+    ProviderAmountSignRegistry::class => fn () => new ProviderAmountSignRegistry(
+        [
+            'plaid' => new PlaidProviderAmountSign(),
+            'teller' => new CreditPositiveProviderAmountSign(),
+            'stripe' => new CreditPositiveProviderAmountSign(),
+            'simplefin' => new CreditPositiveProviderAmountSign(),
+        ],
+        new CreditPositiveProviderAmountSign(),
+    ),
 ];

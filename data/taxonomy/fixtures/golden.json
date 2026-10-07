@@ -1,0 +1,25 @@
+{
+  "taxonomyVersion": "taxonomy/v1",
+  "cases": [
+    {
+      "description": "POS DEBIT RECREATION.GOV RESERVATION",
+      "counterparty": "",
+      "expected": "expense.site_rental"
+    },
+    {
+      "description": "SQ *FEAST TICKETS",
+      "counterparty": "",
+      "expected": "uncategorized"
+    },
+    {
+      "description": "CHECKCARD K&K INSURANCE GROUP",
+      "counterparty": "",
+      "expected": "expense.insurance"
+    },
+    {
+      "description": "ONLINE TRANSFER TO SAV 1234",
+      "counterparty": "",
+      "expected": "transfer.internal"
+    }
+  ]
+}

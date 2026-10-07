@@ -1,0 +1,60 @@
+{
+  "taxonomyVersion": "taxonomy/v1",
+  "rules": [
+    {
+      "id": "kw.site_rental.state_parks",
+      "category": "expense.site_rental",
+      "fields": ["description", "counterparty"],
+      "match": {
+        "type": "regex",
+        "pattern": "\\b(STATE PARKS?|PARKS? (AND|&) REC(REATION)?|RECREATION\\.GOV|RESERVEAMERICA)\\b"
+      },
+      "flows": ["expense"],
+      "confidence": 85
+    },
+    {
+      "id": "kw.insurance.event_carriers",
+      "category": "expense.insurance",
+      "fields": ["counterparty", "description"],
+      "match": {
+        "type": "anyOf",
+        "tokens": ["K&K INSURANCE", "EVENTHELPER", "THE EVENT HELPER"]
+      },
+      "flows": ["expense"],
+      "confidence": 90
+    },
+    {
+      "id": "kw.feast_groceries.costco",
+      "category": "expense.feast_groceries",
+      "fields": ["description"],
+      "match": {
+        "type": "anyOf",
+        "tokens": ["COSTCO", "SAM'S CLUB", "KROGER"]
+      },
+      "flows": ["expense"],
+      "confidence": 75
+    },
+    {
+      "id": "kw.transfer.internal_online",
+      "category": "transfer.internal",
+      "fields": ["description"],
+      "match": {
+        "type": "regex",
+        "pattern": "\\bONLINE TRANSFER (TO|FROM)\\b"
+      },
+      "flows": ["transfer"],
+      "confidence": 80
+    },
+    {
+      "id": "kw.bank_fees.monthly",
+      "category": "expense.bank_fees",
+      "fields": ["description"],
+      "match": {
+        "type": "anyOf",
+        "tokens": ["SERVICE CHARGE", "MAINTENANCE FEE", "OVERDRAFT FEE"]
+      },
+      "flows": ["expense"],
+      "confidence": 70
+    }
+  ]
+}

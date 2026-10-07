@@ -1,0 +1,243 @@
+{
+    "taxonomyVersion": "taxonomy/v1",
+    "retired": {
+        "expense.general": "uncategorized",
+        "transfer.chapter": "transfer.internal",
+        "transfer.processor_payout": "uncategorized"
+    },
+    "categories": [
+        {
+            "slug": "income.event_gate",
+            "label": "Event gate / site fees collected",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.feast_tickets",
+            "label": "Feast tickets",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.dues",
+            "label": "Dues and memberships",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.chapter_remittance",
+            "label": "Remittance from chapters",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.donations",
+            "label": "Donations",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.fundraising",
+            "label": "Fundraising",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.merchandise",
+            "label": "Merchandise sales",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.refund_received",
+            "label": "Refunds received",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.interest",
+            "label": "Interest",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "income.other",
+            "label": "Other income",
+            "flows": [
+                "income"
+            ]
+        },
+        {
+            "slug": "expense.site_rental",
+            "label": "Site rental",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.site_deposit",
+            "label": "Site deposits",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.insurance",
+            "label": "Insurance",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.feast_groceries",
+            "label": "Feast groceries",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.event_supplies",
+            "label": "Event supplies",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.storage",
+            "label": "Storage",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.documentation",
+            "label": "Documentation and printing",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.awards_regalia",
+            "label": "Awards and regalia",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.loaner_gear",
+            "label": "Loaner gear and materials",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.postage_shipping",
+            "label": "Postage and shipping",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.software_web",
+            "label": "Software and web hosting",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.payment_processing",
+            "label": "Payment processing fees",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.bank_fees",
+            "label": "Bank fees",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.government_fees",
+            "label": "Filings, licenses, taxes",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.professional_services",
+            "label": "Professional services",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.reimbursement",
+            "label": "Member reimbursements",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.travel",
+            "label": "Travel",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.charity",
+            "label": "Charitable giving",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.refund_issued",
+            "label": "Refunds issued",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "expense.other",
+            "label": "Other expenses",
+            "flows": [
+                "expense"
+            ]
+        },
+        {
+            "slug": "transfer.internal",
+            "label": "Transfer between kingdom accounts",
+            "flows": [
+                "transfer"
+            ]
+        },
+        {
+            "slug": "uncategorized",
+            "label": "Uncategorized",
+            "flows": [
+                "income",
+                "expense",
+                "transfer"
+            ]
+        },
+        {
+            "slug": "system.bank_verification",
+            "label": "Bank verification (withheld)",
+            "flows": [
+                "expense"
+            ]
+        }
+    ]
+}
