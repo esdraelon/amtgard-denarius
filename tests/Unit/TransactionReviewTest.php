@@ -33,7 +33,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')
@@ -66,7 +66,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')
@@ -96,7 +96,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->publishableAfter('2026-09-10T00:00:00+00:00')
             ->build());
 
@@ -126,7 +126,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-01')
             ->amountCents(-50)
-            ->category('general')
+            ->category('uncategorized')
             ->publishableAfter('2026-09-05T00:00:00+00:00')
             ->build());
         $transactions->upsert(TransactionRecord::builder()
@@ -135,7 +135,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-04')
             ->amountCents(-60)
-            ->category('general')
+            ->category('uncategorized')
             ->publishableAfter('2026-09-10T00:00:00+00:00')
             ->build());
         $transactions->upsert(TransactionRecord::builder()
@@ -144,7 +144,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-08-20')
             ->amountCents(-70)
-            ->category('general')
+            ->category('uncategorized')
             ->publishedAt('2026-08-21T00:00:00+00:00')
             ->build());
 

@@ -11,6 +11,7 @@ use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
 use Amtgard\Denarius\Persistence\Record\RoleGrantRecord;
+use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Persistence\Repository\Account\Impl\AccountRepository;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\Impl\KingdomRepository;
@@ -59,7 +60,7 @@ final class PersistenceStoreArrange
         }
     }
 
-    private static function phinxEnvPrefix(): string
+    public static function phinxEnvPrefix(): string
     {
         $parts = ['PHINX_ENV=testing'];
         foreach (['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $key) {
@@ -124,13 +125,14 @@ final class PersistenceStoreArrange
         $secrets->saveCiphertext((int) $saved->getId(), 'cipher-2');
 
         $transactions = Orm::repository(TransactionRepository::class);
-        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-100)->category('office')->description('paper')->counterparty('Shop')->status('posted')->publishableAfter('2026-09-05T23:59:59+00:00')->build());
-        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn')->tellerAccountId('acc')->postedOn('2026-09-03')->amountCents(-200)->category('fuel')->description('gas')->counterparty('Station')->status('posted')->publishedAt('2026-09-04T00:00:00+00:00')->publishableAfter('2026-09-06T23:59:59+00:00')->build());
-        $transactions->findByTellerTransactionId('txn');
+        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn-rent')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-100)->category('expense.site_rental')->providerCategory('RENT')->categorySource(CategorySource::ProviderHint->value)->categoryRuleId('hint.test')->categoryConfidence(70)->categorySuggested('expense.feast_groceries')->taxonomyVersion('taxonomy/v1')->description('paper')->counterparty('Shop')->status('posted')->publishableAfter('2026-09-05T23:59:59+00:00')->build());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn-grocery')->tellerAccountId('acc')->postedOn('2026-09-03')->amountCents(-200)->category('expense.feast_groceries')->description('gas')->counterparty('Station')->status('posted')->publishedAt('2026-09-04T00:00:00+00:00')->publishableAfter('2026-09-06T23:59:59+00:00')->build());
+        $transactions->findByTellerTransactionId('txn-rent');
+        $transactions->findByTellerTransactionId('txn-grocery');
         $transactions->forKingdom((int) $saved->getId());
         $transactions->forKingdomPublished((int) $saved->getId());
-        $transactions->markPublished((int) $saved->getId(), 'txn', '2026-09-05T12:00:00+00:00');
-        $transactions->markUnpublished((int) $saved->getId(), 'txn');
+        $transactions->markPublished((int) $saved->getId(), 'txn-grocery', '2026-09-05T12:00:00+00:00');
+        $transactions->markUnpublished((int) $saved->getId(), 'txn-grocery');
 
         $grants = Orm::repository(RoleGrantRepository::class);
         $grants->append(RoleGrantRecord::builder()->actorIdpUserId('15')->targetIdpUserId('9')->action('grant')->resource('Denarius/Admin')->createdAt('2026-09-01T00:00:00+00:00')->build());

@@ -14,6 +14,7 @@ use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInt
 use Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler;
 use Amtgard\Denarius\Domain\Statement\Line\Money;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
@@ -148,14 +149,25 @@ final class TransactionSynchronizer
 
     private function record(KingdomRecord $kingdom, string $accountId, \Amtgard\Denarius\Domain\Bank\Enrollment\ProviderTransaction $row): TransactionRecord
     {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $accountId, $row): TransactionRecord {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $kingdom, $accountId, $row): TransactionRecord {
+            $hint = $row->category;
+            if ($hint !== '') {
+                DenariusLog::debugBranch('transaction_provider_hint_recorded', $method, [
+                    'teller_transaction_id' => $row->id,
+                ]);
+            }
+
             return TransactionRecord::builder()
                 ->kingdomId((int) $kingdom->getId())
                 ->tellerTransactionId($row->id)
                 ->tellerAccountId($accountId)
                 ->postedOn($row->postedOn)
                 ->amountCents(Money::centsFromDecimal($row->amount))
-                ->category($row->category)
+                ->category('uncategorized')
+                ->providerCategory($hint === '' ? null : $hint)
+                ->categorySource(CategorySource::Fallback->value)
                 ->description($row->description)
                 ->counterparty($row->counterparty)
                 ->status($row->status)

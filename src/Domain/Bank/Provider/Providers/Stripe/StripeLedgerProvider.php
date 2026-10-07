@@ -221,7 +221,7 @@ final class StripeLedgerProvider implements LedgerProvider
                 $id,
                 $postedOn,
                 Money::format((int) ($row['amount'] ?? 0)),
-                'general',
+                '',
                 $this->text($row['description'] ?? null),
                 '',
                 $this->text($row['status'] ?? null),

@@ -193,7 +193,7 @@ final class TellerLedgerProvider implements LedgerProvider
                 $id,
                 (string) ($row['date'] ?? ''),
                 (string) ($row['amount'] ?? '0'),
-                (string) ($details['category'] ?? 'general'),
+                (string) ($details['category'] ?? ''),
                 (string) ($row['description'] ?? ''),
                 (string) ($counterparty['name'] ?? ''),
                 (string) ($row['status'] ?? ''),

@@ -54,7 +54,7 @@ final class DisplayModeDisclosureTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-01')
             ->amountCents(-500)
-            ->category('general')
+            ->category('uncategorized')
             ->description('supplies')
             ->counterparty('Shop')
             ->build();
@@ -78,7 +78,7 @@ final class DisplayModeDisclosureTest extends AmtgardTestCase
         $line = LedgerLine::builder()
             ->postedOn('2026-09-01')
             ->amountCents(-500)
-            ->category('general')
+            ->category('uncategorized')
             ->description('from pipeline')
             ->counterparty('Shop')
             ->accountName('Checking')

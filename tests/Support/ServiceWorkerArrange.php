@@ -159,7 +159,7 @@ final class ServiceWorkerArrange
                 ->tellerAccountId('acc_review')
                 ->postedOn('2026-09-02')
                 ->amountCents(-100)
-                ->category('general')
+                ->category('uncategorized')
                 ->publishableAfter('2026-09-01T00:00:00+00:00')
                 ->build());
             $reviews = Strategies::reviewService($transactions, $accounts, Strategies::months($cache), new \DateTimeImmutable('2026-10-01'));

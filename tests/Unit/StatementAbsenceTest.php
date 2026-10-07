@@ -29,7 +29,7 @@ final class StatementAbsenceTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->publishableAfter('2026-09-05T00:00:00+00:00')
             ->build();
 
@@ -47,7 +47,7 @@ final class StatementAbsenceTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->publishableAfter('2026-09-10T00:00:00+00:00')
             ->build();
 
@@ -65,7 +65,7 @@ final class StatementAbsenceTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-08-15')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->publishedAt('2026-08-16T00:00:00+00:00')
             ->build();
 
@@ -123,7 +123,7 @@ final class StatementAbsenceTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->category('uncategorized')
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')

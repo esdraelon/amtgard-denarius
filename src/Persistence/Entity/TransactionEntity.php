@@ -41,6 +41,24 @@ class TransactionEntity extends RepositoryEntity
     #[Field('category')]
     private ?string $category = null;
 
+    #[Field('provider_category')]
+    private ?string $providerCategory = null;
+
+    #[Field('category_source')]
+    private ?string $categorySource = null;
+
+    #[Field('category_rule_id')]
+    private ?string $categoryRuleId = null;
+
+    #[Field('category_confidence')]
+    private ?int $categoryConfidence = null;
+
+    #[Field('category_suggested')]
+    private ?string $categorySuggested = null;
+
+    #[Field('taxonomy_version')]
+    private ?string $taxonomyVersion = null;
+
     #[Field('description')]
     private ?string $description = null;
 

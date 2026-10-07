@@ -119,6 +119,12 @@ class TransactionRepository extends Repository implements EntityRepositoryInterf
             $entity->setPostedOn($transaction->getPostedOn());
             $entity->setAmountCents($transaction->getAmountCents());
             $entity->setCategory($transaction->getCategory());
+            $entity->setProviderCategory($transaction->getProviderCategory());
+            $entity->setCategorySource($transaction->getCategorySource());
+            $entity->setCategoryRuleId($transaction->getCategoryRuleId());
+            $entity->setCategoryConfidence($transaction->getCategoryConfidence());
+            $entity->setCategorySuggested($transaction->getCategorySuggested());
+            $entity->setTaxonomyVersion($transaction->getTaxonomyVersion());
             $entity->setDescription($transaction->getDescription());
             $entity->setCounterparty($transaction->getCounterparty());
             $entity->setStatus($transaction->getStatus());
@@ -151,7 +157,13 @@ class TransactionRepository extends Repository implements EntityRepositoryInterf
                 ->tellerAccountId((string) $entity->getTellerAccountId())
                 ->postedOn((string) $entity->getPostedOn())
                 ->amountCents((int) $entity->getAmountCents())
-                ->category((string) $entity->getCategory())
+                ->category((string) ($entity->getCategory() ?? 'uncategorized'))
+                ->providerCategory($entity->getProviderCategory())
+                ->categorySource((string) ($entity->getCategorySource() ?? 'fallback'))
+                ->categoryRuleId($entity->getCategoryRuleId())
+                ->categoryConfidence((int) ($entity->getCategoryConfidence() ?? 0))
+                ->categorySuggested($entity->getCategorySuggested())
+                ->taxonomyVersion($entity->getTaxonomyVersion())
                 ->description((string) $entity->getDescription())
                 ->counterparty((string) $entity->getCounterparty())
                 ->status((string) $entity->getStatus())

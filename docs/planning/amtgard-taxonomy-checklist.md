@@ -2,7 +2,7 @@
 
 Source: [amtgard-transaction-taxonomy.md](amtgard-transaction-taxonomy.md), [publication-threat-model.md](publication-threat-model.md).
 
-Stack base for **M-TAX-02+:** `taxonomy-catalog` @ `3b8ce61` (M-TAX-01 complete: catalog `e0063b4`, product decisions doc `3b8ce61`). Pre-taxonomy WIP remains in git stash `wip-pre-taxonomy` if you need month-cache / site-nav work back.
+Stack base for **M-TAX-03+:** `transaction-category-schema` (M-TAX-02). **M-TAX-02** stacks on `taxonomy-catalog` @ `85e8ab5`. Pre-taxonomy WIP remains in git stash `wip-pre-taxonomy` if you need month-cache / site-nav work back.
 
 **Gates for every milestone** (from the development rules):
 
@@ -21,7 +21,7 @@ Stack base for **M-TAX-02+:** `taxonomy-catalog` @ `3b8ce61` (M-TAX-01 complete:
   - **Tests:** loader fail-closed cases (unknown slug, bad flow, duplicate id, matcher targeting `system.*` or `*.other`, regex compile failure, backtracking budget); normalizer table tests (POS prefixes, digit runs, store numbers); catalog label lookup; retired-slug forward mapping; Plaid sign fixture.
   - **Gates:** standard, plus the loader validation log lines (`taxonomy_catalog_loaded`, `taxonomy_catalog_rejected`).
 
-- [ ] **M-TAX-02** `transaction-category-schema` — stacked on `taxonomy-catalog`
+- [x] **M-TAX-02** `transaction-category-schema` — stacked on `taxonomy-catalog`
   - **Scope:** First route every hand-copied `TransactionRecord::builder()` chain (`TransactionHardRedactAnnotator`, `MicroDepositPairReconciler`, `TransactionPublicationApplier`, pipeline line rebuilds) through `TransactionRecordRebuilder`. Then add a Phinx migration with `provider_category`, `category_source`, `category_rule_id`, `category_confidence`, `category_suggested`, and `taxonomy_version`, plus a data migration (`general` and unknown values become `uncategorized`, with the raw value moved to `provider_category`). Update the entity, record, and repository mapping. Treat `ProviderTransaction::$category` as a provider hint: Stripe FC and SimpleFin send `''`, Plaid and Teller send raw values, and the synchronizer writes the hint to `provider_category`, not `category`. Change the `TransactionRecord` default to `uncategorized`.
   - **Tests:** a reflection test that the rebuilder round-trips every property; repository round trip of the new columns; migration up/down against the test DB; provider adapter tests updated (hint, not category); `ApplicationTest` / persistence arrange fixtures.
   - **Gates:** standard. Existing publication tests stay green with `uncategorized` in place of `general`.
