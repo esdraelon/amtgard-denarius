@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Display mode disclosure tiers
+
+- Branch: `display-mode-disclosure-tiers` (stacked on `micro-deposit-hard-redact`).
+- Replaces legacy `all` with **`less_redacted`** (Phinx data migration + `DisplayMode::fromStored` / settings canonicalization); manage tier labels updated; `LessRedactedPresenter` and `LineRedactionStage` shape public output from the pipeline.
+- Line coverage: 95.24% (4282/4496).
+- Infection covered MSI: 95% (skip-initial-tests, `--threads=4`, ~19m).
+- Log-tested branches: `display_mode_legacy_all`, `publication_line_redacted_tier`.
+
 ## Micro-deposit hard redact
 
 - Branch: `micro-deposit-hard-redact` (stacked on `transaction-review-ui`).

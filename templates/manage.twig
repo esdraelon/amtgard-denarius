@@ -26,11 +26,12 @@
             } %}
             {% include 'components/form-field-select.twig' with {
                 name: 'display_mode',
-                label: 'Display',
-                options: ['all', 'redacted', 'summarized'],
-                selected: kingdom.displayMode,
+                label: 'Public disclosure tier',
+                options: ['less_redacted', 'redacted', 'summarized'],
+                selected: kingdom.displayMode == 'all' ? 'less_redacted' : kingdom.displayMode,
                 max_width: '28rem'
             } %}
+            <p class="small text-body-secondary">Less redacted shows pipeline-scrubbed lines (amounts quantized when enabled). Summarized hides individual transactions.</p>
             {% include 'components/form-field-select.twig' with {
                 name: 'embargo_days',
                 label: 'Publication embargo (days after posted date)',

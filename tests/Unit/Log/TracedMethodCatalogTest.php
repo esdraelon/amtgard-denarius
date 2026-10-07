@@ -46,7 +46,7 @@ final class TracedMethodCatalogTest extends AmtgardTestCase
         $path = dirname(__DIR__, 3) . '/src/Domain/Statement/Presentation/DisplayMode.php';
         $methods = $this->catalog->methodsInFile($path);
         $this->assertSame(
-            ['Amtgard\\Denarius\\Domain\\Statement\\Presentation\\DisplayMode::fromStored'],
+            ['Amtgard\\Denarius\\Domain\\Statement\\Presentation\\DisplayMode::label'],
             $methods,
         );
     }

@@ -28,9 +28,11 @@ final class KingdomSettings
         int $embargoDays,
     ): KingdomRecord {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $visibility, $displayMode, $embargoDays): KingdomRecord {
+            $mode = $this->publicationSettings->canonicalDisplayMode($displayMode);
+
             return $this->kingdoms->save(KingdomRecordRebuilder::from($kingdom)
                 ->visibility($visibility->value)
-                ->displayMode($displayMode->value)
+                ->displayMode($mode->value)
                 ->embargoDays($this->publicationSettings->clampEmbargoDays($embargoDays))
                 ->build());
         });

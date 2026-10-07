@@ -9,7 +9,7 @@ Stack base: `ui-twig-components` @ `dacfa14` (unless a later publication branch 
 - [x] **M-03** `statement-absence-reasons` — Unreviewed / Stale / No current transactions banners
 - [x] **M-04** `transaction-review-ui` — manage queue, publish/withhold actions
 - [x] **M-05** `micro-deposit-hard-redact` — pairing + keyword HARD rules at ingest
-- [ ] **M-06** `display-mode-disclosure-tiers` — migrate `all` → `less_redacted`; manage labels; presenters use pipeline only
+- [x] **M-06** `display-mode-disclosure-tiers` — migrate `all` → `less_redacted`; manage labels; presenters use pipeline only
 - [ ] **M-07** `amount-and-balance-quantization` — amount_quantum, balance_quantum, pull-round vs last published balance
 - [ ] **M-08** `publication-envelope-review` — holistic leak tests (balance vs line sum, partial redaction windows)
 - [ ] **M-09** `publication-pattern-registry` — versioned SOFT patterns, ruleset reprocess, treasurer alerts
