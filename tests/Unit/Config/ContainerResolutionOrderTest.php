@@ -10,6 +10,9 @@ use Amtgard\Denarius\Controller\KingdomPageController;
 use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
 use Amtgard\Denarius\Domain\Access\KingdomAccess;
+use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Service\Access\PermissionService;
@@ -118,6 +121,25 @@ final class ContainerResolutionOrderTest extends TestCase
     {
         $this->assertInstanceOf(PermissionService::class, $this->resolveOrSkip(PermissionService::class));
         $this->assertInstanceOf(LedgerWorker::class, $this->resolveOrSkip(LedgerWorker::class));
+    }
+
+    public function testTaxonomyCatalogAndAmountSignRegistryResolveFromBootstrappedContainer(): void
+    {
+        $catalog = $this->resolveOrSkip(TaxonomyCatalog::class);
+        $this->assertInstanceOf(TaxonomyCatalog::class, $catalog);
+        $this->assertSame('taxonomy/v1', $catalog->taxonomyVersion());
+
+        $registry = $this->resolveOrSkip(ProviderAmountSignRegistry::class);
+        $this->assertInstanceOf(ProviderAmountSignRegistry::class, $registry);
+        $plaid = (new \ReflectionClass($registry))->getProperty('strategies');
+        $plaid->setAccessible(true);
+        /** @var array<string, object> $strategies */
+        $strategies = $plaid->getValue($registry);
+        $this->assertArrayHasKey('plaid', $strategies);
+
+        $loader = new TaxonomyCatalogLoader(dirname(__DIR__, 3), 'data/taxonomy');
+        $expected = $loader->load()->taxonomyVersion();
+        $this->assertSame($expected, $catalog->taxonomyVersion());
     }
 
     private function slimAppWithRoutes(): App

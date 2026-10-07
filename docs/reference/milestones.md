@@ -314,6 +314,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Line coverage: 95.26% (4558/4785).
 - Infection covered MSI: not re-run (Twig-only diff; parent stack at 95% covered MSI).
 
+## Taxonomy catalog (M-TAX-01)
+
+- Branch: `taxonomy-catalog` (stacked on `publication-docs-privacy` @ `c01b259`).
+- Shared pack under `data/taxonomy/` (v1 slugs, keywords, provider hints, golden fixture). `TaxonomyCatalog` + `TaxonomyCatalogLoader` validate at boot; `DescriptionNormalizer` and per-provider `ProviderAmountSign` strategies (Plaid inverts positive outflows; Teller/Stripe/SimpleFin credit-positive) with no ingest wiring yet.
+- Line coverage: 95.00% (4848/5103).
+- Infection covered MSI: 95% (skip-initial-tests, `build/coverage-xml`, `--threads=max`, ~15m).
+- Log-tested branches: `taxonomy_catalog_loaded`, `taxonomy_catalog_rejected` (`TaxonomyCatalogLoaderTest`).
+
 ## Publication pattern registry
 
 - Branch: `publication-pattern-registry` (stacked on `publication-envelope-review`).

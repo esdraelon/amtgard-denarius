@@ -45,6 +45,7 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testPublicKingdomQueryAttachesAbsenceWhenRowsEmpty');
         self::exerciseTransactionReviewDomain();
         self::exercisePublicationEnvelopeBalanceFields();
+        self::exerciseTaxonomyDomain();
 
         MonthWindow::current(new \DateTimeImmutable('2026-09-15'));
 
@@ -54,6 +55,33 @@ final class RestDomainArrange
         self::run(ProviderSetupTest::class, 'testHiddenLineAndEnvFragmentKeepSecretsOutOfTheTerminal');
         self::run(ProviderSetupTest::class, 'testConsoleIoHidesInputOnlyOnATerminal');
         self::run(ProviderSetupTest::class, 'testCurlClientUsesAFetcherOrTheNetwork');
+    }
+
+    private static function exerciseTaxonomyDomain(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $loader = new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader($root, 'data/taxonomy');
+        $catalog = $loader->load();
+        $catalog->taxonomyVersion();
+        $catalog->resolveSlug('expense.general');
+        \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog::isForbiddenMatcherTarget('expense.other');
+        $catalog->label('expense.bank_fees');
+        $catalog->flowsFor('expense.bank_fees');
+        $catalog->permitsFlow('expense.bank_fees', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
+        $catalog->hasSlug('uncategorized');
+        $catalog->keywordRules();
+        $catalog->providerHints();
+        \Amtgard\Denarius\Domain\Taxonomy\CategorySource::fromStored('provider_hint');
+        \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::fromStored('transfer');
+        \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::defaultFromSignedCents(250);
+        (new \Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer())->normalize('POS DEBIT TEST');
+        $registry = new \Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry(
+            ['plaid' => new \Amtgard\Denarius\Domain\Taxonomy\PlaidProviderAmountSign()],
+            new \Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign(),
+        );
+        $registry->forProvider('plaid')->signedCents('1.00');
+        (new \Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign())->signedCents('-2.00');
+        new \Amtgard\Denarius\Domain\Taxonomy\RegexPatternGuard()->assertSafe('\\bFEE\\b', 'kw.test');
     }
 
     public static function exerciseUtilitiesLog(): void
