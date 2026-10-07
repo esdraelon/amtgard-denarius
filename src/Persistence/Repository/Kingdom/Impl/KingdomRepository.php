@@ -129,6 +129,7 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
             $entity->setBalanceQuantumFloorCents($kingdom->getBalanceQuantumFloorCents());
             $entity->setBalanceQuantumCeilingCents($kingdom->getBalanceQuantumCeilingCents());
             $entity->setBalanceQuantumStepCents($kingdom->getBalanceQuantumStepCents());
+            $entity->setSummarizedCategoryMinLines($kingdom->getSummarizedCategoryMinLines());
 
             return null;
         });
@@ -159,6 +160,7 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
                 ->balanceQuantumFloorCents((int) ($entity->getBalanceQuantumFloorCents() ?? PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_FLOOR_CENTS))
                 ->balanceQuantumCeilingCents((int) ($entity->getBalanceQuantumCeilingCents() ?? PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_CEILING_CENTS))
                 ->balanceQuantumStepCents((int) ($entity->getBalanceQuantumStepCents() ?? PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_STEP_CENTS))
+                ->summarizedCategoryMinLines((int) ($entity->getSummarizedCategoryMinLines() ?? PublicationPlatformLimits::DEFAULT_SUMMARIZED_CATEGORY_MIN_LINES))
                 ->build();
         });
     }

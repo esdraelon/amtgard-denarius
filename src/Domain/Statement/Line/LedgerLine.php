@@ -17,6 +17,7 @@ final class LedgerLine
         private string $postedOn = '',
         private int $amountCents = 0,
         private string $category = '',
+        private string $categoryFlow = '',
         private string $description = '',
         private string $counterparty = '',
         private string $status = '',

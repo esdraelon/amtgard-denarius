@@ -28,7 +28,7 @@ final class TransactionReviewTest extends AmtgardTestCase
         $transactions = new MemoryTransactions();
         $cache = new ArrayStore();
         $now = new \DateTimeImmutable('2026-10-01T12:00:00+00:00');
-        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(1)->name('Test')->slug('test')->build());
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(1)->name('Test')->slug('test')->displayMode('redacted')->build());
         $accounts->save(AccountRecord::builder()->kingdomId((int) $kingdom->getId())->tellerAccountId('acc')->name('Checking')->published(true)->build());
         $transactions->upsert(TransactionRecord::builder()
             ->kingdomId((int) $kingdom->getId())

@@ -18,7 +18,7 @@ final class RedactedPresenter implements StatementPresenter
         });
     }
 
-    public function present(array $lines): array
+    public function present(array $lines, int $summarizedCategoryMinLines = 2): array
     {
         return DenariusLog::trace(__METHOD__, function () use ($lines): array {
             $redacted = [];
@@ -37,6 +37,7 @@ final class RedactedPresenter implements StatementPresenter
                 ->postedOn($line->getPostedOn())
                 ->amountCents($line->getAmountCents())
                 ->category($line->getCategory())
+                ->categoryFlow($line->getCategoryFlow())
                 ->status($line->getStatus())
                 ->accountName($line->getAccountName())
                 ->build();

@@ -20,6 +20,7 @@ final class PublicationCandidateLine
         private string $postedOn = '',
         private int $amountCents = 0,
         private string $category = '',
+        private string $categoryFlow = '',
         private string $categorySource = '',
         private int $categoryConfidence = 0,
         private ?string $categorySuggested = null,
@@ -41,6 +42,7 @@ final class PublicationCandidateLine
                 ->postedOn($this->postedOn)
                 ->amountCents($this->amountCents)
                 ->category($this->category)
+                ->categoryFlow($this->categoryFlow)
                 ->description($this->description)
                 ->counterparty($this->counterparty)
                 ->status($this->status)

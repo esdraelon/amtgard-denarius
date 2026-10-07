@@ -100,9 +100,10 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertThrows(\InvalidArgumentException::class, fn () => Money::centsFromDecimal('nope'));
         $this->assertThrows(\InvalidArgumentException::class, fn () => new MonthWindow(2026, 0));
 
-        $line = LedgerLine::builder()->postedOn('2026-01-02')->amountCents(250)->category('dining')->description('meal')->counterparty('Cafe')->status('posted')->accountName('Checking')->build();
-        $other = LedgerLine::builder()->postedOn('2026-02-01')->amountCents(100)->category('fuel')->build();
+        $line = LedgerLine::builder()->postedOn('2026-01-02')->amountCents(250)->category('dining')->categoryFlow('income')->description('meal')->counterparty('Cafe')->status('posted')->accountName('Checking')->build();
+        $other = LedgerLine::builder()->postedOn('2026-02-01')->amountCents(100)->category('fuel')->categoryFlow('income')->build();
         $builder = MonthStatementBuilder::standard();
+        $rollupKingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->summarizedCategoryMinLines(2)->build();
         $less = $builder->build([$line, $other], DisplayMode::LessRedacted, $month);
         $this->assertCount(1, $less->rows);
         $this->assertSame('meal', $less->rows[0]->getDescription());
@@ -113,9 +114,8 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertSame('2026-01-02', $redacted->rows[0]->getPostedOn());
         $summary = $builder->build([
             $line,
-            LedgerLine::builder()->postedOn('2026-01-03')->amountCents(50)->category('dining')->build(),
-            LedgerLine::builder()->postedOn('2026-01-04')->amountCents(20)->category('fuel')->build(),
-        ], DisplayMode::Summarized, $month);
+            LedgerLine::builder()->postedOn('2026-01-03')->amountCents(50)->category('dining')->categoryFlow('income')->build(),
+        ], DisplayMode::Summarized, $month, $rollupKingdom);
         $this->assertSame('dining', $summary->rows[0]->category);
         $this->assertSame(2, $summary->rows[0]->count);
         $this->assertSame(300, $summary->rows[0]->amountCents);

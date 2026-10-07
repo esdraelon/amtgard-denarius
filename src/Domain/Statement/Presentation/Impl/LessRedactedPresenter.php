@@ -24,7 +24,7 @@ final class LessRedactedPresenter implements StatementPresenter
      *
      * @return list<LedgerLine>
      */
-    public function present(array $lines): array
+    public function present(array $lines, int $summarizedCategoryMinLines = 2): array
     {
         return DenariusLog::trace(__METHOD__, fn (): array => $lines);
     }

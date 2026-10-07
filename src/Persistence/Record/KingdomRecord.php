@@ -32,6 +32,7 @@ final class KingdomRecord
         private int $balanceQuantumFloorCents = PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_FLOOR_CENTS,
         private int $balanceQuantumCeilingCents = PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_CEILING_CENTS,
         private int $balanceQuantumStepCents = PublicationPlatformLimits::DEFAULT_BALANCE_QUANTUM_STEP_CENTS,
+        private int $summarizedCategoryMinLines = PublicationPlatformLimits::DEFAULT_SUMMARIZED_CATEGORY_MIN_LINES,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -60,6 +61,7 @@ final class KingdomRecord
                 'balanceQuantumFloorCents' => $this->getBalanceQuantumFloorCents(),
                 'balanceQuantumCeilingCents' => $this->getBalanceQuantumCeilingCents(),
                 'balanceQuantumStepCents' => $this->getBalanceQuantumStepCents(),
+                'summarizedCategoryMinLines' => $this->getSummarizedCategoryMinLines(),
             ];
         });
     }

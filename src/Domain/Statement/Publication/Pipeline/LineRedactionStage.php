@@ -29,6 +29,7 @@ final class LineRedactionStage implements PublicationStage
                     ->postedOn($line->getPostedOn())
                     ->amountCents($line->getAmountCents())
                     ->category($line->getCategory())
+                    ->categoryFlow($line->getCategoryFlow())
                     ->description('')
                     ->counterparty('')
                     ->status($line->getStatus())

@@ -45,6 +45,7 @@ final class ProfessionalServicesSoftPattern implements PublicationPattern
                 ->postedOn($line->getPostedOn())
                 ->amountCents($line->getAmountCents())
                 ->category($line->getCategory())
+                ->categoryFlow($line->getCategoryFlow())
                 ->description('')
                 ->counterparty('')
                 ->status($line->getStatus())

@@ -104,4 +104,24 @@ final class PublicationSettingsValidator
             return ['floor' => $floor, 'ceiling' => $ceiling, 'step' => $step];
         });
     }
+
+    public function clampSummarizedCategoryMinLines(int $requested): int
+    {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $requested): int {
+            $clamped = max(
+                PublicationPlatformLimits::MIN_SUMMARIZED_CATEGORY_MIN_LINES,
+                min(PublicationPlatformLimits::MAX_SUMMARIZED_CATEGORY_MIN_LINES, $requested),
+            );
+            if ($clamped !== $requested) {
+                DenariusLog::debugBranch('summarized_category_min_lines_clamped', $method, [
+                    'requested' => $requested,
+                    'applied' => $clamped,
+                ]);
+            }
+
+            return $clamped;
+        });
+    }
 }

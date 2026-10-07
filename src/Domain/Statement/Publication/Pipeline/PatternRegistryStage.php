@@ -47,6 +47,7 @@ final class PatternRegistryStage implements PublicationStage
                     ->postedOn($shaped->getPostedOn())
                     ->amountCents($shaped->getAmountCents())
                     ->category($shaped->getCategory())
+                    ->categoryFlow($shaped->getCategoryFlow())
                     ->description($shaped->getDescription())
                     ->counterparty($shaped->getCounterparty())
                     ->status($shaped->getStatus())

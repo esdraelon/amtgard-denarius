@@ -18,7 +18,7 @@ final class PublicationPublicReadTest extends AmtgardTestCase
         $kingdoms = new MemoryKingdoms();
         $accounts = new MemoryAccounts();
         $transactions = new MemoryTransactions();
-        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(1)->name('Test')->slug('test')->build());
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(1)->name('Test')->slug('test')->displayMode('redacted')->build());
         $accounts->save(AccountRecord::builder()->kingdomId((int) $kingdom->getId())->tellerAccountId('acc')->name('Checking')->type('depository')->published(true)->build());
         $transactions->upsert(TransactionRecord::builder()
             ->kingdomId((int) $kingdom->getId())

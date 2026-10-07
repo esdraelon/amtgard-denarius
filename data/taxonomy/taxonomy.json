@@ -179,14 +179,18 @@
             "label": "Professional services",
             "flows": [
                 "expense"
-            ]
+            ],
+            "sensitivity": "soft",
+            "summaryParentLabel": "Services"
         },
         {
             "slug": "expense.reimbursement",
             "label": "Member reimbursements",
             "flows": [
                 "expense"
-            ]
+            ],
+            "sensitivity": "soft",
+            "summaryParentLabel": "Reimbursements"
         },
         {
             "slug": "expense.travel",

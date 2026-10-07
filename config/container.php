@@ -349,7 +349,9 @@ return [
             new DisconnectLedgerNotice($c->get(EnrollmentService::class)),
         ]),
     ),
-    PublicationPipelineFactory::class => fn () => PublicationPipelineFactory::standard(),
+    PublicationPipelineFactory::class => fn (ContainerInterface $c) => PublicationPipelineFactory::standard(
+        $c->get(TaxonomyCatalog::class),
+    ),
     KingdomPublicationLineSource::class => fn (ContainerInterface $c) => new KingdomPublicationLineSource(
         $c->get(TransactionRepositoryInterface::class),
         $c->get(AccountRepositoryInterface::class),
@@ -358,14 +360,20 @@ return [
     KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
         $c->get(KingdomPublicationLineSource::class),
         $c->get(PublicationPipelineFactory::class)->forPublicRead(),
-        new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
+        new MonthStatementBuilder(
+            $c->get(StatementPresenterRegistry::class),
+            $c->get(PublicationSettingsValidator::class),
+        ),
         $c->get(StatementAbsenceClassifier::class),
         new DateTimeImmutable('now'),
     ),
     ManagerKingdomPageQuery::class => fn (ContainerInterface $c) => new ManagerKingdomPageQuery(
         $c->get(KingdomPublicationLineSource::class),
         $c->get(PublicationPipelineFactory::class)->forManagerReview(),
-        new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
+        new MonthStatementBuilder(
+            $c->get(StatementPresenterRegistry::class),
+            $c->get(PublicationSettingsValidator::class),
+        ),
         new DateTimeImmutable('now'),
     ),
     MonthInvalidator::class => fn (RedisKeyValueStore $store) => new MonthInvalidator($store),
