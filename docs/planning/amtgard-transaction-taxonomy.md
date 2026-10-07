@@ -2,7 +2,7 @@
 
 Design for a shared, kingdom-relevant category taxonomy applied to every synced bank transaction. Categories feed the **summarized** (category totals) and **redacted** (date + category + quantized amount) disclosure tiers, so a meaningless `general` bucket makes both tiers useless. Milestones: [amtgard-taxonomy-checklist.md](amtgard-taxonomy-checklist.md). Threat context: [publication-threat-model.md](publication-threat-model.md).
 
-**Document version:** `taxonomy-design/v1` (taxonomy data itself is versioned separately as `taxonomy/vN`, see §3.3).
+**Document version:** `taxonomy-design/v1.1` (taxonomy data itself is versioned separately as `taxonomy/vN`, see §3.3).
 
 ---
 
@@ -31,7 +31,7 @@ Goal: one **closed** taxonomy shared by all kingdoms, applied automatically at i
 |-------|---------|-----------------|
 | `income` | Money into the kingdom from outside | Income section |
 | `expense` | Money out of the kingdom to outside | Expense section |
-| `transfer` | Money moving between kingdom-controlled accounts or parent/child chapters | Shown separately; excluded from income/expense totals |
+| `transfer` | Money moving between kingdom-controlled accounts (same org) | Shown separately; excluded from income/expense totals |
 
 Flow is a property of the **category**, not stored separately. Each category declares the flow(s) it permits. The sign of the amount only produces the **default** flow.
 
@@ -50,7 +50,9 @@ Special slugs:
 
 Legacy `general` and raw provider strings are migrated to `uncategorized`, with the raw value kept in `provider_category` (§5).
 
-### 2.3 Taxonomy v1 (proposed; product owner to confirm)
+### 2.3 Taxonomy v1 (locked; managers may split further via patterns)
+
+Default taxonomy stays **granular** (separate slugs for feast tickets vs event gate, site rental vs site deposit, and so on). Managers choose the right slug per row; shared matchers only narrow the search space.
 
 **Income**
 
@@ -97,8 +99,10 @@ Legacy `general` and raw provider strings are migrated to `uncategorized`, with 
 | Slug | Label | Typical sources |
 |------|-------|-----------------|
 | `transfer.internal` | Transfer between kingdom accounts | “ONLINE TRANSFER TO SAV ####” |
-| `transfer.chapter` | Transfer to/from a chapter | Seed money to a park, returns of unspent funds |
-| `transfer.processor_payout` | Payment processor payout | Square/Stripe/PayPal batch deposits (see open question Q3) |
+
+**Processor payouts** (Square/Stripe/PayPal batch deposits) are **income**, not transfers. Shared matchers do **not** auto-target `*.other`, so processor deposits stay `uncategorized` until the treasurer picks an income slug or adds a **kingdom pattern** (M-TAX-06). Retired slug `transfer.processor_payout` maps to `uncategorized`.
+
+**Chapter ↔ kingdom bank movements** are out of scope for v1; use income (`income.chapter_remittance`) or expense categories from the kingdom’s perspective, not a dedicated transfer slug.
 
 `*.other` slugs are never auto-assigned, so “Other” only contains things a manager deliberately placed there.
 
@@ -114,9 +118,6 @@ data/taxonomy/
   matchers/
     provider-hints.json      # provider category -> slug, per provider id
     keywords.json            # shared keyword/regex rules (all regions)
-    regional/
-      us-southwest.json      # optional regional packs (merchant chains, park agencies)
-      ...
   fixtures/
     golden.json              # normalized descriptions -> expected slug (test corpus)
 ```
@@ -170,7 +171,7 @@ Files are committed, code-reviewed, and shared by every kingdom. They follow the
 - regex that fails to compile or exceeds the backtracking budget
 - `system.*` or `*.other` targeted by a matcher rule
 
-Regional packs are opt-in per kingdom through a `taxonomy_regions` kingdom setting (v1 can ship with only the shared `keywords.json` loaded for everyone; see open question Q5).
+**Region:** Denarius is US-only. v1 ships a single shared `keywords.json` (US merchants and agencies). No per-kingdom region packs.
 
 ---
 
@@ -200,18 +201,18 @@ Matchers are injected as an ordered list in `config/container.php`. Tests replac
 1. **`ManagerLockMatcher`**: if the existing row has `category_source = manager`, return it unchanged (confidence 100). This is what makes overrides survive re-sync.
 2. **`ProviderHintMatcher`**: maps `provider_category` through `provider-hints.json` (e.g. Plaid `BANK_FEES` → `expense.bank_fees`, Plaid `TRANSFER_IN`/`TRANSFER_OUT` → `transfer.internal`, Teller `groceries` → `expense.feast_groceries`). Hints are low confidence (40–70) by design because consumer taxonomies misfile kingdom spending. Grocery runs are feast groceries for a kingdom, not personal food.
 3. **`KeywordRuleMatcher`**: shared `keywords.json` plus any enabled regional packs, against normalized description and counterparty. When several rules match, the highest confidence wins, ties go to the longer pattern, then to file order.
-4. **`KingdomRuleMatcher`** *(post-v1)*: per-kingdom learned rules from manager overrides (“always file `JOE'S STORAGE` as storage”). Stored in a `kingdom_category_rules` table. Sits above shared keywords because a kingdom knows its own vendors.
+4. **`KingdomRuleMatcher`** *(M-TAX-06)*: per-kingdom patterns created from review (“always file `JOE'S STORAGE` as storage”). Stored in `kingdom_category_rules`. Runs above shared keywords because a kingdom knows its own vendors.
 5. **`FallbackMatcher`**: returns `uncategorized`, confidence 0, keeping the best sub-threshold match as `suggestedSlug`.
 
 ### 4.3 Confidence
 
 | Band | Range | Effect |
 |------|-------|--------|
-| Auto-accept | ≥ 70 (`CategoryConfidence::AUTO_ACCEPT`, one constant) | Row gets the slug; review shows it pre-selected with an “auto” badge |
-| Suggest | 1–69 | Row stays `uncategorized`; review pre-fills the dropdown with `suggestedSlug` and the manager confirms with one click |
+| Auto-accept | ≥ 70 (`CategoryConfidence::AUTO_ACCEPT`, one constant) | Row gets the slug; **eligible to publish without a separate confirm step**; review shows an “auto” badge |
+| Suggest | 1–69 | Row stays `uncategorized` for publish; type-ahead pre-fills `suggestedSlug` |
 | None | 0 | `uncategorized`, no suggestion |
 
-Confidence is stored (`category_confidence`) so the threshold can change later without re-matching, and so the review queue can sort “least sure first”.
+Confidence is stored (`category_confidence`) so the threshold can change later without re-matching, and so the review queue can sort “least sure first”. Auto-accepted rows still appear in review so treasurers can fix mistakes or add patterns afterward.
 
 ### 4.4 Category source
 
@@ -264,10 +265,15 @@ storePage(row)
 
 - `TransactionReviewRow` gains `category`, `categoryLabel`, `categorySource`, `categorySuggested`, `categoryConfidence`.
 - `rowsForManage` supports an `uncategorized` filter and sorts least-confident first within a month when the filter is on.
-- `TransactionReviewService::update` row shape gains `category: string`. It is validated against `TaxonomyCatalog` (known slug, flow compatible with the amount sign, not `system.*`). On change it writes `category_source = manager`, `confidence = 100`, `rule_id = null`. On unchanged auto slugs it leaves the source alone, since confirming an auto slug is not an override, unless the manager ticks “confirm”. Invalid slugs throw `InvalidArgumentException` and log `transaction_review_rejected_category`.
-- The manage UI is a `<select>` grouped by flow, filtered to flows allowed for the row's sign, with `suggestedSlug` pre-selected. There is no free text.
-- Bulk action: “Apply to all rows in this month with the same counterparty.” This is manager-side only and is the seed for post-v1 learned rules.
+- `TransactionReviewService::update` row shape gains `category: string`. It is validated against `TaxonomyCatalog` (known slug, flow compatible with the amount sign, not `system.*`). On change it writes `category_source = manager`, `confidence = 100`, `rule_id = null`. On unchanged auto slugs it leaves the source alone. Invalid slugs throw `InvalidArgumentException` and log `transaction_review_rejected_category`.
+- **Category picker (type-ahead):** one combobox per row, not a long `<select>`. The treasurer types to filter **flow + label** (e.g. “expense site”, “income gate”). Options are built from `TaxonomyCatalog`, restricted to flows allowed for the row’s sign (after amount normalization). Keyboard: arrow keys, Enter to commit, Escape to revert. `suggestedSlug` and auto slug pre-fill the input. No free-text categories in v1—only closed slugs.
+- **Workflow:** treasurers can **sweep** the month: assign categories and publish without touching patterns. Patterns are optional and never block save/publish.
+- **“Create pattern…”** (per row, non-modal blocking): opens the pattern editor (same page or slide-over) pre-filled from the row’s normalized description/counterparty and the chosen category. Saving the pattern does **not** require leaving the queue; dismiss returns to the same month view. Bulk: “Apply category to same counterparty this month” remains; M-TAX-06 adds “Create pattern from this counterparty” and a **Patterns** tab to edit rules collectively.
 - `MonthInvalidator::invalidate` already runs for touched months, so category edits invalidate the cache the same way publish edits do.
+
+### 6.2.1 Kingdom patterns (M-TAX-06)
+
+Treasurers maintain **kingdom-only** matcher rules (tokens/regex on description and counterparty → slug). Patterns are created from review, edited in bulk, and deleted individually. Saving a pattern enqueues a **recategorize** pass for that kingdom (non-manager rows only). Patterns never export to public output and never appear in logs (rule id only). See §7.8.
 
 ### 6.3 Publication gate
 
@@ -282,9 +288,7 @@ storePage(row)
 
 It does **not** drop lines. Dropping a published line would change totals that `EnvelopeReviewStage` and `BalanceCoarseningStage` reconcile against.
 
-**Summarized tier:** `SummarizedPresenter` buckets by slug, emits flow sections (income, expense, transfer), excludes transfers from net, and shows labels rather than slugs. See §7 for the small-bucket rollup.
-
-**Already-published legacy rows:** rows published before this feature keep `published_at`. They display as “Uncategorized” until a manager categorizes them, and the review queue surfaces them with a “published, needs category” badge (open question Q2).
+**Summarized tier:** `SummarizedPresenter` buckets by slug, emits flow sections (income, expense, transfer), excludes transfers from net, and shows labels rather than slugs. Small-bucket rollup uses kingdom setting **`summarized_category_min_lines`** (platform floor **2**, kingdom may raise). Applied per **calendar month** displayed. See §7.
 
 ### 6.4 Month cache
 
@@ -303,7 +307,7 @@ Categories are published at every disclosure tier, including the most redacted. 
 1. **Closed vocabulary only.** The public value is always a label from `taxonomy.json`. Nothing derived from `description`, `counterparty`, or `provider_category` is ever published. No free-text categories, and no manager-authored labels in v1.
 2. **Metadata stays manager-side.** `provider_category`, `category_rule_id`, `category_source`, `category_confidence`, and `category_suggested` are excluded from `PublicationCandidateLine`'s public projection, the month cache, and the API. A test asserts the public payload keys.
 3. **Rule ids leak vendors.** `kw.site_rental.camp_xyz` names a vendor, which is why rule ids are never published.
-4. **Small-bucket re-identification (summarized tier).** One `expense.professional_services` line of ~$1,200 in a month tells readers “the kingdom paid a lawyer”. Likewise one `expense.reimbursement` line next to a public event schedule can point to a member. `SummarizedPresenter` should roll buckets with fewer than `k` lines (proposed `k = 2`, a platform floor, kingdom-adjustable upward) into the flow's “Other” bucket. This needs product sign-off (Q4).
+4. **Small-bucket re-identification (summarized tier).** One `expense.professional_services` line of ~$1,200 in a month tells readers “the kingdom paid a lawyer”. Likewise one `expense.reimbursement` line next to a public event schedule can point to a member. `SummarizedPresenter` rolls buckets with fewer than **`summarized_category_min_lines`** (default **2**, configurable per kingdom, platform minimum 2) into the flow's “Other” bucket for that month.
 5. **Sensitive categories in the redacted tier.** `expense.professional_services` and `expense.reimbursement` rows on line-level tiers can be relabeled to a parent label (“Services”, “Reimbursements”). They are already SOFT-pattern territory per the threat model §2. Proposal: a taxonomy `sensitivity: soft` flag; `less_redacted` shows the label, while `redacted` and `summarized` apply the rollup in (4).
 6. **KBA.** “Which merchant did you pay?” questions need the merchant, and a category is coarser. The accepted residual risk is that a category plus a quantized amount plus a date narrows KBA answers somewhat, and quantization (§4 of the threat model) remains the main control.
 7. **HARD rows.** The categorizer must not score verification rows as `income.refund_received` or similar. The HARD path forces `system.bank_verification`, and matchers are forbidden from targeting `system.*`. Matching runs on the raw description before HARD stubbing, but its outputs (slug and rule id) carry no verification text.
@@ -317,19 +321,21 @@ Bump [publication-threat-model.md](publication-threat-model.md) to `threat-model
 
 ## 8. Out of scope for v1
 
-- Kingdom learned rules (`KingdomRuleMatcher`, `kingdom_category_rules` table). Designed in §4.2 but deferred.
 - Split transactions (one Costco run covering feast groceries and event supplies). v1 assigns one category per row.
 - Budgets or per-event tagging (“Spring Coronation”), which would be a separate dimension from category.
 - ML or LLM classification. If ever added, it is just another `CategoryMatcher` and must run in-process with no third-party egress of descriptions.
 
 ---
 
-## 9. Open questions (product owner)
+## 9. Product decisions (locked 2026-10-07)
 
-1. **Taxonomy list:** confirm or edit §2.3. In particular, should `income.event_gate` and `income.feast_tickets` be one bucket, and should `site_deposit` merge into `site_rental`?
-2. **Legacy published rows:** when the feature ships, leave already-published uncategorized rows public as “Uncategorized”, or auto-withhold them until categorized?
-3. **Processor payouts:** a Square/Stripe/PayPal batch deposit is really income (gate fees, dues), but the bank only sees the net payout. Treat it as `transfer.processor_payout`, which keeps it out of income totals, or as income with a manager pick of which income category?
-4. **Small-bucket rollup:** approve `k = 2` as the platform floor for summarized category buckets? Apply it per month or per displayed period?
-5. **Regional packs:** ship v1 with only a shared US keyword set, or start with per-kingdom region selection? Who maintains the packs: platform, or kingdom PRs?
-6. **Confirm vs auto:** must a manager explicitly confirm auto-accepted categories before publish, or does auto at ≥ 70 count as categorized? The doc assumes auto counts.
-7. **Chapter transfers:** do kingdoms and parks share bank accounts or file each other's transfers in Denarius? This affects whether `transfer.chapter` is income/expense from the kingdom's perspective.
+| # | Decision |
+|---|----------|
+| 1 | **Granular default taxonomy** — keep separate slugs; managers pick the right one per transaction. |
+| 2 | **No production legacy** — not live yet; no migration policy for old published rows. |
+| 3 | **Processor payouts = income** — treasurer selects the income slug (gate, dues, etc.); no transfer slug. |
+| 4 | **Summarized rollup** — `summarized_category_min_lines`, default **2**, kingdom-configurable (floor 2), per calendar month. |
+| 5 | **US-only matchers** — single shared `keywords.json`; no regional packs. |
+| 6 | **Auto-publish threshold** — confidence ≥ 70 assigns the slug and **counts as categorized for publish** without a separate confirm click. |
+| 7 | **Chapter bank transfers** — not supported; use normal income/expense slugs from the kingdom view. |
+| 8 | **Review UX** — type-ahead category search; optional **Create pattern…** that never blocks categorization/publish; patterns editable later individually or in bulk (M-TAX-06). |
