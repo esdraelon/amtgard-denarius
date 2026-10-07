@@ -66,13 +66,25 @@ final class PublicationFlags
     public function withHardPattern(string $patternId): self
     {
         return DenariusLog::trace(__METHOD__, function () use ($patternId): self {
+            return $this->withPatternId($patternId)->withHard(true);
+        });
+    }
+
+    public function withPatternId(string $patternId): self
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($patternId): self {
             $ids = $this->patternIds;
             if (!in_array($patternId, $ids, true)) {
                 $ids[] = $patternId;
             }
 
-            return new self(true, $ids);
+            return new self($this->hard, $ids);
         });
+    }
+
+    private function withHard(bool $hard): self
+    {
+        return DenariusLog::trace(__METHOD__, fn (): self => new self($hard, $this->patternIds));
     }
 
     public function merge(self $other): self

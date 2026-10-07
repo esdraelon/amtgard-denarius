@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Publication pattern registry
+
+- Branch: `publication-pattern-registry` (stacked on `publication-envelope-review`).
+- `PatternRegistryStage` with `PublicationRulesetVersion::CURRENT` and SOFT `ProfessionalServicesSoftPattern`; merges `pattern_ids` into existing ingest HARD `publication_flags`; treasurer signal is `infoBranch` only (`publication_treasurer_alert`).
+- Line coverage: 95.26% (4558/4785).
+- Infection covered MSI: 95% (skip-initial-tests, `--threads=4`).
+- Log-tested branches: `publication_soft_pattern_applied`, `publication_treasurer_alert`.
+
 ## Publication envelope review
 
 - Branch: `publication-envelope-review` (stacked on `amount-and-balance-quantization`).

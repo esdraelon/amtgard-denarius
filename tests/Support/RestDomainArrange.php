@@ -35,6 +35,7 @@ final class RestDomainArrange
         self::exerciseDisplayModeDisclosure();
         self::exercisePublicationQuantization();
         self::exercisePublicationEnvelopeReview();
+        self::exercisePublicationPatternRegistry();
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPublicReadTest::class, 'testPublicStatementOmitsUnpublishedTransactions');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonSerializesForCache');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksUnreviewedWhenEmbargoClearedButUnpublished');
@@ -151,6 +152,17 @@ final class RestDomainArrange
     {
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationEnvelopeReviewTest::class, 'testEnvelopeReviewWithholdsBalanceWhenLineSumLeaks');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationEnvelopeReviewTest::class, 'testEnvelopeReviewPassesWhenLineSumMatchesBalanceDelta');
+    }
+
+    private static function exercisePublicationPatternRegistry(): void
+    {
+        $pattern = new \Amtgard\Denarius\Domain\Statement\Publication\Pattern\ProfessionalServicesSoftPattern();
+        $pattern->id();
+        $pattern->version();
+        $pattern->tier();
+        (new \Amtgard\Denarius\Domain\Statement\Publication\Pattern\PublicationPatternRegistry())
+            ->patternsForRuleset(\Amtgard\Denarius\Domain\Statement\Publication\Pattern\PublicationRulesetVersion::CURRENT);
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationPatternRegistryTest::class, 'testSoftPatternStripsPayrollDescriptorAndMergesFlags');
     }
 
     private static function exercisePublicationHardRedact(): void
