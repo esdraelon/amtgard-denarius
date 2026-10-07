@@ -43,6 +43,12 @@ use Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign;
 use Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer;
 use Amtgard\Denarius\Domain\Taxonomy\PlaidProviderAmountSign;
 use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\CategoryMatcherChain;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\FallbackMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\ProviderHintMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
@@ -109,11 +115,15 @@ use Amtgard\Denarius\Domain\Statement\Publication\Ingest\VerificationKeywordHard
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
 use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
+use Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver;
+use Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
+use Amtgard\Denarius\Service\Ledger\TransactionRecategorizer;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
+use Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 use Amtgard\Denarius\Utilities\Session\RedisSessionHandler;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\Impl\CurlTellerApi;
@@ -288,6 +298,33 @@ return [
         $c->get(TransactionHardRedactAnnotator::class),
         new DateTimeImmutable('now'),
     ),
+    LedgerProviderIdResolver::class => fn (ContainerInterface $c) => new LedgerProviderIdResolver(
+        $c->get(LedgerProviderRegistry::class),
+    ),
+    CategoryMatcherChain::class => fn (ContainerInterface $c) => new CategoryMatcherChain([
+        new ManagerLockMatcher(),
+        new ProviderHintMatcher($c->get(TaxonomyCatalog::class)),
+        new KeywordRuleMatcher($c->get(TaxonomyCatalog::class)),
+        new FallbackMatcher(),
+    ]),
+    TransactionCategorizer::class => fn (ContainerInterface $c) => new TransactionCategorizer(
+        $c->get(TaxonomyCatalog::class),
+        $c->get(DescriptionNormalizer::class),
+        $c->get(ProviderAmountSignRegistry::class),
+        $c->get(CategoryMatcherChain::class),
+    ),
+    TransactionCategoryApplier::class => fn (ContainerInterface $c) => new TransactionCategoryApplier(
+        $c->get(TransactionCategorizer::class),
+        $c->get(LedgerProviderIdResolver::class),
+    ),
+    TransactionRecategorizer::class => fn (ContainerInterface $c) => new TransactionRecategorizer(
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(TransactionCategorizer::class),
+        $c->get(LedgerProviderIdResolver::class),
+        $c->get(TaxonomyCatalog::class),
+        $c->get(MonthInvalidator::class),
+    ),
     TransactionSynchronizer::class => fn (ContainerInterface $c) => new TransactionSynchronizer(
         $c->get(KingdomRepositoryInterface::class),
         $c->get(AccountRepositoryInterface::class),
@@ -297,6 +334,7 @@ return [
         $c->get(TokenCipher::class),
         new DateTimeImmutable('now'),
         $c->get(MonthInvalidator::class),
+        $c->get(TransactionCategoryApplier::class),
         $c->get(TransactionPublicationApplier::class),
         $c->get(MicroDepositPairReconciler::class),
     ),
@@ -332,6 +370,7 @@ return [
     MonthReader::class => fn (ContainerInterface $c) => new CachingMonthReader(
         $c->get(KingdomPageQuery::class),
         $c->get(RedisKeyValueStore::class),
+        $c->get(TaxonomyCatalog::class),
     ),
     StatementPresenterRegistry::class => fn () => StatementPresenterRegistry::standard(),
     VisibilityPolicyRegistry::class => fn () => VisibilityPolicyRegistry::standard(),
@@ -467,6 +506,7 @@ return [
         $c->get(MessageQueue::class),
         new RefreshJobRegistry([
             new LedgerRefreshJob($c->get(TransactionSynchronizer::class)),
+            new TransactionRecategorizeJob($c->get(TransactionRecategorizer::class)),
         ]),
     ),
     RedisSessionHandler::class => function () {

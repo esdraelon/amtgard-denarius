@@ -123,6 +123,18 @@ final class ContainerResolutionOrderTest extends TestCase
         $this->assertInstanceOf(LedgerWorker::class, $this->resolveOrSkip(LedgerWorker::class));
     }
 
+    public function testCategorizerChainIsWiredInContainer(): void
+    {
+        $applier = $this->resolveOrSkip(\Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier::class);
+        $this->assertInstanceOf(\Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier::class, $applier);
+        $property = new \ReflectionProperty($applier, 'categorizer');
+        $property->setAccessible(true);
+        $this->assertInstanceOf(
+            \Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer::class,
+            $property->getValue($applier),
+        );
+    }
+
     public function testTaxonomyCatalogAndAmountSignRegistryResolveFromBootstrappedContainer(): void
     {
         $catalog = $this->resolveOrSkip(TaxonomyCatalog::class);

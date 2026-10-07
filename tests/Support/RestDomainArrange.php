@@ -46,6 +46,7 @@ final class RestDomainArrange
         self::exerciseTransactionReviewDomain();
         self::exercisePublicationEnvelopeBalanceFields();
         self::exerciseTaxonomyDomain();
+        self::exerciseCategorizationDomain();
 
         MonthWindow::current(new \DateTimeImmutable('2026-09-15'));
 
@@ -100,6 +101,80 @@ final class RestDomainArrange
         $registry->forProvider('plaid')->signedCents('1.00');
         (new \Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign())->signedCents('-2.00');
         new \Amtgard\Denarius\Domain\Taxonomy\RegexPatternGuard()->assertSafe('\\bFEE\\b', 'kw.test');
+    }
+
+    private static function exerciseCategorizationDomain(): void
+    {
+        $categorizer = \Amtgard\Denarius\Tests\Support\CategorizationArrange::categorizer();
+        $incoming = TransactionRecord::builder()
+            ->description('POS DEBIT RECREATION.GOV RESERVATION')
+            ->amountCents(-1000)
+            ->build();
+        $categorizer->decide('teller', $incoming, null);
+        $manager = TransactionRecord::builder()
+            ->category('expense.storage')
+            ->categorySource('manager')
+            ->build();
+        $categorizer->decide('teller', $incoming, $manager);
+        $input = \Amtgard\Denarius\Domain\Taxonomy\Categorization\CategorizationInput::builder()
+            ->normalizedDescription('FEE')
+            ->normalizedCounterparty('SHOP')
+            ->providerId('teller')
+            ->providerCategory('groceries')
+            ->defaultFlow(\Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense)
+            ->existingCategory('expense.storage')
+            ->existingSource('manager')
+            ->existingConfidence(100)
+            ->existingRuleId('kw.test')
+            ->existingSuggested('expense.bank_fees')
+            ->existingTaxonomyVersion('taxonomy/v1')
+            ->build();
+        $input->normalizedDescription();
+        $input->normalizedCounterparty();
+        $input->providerId();
+        $input->providerCategory();
+        $input->defaultFlow();
+        $input->existingSource();
+        $input->existingCategory();
+        $input->existingConfidence();
+        $input->existingRuleId();
+        $input->existingSuggested();
+        $input->existingTaxonomyVersion();
+        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher())->match($input);
+        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ProviderHintMatcher(
+            \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
+        ))->match($input);
+        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher(
+            \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
+        ))->match($input);
+        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\FallbackMatcher())->match($input);
+        $hintInput = \Amtgard\Denarius\Domain\Taxonomy\Categorization\CategorizationInput::builder()
+            ->normalizedDescription('COSTCO WHOLESALE')
+            ->providerId('teller')
+            ->providerCategory('dining')
+            ->defaultFlow(\Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense)
+            ->build();
+        \Amtgard\Denarius\Tests\Support\CategorizationArrange::matcherChain(
+            \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
+        )->resolve($hintInput);
+        $kingdom = KingdomRecord::builder()->provider('teller')->build();
+        $existing = TransactionRecord::builder()
+            ->description('SAME TEXT')
+            ->category('expense.bank_fees')
+            ->categorySource('shared_rule')
+            ->build();
+        $resync = TransactionRecord::builder()->description('SAME TEXT')->amountCents(-100)->build();
+        (new \Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier(
+            $categorizer,
+            new \Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver(
+                \Amtgard\Denarius\Tests\Unit\Strategies::providers(\Amtgard\Denarius\Tests\Unit\Strategies::teller()),
+            ),
+        ))->apply($kingdom, $resync, $existing);
+        (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->taxonomyNamespace();
+        self::run(
+            \Amtgard\Denarius\Tests\Unit\TransactionCategorizerTest::class,
+            'testKeywordTieBreakPrefersHigherConfidenceThenLongerPattern',
+        );
     }
 
     public static function exerciseUtilitiesLog(): void

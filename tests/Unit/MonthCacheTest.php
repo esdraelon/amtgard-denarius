@@ -9,6 +9,7 @@ use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Tests\Support\CategorizationArrange;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;
@@ -33,7 +34,8 @@ final class MonthCacheTest extends AmtgardTestCase
                 );
             }
         };
-        $reader = new CachingMonthReader($origin, $store);
+        $catalog = CategorizationArrange::bundledCatalog();
+        $reader = new CachingMonthReader($origin, $store, $catalog);
         $first = $reader->statement($kingdom, $month);
         $second = $reader->statement($kingdom, $month);
         $this->assertSame(1, $origin->calls);
@@ -44,7 +46,7 @@ final class MonthCacheTest extends AmtgardTestCase
         $reader->statement($kingdom, $month);
         $this->assertSame(2, $origin->calls);
 
-        $store->set('denarius:month:4:1:less_redacted:2026-09', 'not-json', 10);
+        $store->set('denarius:month:4:1:less_redacted:2026-09:taxonomy/v1', 'not-json', 10);
         $reader->statement($kingdom, $month);
         $this->assertSame(3, $origin->calls);
 
@@ -59,7 +61,7 @@ final class MonthCacheTest extends AmtgardTestCase
             }
         };
         $summarizedKingdom = KingdomRecord::builder()->id(5)->orkKingdomId(8)->name('Golden Plains')->slug('golden-plains')->displayMode('summarized')->build();
-        $cached = new CachingMonthReader($summary, $store);
+        $cached = new CachingMonthReader($summary, $store, $catalog);
         $cached->statement($summarizedKingdom, $month);
         $again = $cached->statement($summarizedKingdom, $month);
         $this->assertSame(2, $again->rows[0]->count);

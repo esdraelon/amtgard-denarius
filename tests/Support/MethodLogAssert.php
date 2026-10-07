@@ -61,6 +61,50 @@ final class MethodLogAssert
         ));
     }
 
+    public static function assertBranchContextExcludes(string $branch, string $method, string ...$forbiddenKeys): void
+    {
+        $recorder = self::requireRecorder();
+        foreach ($recorder->branches() as $entry) {
+            if ($entry['branch'] !== $branch || $entry['method'] !== $method) {
+                continue;
+            }
+            foreach ($forbiddenKeys as $key) {
+                if (array_key_exists($key, $entry['context'])) {
+                    Assert::fail(sprintf(
+                        'Branch %s at %s must not log context key %s.',
+                        $branch,
+                        $method,
+                        $key,
+                    ));
+                }
+            }
+            foreach ($entry['context'] as $value) {
+                if (is_string($value) && self::looksLikeDescriptionOrCounterparty($value)) {
+                    Assert::fail(sprintf(
+                        'Branch %s at %s must not log description or counterparty text (%s).',
+                        $branch,
+                        $method,
+                        $value,
+                    ));
+                }
+            }
+
+            return;
+        }
+
+        Assert::fail(sprintf('Expected branch %s at %s but it was not logged.', $branch, $method));
+    }
+
+    private static function looksLikeDescriptionOrCounterparty(string $value): bool
+    {
+        $upper = strtoupper($value);
+        if (str_contains($upper, 'RECREATION.GOV') || str_contains($upper, 'K&K INSURANCE')) {
+            return true;
+        }
+
+        return str_contains($upper, 'CAFE') && str_contains($upper, 'LUNCH');
+    }
+
     public static function assertAnyOfTraced(string ...$methods): void
     {
         $recorder = self::requireRecorder();

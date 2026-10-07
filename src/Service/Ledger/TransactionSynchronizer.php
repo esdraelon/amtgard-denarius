@@ -32,6 +32,7 @@ final class TransactionSynchronizer
         private readonly TokenCipher $cipher,
         private readonly \DateTimeImmutable $now,
         private readonly MonthInvalidator $months,
+        private readonly TransactionCategoryApplier $categories,
         private readonly TransactionPublicationApplier $publication,
         private readonly MicroDepositPairReconciler $microPairs,
     ) {
@@ -123,6 +124,7 @@ final class TransactionSynchronizer
     ): ?string {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $accountId, $page, &$seen, $backfillAmnesty): ?string {
             $lastId = null;
+            $fallbackCount = 0;
             foreach ($page as $row) {
                 if ($row->id === '' || isset($seen[$row->id])) {
                     continue;
@@ -130,7 +132,20 @@ final class TransactionSynchronizer
                 $seen[$row->id] = true;
                 $lastId = $row->id;
                 $incoming = $this->record($kingdom, $accountId, $row);
-                $this->transactions->upsert($this->publication->apply($kingdom, $incoming, $backfillAmnesty));
+                $existing = $this->transactions->findByTellerTransactionId($incoming->getTellerTransactionId());
+                $categorized = $this->categories->apply($kingdom, $incoming, $existing);
+                if ($categorized->getCategory() === 'uncategorized'
+                    && $categorized->getCategorySuggested() === null
+                    && $categorized->getCategoryConfidence() === 0
+                ) {
+                    ++$fallbackCount;
+                }
+                $this->transactions->upsert($this->publication->apply($kingdom, $categorized, $backfillAmnesty));
+            }
+            if ($fallbackCount > 0) {
+                DenariusLog::infoBranch('transaction_category_fallback', __METHOD__, [
+                    'count' => $fallbackCount,
+                ]);
             }
 
             return $lastId;

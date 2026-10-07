@@ -35,14 +35,19 @@ use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInt
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
 use Amtgard\Denarius\Service\Kingdom\KingdomPublicationLineSource;
+use Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver;
+use Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
+use Amtgard\Denarius\Tests\Support\CategorizationArrange;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerWebhookVerifier;
+use Amtgard\Denarius\Service\Ledger\TransactionRecategorizer;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
+use Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 
 final class Strategies
@@ -126,11 +131,35 @@ final class Strategies
         return new MonthInvalidator($store ?? new ArrayStore());
     }
 
-    public static function jobs(TransactionSynchronizer $synchronizer): RefreshJobRegistry
-    {
+    public static function jobs(
+        TransactionSynchronizer $synchronizer,
+        ?TransactionRecategorizer $recategorizer = null,
+    ): RefreshJobRegistry {
+        $recategorizer ??= self::recategorizer(
+            new MemoryKingdoms(),
+            new MemoryTransactions(),
+            self::providers(self::teller()),
+        );
+
         return new RefreshJobRegistry([
             new LedgerRefreshJob($synchronizer),
+            new TransactionRecategorizeJob($recategorizer),
         ]);
+    }
+
+    public static function recategorizer(
+        KingdomRepositoryInterface $kingdoms,
+        TransactionRepositoryInterface $transactions,
+        LedgerProviderRegistry $providers,
+    ): TransactionRecategorizer {
+        return new TransactionRecategorizer(
+            $kingdoms,
+            $transactions,
+            CategorizationArrange::categorizer(),
+            new LedgerProviderIdResolver($providers),
+            CategorizationArrange::bundledCatalog(),
+            self::months(),
+        );
     }
 
     public static function kingdomSettings(KingdomRepositoryInterface $kingdoms): KingdomSettings
@@ -177,6 +206,14 @@ final class Strategies
         );
     }
 
+    public static function categoryApplier(LedgerProviderRegistry $providers): TransactionCategoryApplier
+    {
+        return new TransactionCategoryApplier(
+            CategorizationArrange::categorizer(),
+            new LedgerProviderIdResolver($providers),
+        );
+    }
+
     public static function synchronizer(
         KingdomRepositoryInterface $kingdoms,
         AccountRepositoryInterface $accounts,
@@ -196,6 +233,7 @@ final class Strategies
             $cipher,
             $now,
             $months,
+            self::categoryApplier($providers),
             self::publicationApplier($transactions, $now),
             new \Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler($transactions),
         );

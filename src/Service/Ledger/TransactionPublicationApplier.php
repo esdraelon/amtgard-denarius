@@ -43,16 +43,6 @@ final class TransactionPublicationApplier
             Optional::ofNullable($existing?->getPublishedAt())->ifPresent(static fn (string $at) => $builder->publishedAt($at));
             Optional::ofNullable($existing?->getPublicationFlags())->ifPresent(static fn (string $flags) => $builder->publicationFlags($flags));
 
-            if ($existing !== null) {
-                $builder
-                    ->category($existing->getCategory())
-                    ->categorySource($existing->getCategorySource())
-                    ->categoryRuleId($existing->getCategoryRuleId())
-                    ->categoryConfidence($existing->getCategoryConfidence())
-                    ->categorySuggested($existing->getCategorySuggested())
-                    ->taxonomyVersion($existing->getTaxonomyVersion());
-            }
-
             return $this->hardRedact->annotate($builder->build());
         });
     }
