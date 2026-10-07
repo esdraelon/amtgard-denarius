@@ -31,7 +31,16 @@
                 selected: kingdom.displayMode == 'all' ? 'less_redacted' : kingdom.displayMode,
                 max_width: '28rem'
             } %}
-            <p class="small text-body-secondary">Less redacted shows pipeline-scrubbed lines (amounts quantized when enabled). Summarized hides individual transactions.</p>
+            <p class="small text-body-secondary mb-2">
+                <strong>Visibility</strong> controls who may open the kingdom page.
+                <strong>Disclosure tier</strong> controls what members see after the publication pipeline runs.
+            </p>
+            <ul class="small text-body-secondary mb-3">
+                <li><strong>Summarized</strong> — category totals only; no individual transactions.</li>
+                <li><strong>Redacted</strong> — dated lines with category and <em>quantized</em> amounts (no description or counterparty).</li>
+                <li><strong>Less redacted</strong> — adds account name and limited narrative fields; amounts stay quantized; verification and payroll-style rows may be further scrubbed.</li>
+            </ul>
+            <p class="small text-body-secondary">Public paths never show raw bank cents. Managers review and publish in the queue before rows appear here.</p>
             {% include 'components/form-field-select.twig' with {
                 name: 'embargo_days',
                 label: 'Publication embargo (days after posted date)',

@@ -307,6 +307,13 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Publication docs privacy
+
+- Branch: `publication-docs-privacy` (stacked on `publication-pattern-registry`).
+- Manage and kingdom Twig copy documents disclosure tiers, quantization, and verification withholding; privacy policy describes the publication pipeline (copy only).
+- Line coverage: 95.26% (4558/4785).
+- Infection covered MSI: not re-run (Twig-only diff; parent stack at 95% covered MSI).
+
 ## Publication pattern registry
 
 - Branch: `publication-pattern-registry` (stacked on `publication-envelope-review`).
