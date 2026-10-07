@@ -22,6 +22,10 @@ final class PublicationEnvelope
         private readonly DisplayMode $disclosureTier,
         private readonly \DateTimeImmutable $asOf,
         private array $lines,
+        private readonly ?int $providerBalanceCents = null,
+        private readonly ?int $lastPublishedBalanceCents = null,
+        private readonly ?int $publishedBalanceCents = null,
+        private readonly ?int $balanceQuantumCents = null,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -60,7 +64,83 @@ final class PublicationEnvelope
     public function withLines(array $lines): self
     {
         return DenariusLog::trace(__METHOD__, function () use ($lines): self {
-            return new self($this->kingdom, $this->month, $this->disclosureTier, $this->asOf, $lines);
+            return new self(
+                $this->kingdom,
+                $this->month,
+                $this->disclosureTier,
+                $this->asOf,
+                $lines,
+                $this->providerBalanceCents,
+                $this->lastPublishedBalanceCents,
+                $this->publishedBalanceCents,
+                $this->balanceQuantumCents,
+            );
+        });
+    }
+
+    public function providerBalanceCents(): ?int
+    {
+        return DenariusLog::trace(__METHOD__, fn (): ?int => $this->providerBalanceCents);
+    }
+
+    public function lastPublishedBalanceCents(): ?int
+    {
+        return DenariusLog::trace(__METHOD__, fn (): ?int => $this->lastPublishedBalanceCents);
+    }
+
+    public function publishedBalanceCents(): ?int
+    {
+        return DenariusLog::trace(__METHOD__, fn (): ?int => $this->publishedBalanceCents);
+    }
+
+    public function balanceQuantumCents(): ?int
+    {
+        return DenariusLog::trace(__METHOD__, fn (): ?int => $this->balanceQuantumCents);
+    }
+
+    public function withBalanceQuantumCents(int $balanceQuantumCents): self
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($balanceQuantumCents): self {
+            return new self(
+                $this->kingdom,
+                $this->month,
+                $this->disclosureTier,
+                $this->asOf,
+                $this->lines,
+                $this->providerBalanceCents,
+                $this->lastPublishedBalanceCents,
+                $this->publishedBalanceCents,
+                $balanceQuantumCents,
+            );
+        });
+    }
+
+    public function withPublishedBalanceCents(int $publishedBalanceCents): self
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($publishedBalanceCents): self {
+            return new self(
+                $this->kingdom,
+                $this->month,
+                $this->disclosureTier,
+                $this->asOf,
+                $this->lines,
+                $this->providerBalanceCents,
+                $this->lastPublishedBalanceCents,
+                $publishedBalanceCents,
+                $this->balanceQuantumCents,
+            );
+        });
+    }
+
+    public function quantizedLineCentsSum(): int
+    {
+        return DenariusLog::trace(__METHOD__, function (): int {
+            $sum = 0;
+            foreach ($this->lines as $line) {
+                $sum += $line->getAmountCents();
+            }
+
+            return $sum;
         });
     }
 

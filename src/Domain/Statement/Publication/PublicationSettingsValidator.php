@@ -41,4 +41,67 @@ final class PublicationSettingsValidator
             return $mode;
         });
     }
+
+    public function clampAmountQuantumCents(int $requested): int
+    {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $requested): int {
+            $clamped = max(
+                PublicationPlatformLimits::MIN_AMOUNT_QUANTUM_CENTS,
+                min(PublicationPlatformLimits::MAX_AMOUNT_QUANTUM_CENTS, $requested),
+            );
+            if ($clamped !== $requested) {
+                DenariusLog::debugBranch('amount_quantum_clamped', $method, [
+                    'requested' => $requested,
+                    'applied' => $clamped,
+                ]);
+            }
+
+            return $clamped;
+        });
+    }
+
+    /**
+     * @return array{floor: int, ceiling: int, step: int}
+     */
+    public function clampBalanceQuantumSettings(int $floorCents, int $ceilingCents, int $stepCents): array
+    {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $floorCents, $ceilingCents, $stepCents): array {
+            $floor = max(
+                PublicationPlatformLimits::MIN_BALANCE_QUANTUM_FLOOR_CENTS,
+                min(PublicationPlatformLimits::MAX_BALANCE_QUANTUM_FLOOR_CENTS, $floorCents),
+            );
+            $ceiling = max(
+                PublicationPlatformLimits::MIN_BALANCE_QUANTUM_CEILING_CENTS,
+                min(PublicationPlatformLimits::MAX_BALANCE_QUANTUM_CEILING_CENTS, $ceilingCents),
+            );
+            if ($ceiling < $floor) {
+                DenariusLog::debugBranch('balance_quantum_ceiling_raised', $method, [
+                    'requested_ceiling' => $ceilingCents,
+                    'applied_ceiling' => $floor,
+                    'floor' => $floor,
+                ]);
+                $ceiling = $floor;
+            }
+            $step = max(
+                PublicationPlatformLimits::MIN_BALANCE_QUANTUM_STEP_CENTS,
+                min(PublicationPlatformLimits::MAX_BALANCE_QUANTUM_STEP_CENTS, $stepCents),
+            );
+            if ($floor !== $floorCents || $ceiling !== $ceilingCents || $step !== $stepCents) {
+                DenariusLog::debugBranch('balance_quantum_clamped', $method, [
+                    'requested_floor' => $floorCents,
+                    'requested_ceiling' => $ceilingCents,
+                    'requested_step' => $stepCents,
+                    'applied_floor' => $floor,
+                    'applied_ceiling' => $ceiling,
+                    'applied_step' => $step,
+                ]);
+            }
+
+            return ['floor' => $floor, 'ceiling' => $ceiling, 'step' => $step];
+        });
+    }
 }

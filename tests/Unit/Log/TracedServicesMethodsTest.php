@@ -22,7 +22,7 @@ final class TracedServicesMethodsTest extends AmtgardTestCase
 
     public function testEveryServiceAndWorkerTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         ServiceWorkerArrange::exerciseAll();

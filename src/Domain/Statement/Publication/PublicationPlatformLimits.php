@@ -19,6 +19,30 @@ final class PublicationPlatformLimits
 
     public const int DEFAULT_PAIR_WINDOW_DAYS = 14;
 
+    public const int MIN_AMOUNT_QUANTUM_CENTS = 100;
+
+    public const int MAX_AMOUNT_QUANTUM_CENTS = 5000;
+
+    public const int DEFAULT_AMOUNT_QUANTUM_CENTS = 100;
+
+    public const int MIN_BALANCE_QUANTUM_FLOOR_CENTS = 500;
+
+    public const int MAX_BALANCE_QUANTUM_FLOOR_CENTS = 5000;
+
+    public const int DEFAULT_BALANCE_QUANTUM_FLOOR_CENTS = 500;
+
+    public const int MIN_BALANCE_QUANTUM_CEILING_CENTS = 500;
+
+    public const int MAX_BALANCE_QUANTUM_CEILING_CENTS = 50000;
+
+    public const int DEFAULT_BALANCE_QUANTUM_CEILING_CENTS = 500;
+
+    public const int MIN_BALANCE_QUANTUM_STEP_CENTS = 0;
+
+    public const int MAX_BALANCE_QUANTUM_STEP_CENTS = 2500;
+
+    public const int DEFAULT_BALANCE_QUANTUM_STEP_CENTS = 0;
+
     private function __construct()
     {
     }

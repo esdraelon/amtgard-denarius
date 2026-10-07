@@ -22,7 +22,7 @@ final class TracedBankMethodsTest extends AmtgardTestCase
 
     public function testEveryBankTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         BankDomainArrange::exerciseAll();

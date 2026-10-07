@@ -40,7 +40,7 @@ final class TracedAuthMethodsTest extends AmtgardTestCase
 
     public function testEveryAuthAccessTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         $adminOrn = ClaimOrn::admin();

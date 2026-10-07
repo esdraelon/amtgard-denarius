@@ -21,10 +21,10 @@ final class PublicationPipelineFactory
                 new EmbargoStage(),
                 new HardRedactionStage(),
                 new PublicationStatusStage(),
-                new DeferredPublicationStage('amount_quantization'),
+                new AmountQuantizationStage(),
                 new LineRedactionStage(),
                 new DeferredPublicationStage('aggregate'),
-                new DeferredPublicationStage('balance_coarsening'),
+                new BalanceCoarseningStage(),
                 new DeferredPublicationStage('envelope_review'),
             ]);
         });

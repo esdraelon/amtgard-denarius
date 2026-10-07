@@ -64,7 +64,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
 {
     public function testEveryControllerAndHttpTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         $twig = new TwigHtmlRenderer(new Environment(new ArrayLoader([

@@ -20,7 +20,6 @@ final class TransactionReviewTest extends AmtgardTestCase
     public function testPublishSetsPublishedAtAndPublicReadSeesRow(): void
     {
         class_exists(ApplicationTest::class);
-        MethodLogAssert::reset();
         $kingdoms = new MemoryKingdoms();
         $accounts = new MemoryAccounts();
         $transactions = new MemoryTransactions();
@@ -42,6 +41,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->build());
 
         $reviews = new TransactionReviewService($transactions, $accounts, Strategies::months($cache), $now);
+        MethodLogAssert::reset();
         $reviews->publish($kingdom, 't1');
 
         $published = $transactions->findByTellerTransactionId('t1');
@@ -54,7 +54,6 @@ final class TransactionReviewTest extends AmtgardTestCase
     public function testWithholdClearsPublishedAt(): void
     {
         class_exists(ApplicationTest::class);
-        MethodLogAssert::reset();
         $kingdoms = new MemoryKingdoms();
         $accounts = new MemoryAccounts();
         $transactions = new MemoryTransactions();
@@ -75,6 +74,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->build());
 
         $reviews = new TransactionReviewService($transactions, $accounts, Strategies::months(), $now);
+        MethodLogAssert::reset();
         $reviews->withhold($kingdom, 't1');
 
         $this->assertNull($transactions->findByTellerTransactionId('t1')?->getPublishedAt());
@@ -84,7 +84,6 @@ final class TransactionReviewTest extends AmtgardTestCase
     public function testPublishRejectsEmbargoedRow(): void
     {
         class_exists(ApplicationTest::class);
-        MethodLogAssert::reset();
         $kingdoms = new MemoryKingdoms();
         $accounts = new MemoryAccounts();
         $transactions = new MemoryTransactions();
@@ -102,6 +101,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->build());
 
         $reviews = new TransactionReviewService($transactions, $accounts, Strategies::months(), $now);
+        MethodLogAssert::reset();
         try {
             $reviews->publish($kingdom, 't1');
             $this->fail('Expected embargo rejection.');
@@ -114,7 +114,6 @@ final class TransactionReviewTest extends AmtgardTestCase
     public function testQueueListsPendingEmbargoedAndPublished(): void
     {
         class_exists(ApplicationTest::class);
-        MethodLogAssert::reset();
         $kingdoms = new MemoryKingdoms();
         $accounts = new MemoryAccounts();
         $transactions = new MemoryTransactions();
@@ -149,6 +148,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->publishedAt('2026-08-21T00:00:00+00:00')
             ->build());
 
+        MethodLogAssert::reset();
         $rows = Strategies::reviewQueue($transactions, $accounts, $now)->rowsForManage($kingdom);
         $this->assertCount(3, $rows);
         $statuses = array_column($rows, 'status');
