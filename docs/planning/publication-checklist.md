@@ -13,4 +13,4 @@ Stack base: `ui-twig-components` @ `dacfa14` (unless a later publication branch 
 - [x] **M-07** `amount-and-balance-quantization` — amount_quantum, balance_quantum, pull-round vs last published balance
 - [x] **M-08** `publication-envelope-review` — holistic leak tests (balance vs line sum, partial redaction windows)
 - [x] **M-09** `publication-pattern-registry` — versioned SOFT patterns, ruleset reprocess, treasurer alerts
-- [ ] **M-10** `publication-docs-privacy` — manage and privacy copy
+- [x] **M-10** `publication-docs-privacy` — manage and privacy copy
