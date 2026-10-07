@@ -31,6 +31,7 @@ final class RestDomainArrange
         self::exercisePublicationDomain();
         self::exercisePublicationPipeline();
         self::exercisePublicationHardRedact();
+        self::exerciseDisplayModeDisclosure();
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPublicReadTest::class, 'testPublicStatementOmitsUnpublishedTransactions');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testAbsenceReasonSerializesForCache');
         self::run(\Amtgard\Denarius\Tests\Unit\StatementAbsenceTest::class, 'testClassifierMarksUnreviewedWhenEmbargoClearedButUnpublished');
@@ -93,6 +94,15 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testPublicationStatusStageDropsUnpublishedLines');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testManagerQueryIncludesUnpublishedLines');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationPipelineTest::class, 'testPublicPipelineRunsFullStageChain');
+    }
+
+    private static function exerciseDisplayModeDisclosure(): void
+    {
+        self::run(\Amtgard\Denarius\Tests\Unit\DisplayModeDisclosureTest::class, 'testDisplayModeLabelIsTraced');
+        self::run(\Amtgard\Denarius\Tests\Unit\DisplayModeDisclosureTest::class, 'testFromStoredMapsLegacyAllToLessRedacted');
+        self::run(\Amtgard\Denarius\Tests\Unit\DisplayModeDisclosureTest::class, 'testCanonicalDisplayModePersistsLessRedacted');
+        self::run(\Amtgard\Denarius\Tests\Unit\DisplayModeDisclosureTest::class, 'testLineRedactionStageStripsFieldsForRedactedTier');
+        self::run(\Amtgard\Denarius\Tests\Unit\DisplayModeDisclosureTest::class, 'testLessRedactedPresenterUsesPipelineLines');
     }
 
     private static function exercisePublicationHardRedact(): void

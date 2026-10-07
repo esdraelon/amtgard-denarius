@@ -103,8 +103,9 @@ final class ApplicationTest extends AmtgardTestCase
         $line = LedgerLine::builder()->postedOn('2026-01-02')->amountCents(250)->category('dining')->description('meal')->counterparty('Cafe')->status('posted')->accountName('Checking')->build();
         $other = LedgerLine::builder()->postedOn('2026-02-01')->amountCents(100)->category('fuel')->build();
         $builder = MonthStatementBuilder::standard();
-        $all = $builder->build([$line, $other], DisplayMode::All, $month);
-        $this->assertCount(1, $all->rows);
+        $less = $builder->build([$line, $other], DisplayMode::LessRedacted, $month);
+        $this->assertCount(1, $less->rows);
+        $this->assertSame('meal', $less->rows[0]->getDescription());
         $redacted = $builder->build([$line], DisplayMode::Redacted, $month);
         $this->assertSame('', $redacted->rows[0]->getDescription());
         $this->assertSame('', $redacted->rows[0]->getCounterparty());
@@ -219,7 +220,7 @@ final class ApplicationTest extends AmtgardTestCase
         $settings = Strategies::kingdomSettings($kingdoms);
         $updated = $settings->update($saved, Visibility::Public, DisplayMode::All, 3);
         $this->assertSame('public', $updated->getVisibility());
-        $this->assertSame('all', $updated->getDisplayMode());
+        $this->assertSame('less_redacted', $updated->getDisplayMode());
 
         $secrets = new MemorySecrets();
         $accounts = new MemoryAccounts();

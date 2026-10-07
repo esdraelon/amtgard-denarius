@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Statement\Publication;
 
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 /** Strategy: validates and clamps kingdom publication settings to platform limits. */
@@ -23,6 +24,21 @@ final class PublicationSettingsValidator
             }
 
             return $clamped;
+        });
+    }
+
+    public function canonicalDisplayMode(DisplayMode $mode): DisplayMode
+    {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $mode): DisplayMode {
+            if ($mode === DisplayMode::All) {
+                DenariusLog::debugBranch('display_mode_legacy_all', $method, ['requested' => $mode->value]);
+
+                return DisplayMode::LessRedacted;
+            }
+
+            return $mode;
         });
     }
 }

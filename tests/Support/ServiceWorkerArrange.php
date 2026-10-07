@@ -89,7 +89,7 @@ final class ServiceWorkerArrange
         $ignoredCommand->execute($roleAdmin, $body);
 
         $settings = Strategies::kingdomSettings($kingdoms);
-        $updated = $settings->update($saved, \Amtgard\Denarius\Domain\Access\Visibility::Public, DisplayMode::All, 3);
+        $updated = $settings->update($saved, \Amtgard\Denarius\Domain\Access\Visibility::Public, DisplayMode::LessRedacted, 3);
 
         $secrets = new MemorySecrets();
         $accounts = new MemoryAccounts();
@@ -236,7 +236,7 @@ final class ServiceWorkerArrange
             public function statement(KingdomRecord $kingdom, MonthWindow $month): MonthStatement
             {
                 return new MonthStatement(
-                    DisplayMode::All,
+                    DisplayMode::LessRedacted,
                     $month,
                     [LedgerLine::builder()->postedOn('2026-09-02')->amountCents(250)->category('office')->description('paper')->counterparty('Shop')->build()],
                 );

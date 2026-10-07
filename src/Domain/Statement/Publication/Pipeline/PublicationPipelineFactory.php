@@ -22,7 +22,7 @@ final class PublicationPipelineFactory
                 new HardRedactionStage(),
                 new PublicationStatusStage(),
                 new DeferredPublicationStage('amount_quantization'),
-                new DeferredPublicationStage('line_redaction'),
+                new LineRedactionStage(),
                 new DeferredPublicationStage('aggregate'),
                 new DeferredPublicationStage('balance_coarsening'),
                 new DeferredPublicationStage('envelope_review'),

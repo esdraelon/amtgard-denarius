@@ -27,7 +27,7 @@ final class MonthCacheTest extends AmtgardTestCase
             {
                 $this->calls++;
                 return new MonthStatement(
-                    \Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode::All,
+                    \Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode::LessRedacted,
                     $month,
                     [LedgerLine::builder()->postedOn('2026-09-02')->amountCents(250)->category('office')->description('paper')->counterparty('Shop')->build()],
                 );
@@ -44,7 +44,7 @@ final class MonthCacheTest extends AmtgardTestCase
         $reader->statement($kingdom, $month);
         $this->assertSame(2, $origin->calls);
 
-        $store->set('denarius:month:4:1:all:2026-09', 'not-json', 10);
+        $store->set('denarius:month:4:1:less_redacted:2026-09', 'not-json', 10);
         $reader->statement($kingdom, $month);
         $this->assertSame(3, $origin->calls);
 
