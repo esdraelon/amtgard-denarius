@@ -21,7 +21,7 @@ Plan: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 
 | # | Branch | Done |
 |---|--------|------|
-| D1 | `stack/denarius-integ-d1-public-static` | [ ] |
+| D1 | `stack/denarius-integ-d1-public-static` | [x] |
 | D2 | `stack/denarius-integ-d2-auth-session` | [ ] |
 | D3 | `stack/denarius-integ-d3-webhooks` | [ ] |
 | D4 | `stack/denarius-integ-d4-kingdom-public` | [ ] |

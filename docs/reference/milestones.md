@@ -612,3 +612,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; docs only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ public static (D1)
+
+- Branch: `stack/denarius-integ-d1-public-static`
+- `PublicStaticTest`: live HTTP `GET /` (200, Denarius home markers) and `GET /privacy-policy` (200, policy text and contact email). Route matrix rows for those paths set to **y** (3/32 in-scope, 9.4%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).

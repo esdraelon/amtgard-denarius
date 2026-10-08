@@ -12,26 +12,26 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** | In scope; not covered yet (Phase D backlog). |
 | **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
 
-## Summary (C7 baseline)
+## Summary (D1)
 
 | Metric | Count |
 |--------|------:|
 | Routes in `config/routes.php` | 36 |
 | **excluded** | 4 |
 | In scope (total − excluded) | 32 |
-| **y** (covered today) | 1 |
-| **n** (uncovered in scope) | 31 |
-| Coverage `y / in-scope` | 3.1% (target ≥ 90% at D14) |
+| **y** (covered today) | 3 |
+| **n** (uncovered in scope) | 29 |
+| Coverage `y / in-scope` | 9.4% (target ≥ 90% at D14) |
 
-Only **`GET /version`** is covered today (`VersionEndpointTest` smoke after per-test reseed). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
+**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** are covered (`PublicStaticTest`, `VersionEndpointTest`). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
 
 ## Matrix
 
 | Method | Path | Covered | Test class | Notes |
 |--------|------|---------|------------|-------|
-| GET | `/` | n | — | D1 public static (`home`) |
+| GET | `/` | y | `PublicStaticTest` | Home landing; Denarius + sign-in markers |
 | GET | `/version` | y | `VersionEndpointTest` | JSON `version` key; harness smoke |
-| GET | `/privacy-policy` | n | — | D1 public static (`privacy-policy`) |
+| GET | `/privacy-policy` | y | `PublicStaticTest` | Privacy policy body + contact email |
 | POST | `/webhooks/teller` | n | — | D3 webhooks; signed body via stub ledger |
 | POST | `/webhooks/stripe` | n | — | D3 webhooks; `Stripe-Signature` |
 | POST | `/webhooks/plaid` | n | — | D3 webhooks; `Plaid-Verification` JWT |
