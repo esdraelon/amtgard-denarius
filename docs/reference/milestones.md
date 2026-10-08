@@ -307,6 +307,13 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Admin IdP lookup hints (P10)
+
+- Branch: `publication/p10-admin-idp-lookup-hints` (stacked on `publication/i01-dev-docker-networks`).
+- Residual from `backup/wip-pre-taxonomy`: `admin.twig` shows an info alert before a search (full email or username, IdP Client IAM lookup) and a warning when IdP resolves nobody, since P9 search no longer matches the local principal cache. `data/ork-kingdoms.json.example` uses real ORK ids (11, 12, 14) that match `data/ork-kingdoms.bundled.json`. `AdminTemplateTest` renders the real template for each search state.
+- Line coverage: 95.74% (6723/7022).
+- Infection covered MSI: not re-run (template and data only).
+
 ## Dev docker networks and env (I1)
 
 - Branch: `publication/i01-dev-docker-networks` (stacked on `publication/p09-admin-principal-suggester`).
