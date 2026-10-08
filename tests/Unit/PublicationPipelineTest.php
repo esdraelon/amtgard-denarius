@@ -7,6 +7,9 @@ namespace Amtgard\Denarius\Tests\Unit;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\EmbargoStage;
+use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\ManagerDescriptionRedactStage;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationManagerRedactCopy;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationCandidateLine;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationEnvelope;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationPipelineFactory;
@@ -132,5 +135,69 @@ final class PublicationPipelineTest extends AmtgardTestCase
         $result->lines();
         $this->assertCount(1, $result->toLedgerLines());
         PublicationPipelineFactory::standard()->forManagerReview()->run($envelope);
+    }
+
+    public function testManagerDescriptionRedactStageClearsDescription(): void
+    {
+        MethodLogAssert::reset();
+        $flagged = $this->candidate(PublicationFlags::empty()->withManagerRedactDescription(true)->encode());
+        $plain = $this->candidate(null);
+
+        $result = (new ManagerDescriptionRedactStage())->process($this->envelope(DisplayMode::LessRedacted, [$flagged, $plain]));
+
+        $redacted = $result->lines()[0];
+        $this->assertSame(PublicationManagerRedactCopy::LINE_DESCRIPTION, $redacted->getDescription());
+        $this->assertSame('', $redacted->getCounterparty());
+        $this->assertSame('expense', $redacted->getCategoryFlow());
+        $this->assertSame(-100, $redacted->getAmountCents());
+        $this->assertSame('t-1', $redacted->getTellerTransactionId());
+        $this->assertSame($flagged->getPublicationFlags(), $redacted->getPublicationFlags());
+        $this->assertSame($plain, $result->lines()[1]);
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'publication_manager_description_redact', ManagerDescriptionRedactStage::class . '::process');
+    }
+
+    public function testPublicPipelineAppliesManagerDescriptionRedact(): void
+    {
+        $flagged = $this->candidate(PublicationFlags::empty()->withManagerRedactDescription(true)->encode());
+
+        $lines = PublicationPipelineFactory::standard(TaxonomyCatalogFixture::load())
+            ->forPublicRead()
+            ->run($this->envelope(DisplayMode::LessRedacted, [$flagged, $this->candidate(null)]))
+            ->toLedgerLines();
+
+        $this->assertCount(2, $lines);
+        $this->assertSame(PublicationManagerRedactCopy::LINE_DESCRIPTION, $lines[0]->getDescription());
+        $this->assertSame('private', $lines[1]->getDescription());
+    }
+
+    private function candidate(?string $flags): PublicationCandidateLine
+    {
+        return PublicationCandidateLine::builder()
+            ->tellerTransactionId('t-1')
+            ->postedOn('2026-09-01')
+            ->amountCents(-100)
+            ->category('general')
+            ->categoryFlow('expense')
+            ->description('private')
+            ->counterparty('Vendor')
+            ->accountName('Checking')
+            ->publishedAt('2026-09-03T00:00:00+00:00')
+            ->publishableAfter('2026-09-01T00:00:00+00:00')
+            ->publicationFlags($flags)
+            ->build();
+    }
+
+    /**
+     * @param list<PublicationCandidateLine> $lines
+     */
+    private function envelope(DisplayMode $tier, array $lines): PublicationEnvelope
+    {
+        return new PublicationEnvelope(
+            KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build(),
+            new MonthWindow(2026, 9),
+            $tier,
+            new \DateTimeImmutable('2026-10-01T12:00:00+00:00'),
+            $lines,
+        );
     }
 }

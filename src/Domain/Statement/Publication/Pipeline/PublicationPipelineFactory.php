@@ -33,6 +33,7 @@ final class PublicationPipelineFactory
                 new HardRedactionStage(),
                 new PublicationStatusStage(),
                 new PatternRegistryStage(),
+                new ManagerDescriptionRedactStage(),
                 new CategoryLabelStage($this->catalog),
                 new AmountQuantizationStage(),
                 new LineRedactionStage(),

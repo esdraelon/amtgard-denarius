@@ -6,6 +6,7 @@ namespace Amtgard\Denarius\Service\Ledger;
 
 use Amtgard\Denarius\Domain\Statement\Publication\Ingest\TransactionHardRedactAnnotator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
@@ -29,13 +30,19 @@ final class TransactionPublicationApplier
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $incoming, $backfillAmnesty): TransactionRecord {
             $existing = $this->findExisting($incoming->getTellerTransactionId());
-            $embargoDays = $kingdom->getEmbargoDays();
-            $publishableAfter = $this->embargo->publishableAfter(
-                $incoming->getPostedOn(),
-                $embargoDays,
-                $this->now,
-                $backfillAmnesty,
-            );
+            if (PublicationFlags::parse($existing?->getPublicationFlags())->isManagerEmbargoWaived()) {
+                DenariusLog::debugBranch('publication_embargo_waived', self::class . '::apply', [
+                    'teller_transaction_id' => $incoming->getTellerTransactionId(),
+                ]);
+                $publishableAfter = $this->now->setTime(0, 0)->format('c');
+            } else {
+                $publishableAfter = $this->embargo->publishableAfter(
+                    $incoming->getPostedOn(),
+                    $kingdom->getEmbargoDays(),
+                    $this->now,
+                    $backfillAmnesty,
+                );
+            }
 
             $builder = TransactionRecordRebuilder::from($incoming)->publishableAfter($publishableAfter);
 

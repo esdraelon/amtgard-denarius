@@ -134,6 +134,68 @@ final class PublicationHardRedactTest extends AmtgardTestCase
         $this->assertFalse(PublicationFlags::parse('{invalid')->isHard());
     }
 
+    public function testPublicationFlagsCarryManagerRedactAndEmbargoWaiver(): void
+    {
+        $manager = PublicationFlags::empty()
+            ->withManagerRedactDescription(true)
+            ->withManagerEmbargoWaived(true);
+        $this->assertNotNull($manager->encode());
+        $parsed = PublicationFlags::parse($manager->encode());
+        $this->assertTrue($parsed->isManagerRedactDescription());
+        $this->assertTrue($parsed->isManagerEmbargoWaived());
+        $this->assertFalse($parsed->isHard());
+
+        $hardened = $parsed->withHardPattern(PublicationHardPatternIds::VERIFY_KEYWORD);
+        $this->assertTrue($hardened->isManagerRedactDescription());
+        $this->assertTrue($hardened->isManagerEmbargoWaived());
+
+        $merged = PublicationFlags::empty()->withManagerEmbargoWaived(true)
+            ->merge(PublicationFlags::empty()->withManagerRedactDescription(true));
+        $this->assertTrue($merged->isManagerRedactDescription());
+        $this->assertTrue($merged->isManagerEmbargoWaived());
+
+        $this->assertNull($parsed->withManagerRedactDescription(false)->withManagerEmbargoWaived(false)->encode());
+        $this->assertNotNull(PublicationFlags::empty()->withManagerRedactDescription(true)->encode());
+        $this->assertNotNull(PublicationFlags::empty()->withManagerEmbargoWaived(true)->encode());
+        $this->assertFalse(PublicationFlags::empty()->isManagerRedactDescription());
+        $this->assertFalse(PublicationFlags::empty()->isManagerEmbargoWaived());
+    }
+
+    public function testApplierWaivesEmbargoWhenManagerFlagged(): void
+    {
+        MethodLogAssert::reset();
+        $transactions = new MemoryTransactions();
+        $kingdom = KingdomRecord::builder()->id(1)->orkKingdomId(1)->name('K')->slug('k')->embargoDays(10)->build();
+        $incoming = TransactionRecord::builder()
+            ->kingdomId(1)
+            ->tellerTransactionId('t-waive')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-01')
+            ->amountCents(-500)
+            ->category('uncategorized')
+            ->description('supplies')
+            ->counterparty('Shop')
+            ->status('posted')
+            ->build();
+        $transactions->upsert(\Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder::from($incoming)
+            ->publicationFlags(PublicationFlags::empty()->withManagerEmbargoWaived(true)->encode())
+            ->build());
+        $now = new \DateTimeImmutable('2026-09-03T15:30:00+00:00');
+
+        $applied = Strategies::publicationApplier($transactions, $now)->apply($kingdom, $incoming, false);
+
+        $this->assertSame('2026-09-03T00:00:00+00:00', $applied->getPublishableAfter());
+        $this->assertTrue(PublicationFlags::parse($applied->getPublicationFlags())->isManagerEmbargoWaived());
+        MethodLogAssert::assertBranchLogged(
+            BranchLogLevel::Debug,
+            'publication_embargo_waived',
+            \Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier::class . '::apply',
+        );
+
+        $unwaived = Strategies::publicationApplier(new MemoryTransactions(), $now)->apply($kingdom, $incoming, false);
+        $this->assertNotSame('2026-09-03T00:00:00+00:00', $unwaived->getPublishableAfter());
+    }
+
     public function testHardRedactionStageStubsLine(): void
     {
         MethodLogAssert::reset();

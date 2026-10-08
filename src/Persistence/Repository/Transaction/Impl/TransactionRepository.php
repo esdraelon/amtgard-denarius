@@ -129,15 +129,10 @@ class TransactionRepository extends Repository implements EntityRepositoryInterf
             $entity->setCounterparty($transaction->getCounterparty());
             $entity->setStatus($transaction->getStatus());
             $entity->setPublishableAfter($transaction->getPublishableAfter());
-            if (!$existing) {
-                $entity->setPublishedAt($transaction->getPublishedAt());
-                $entity->setPublicationFlags($transaction->getPublicationFlags());
-            } elseif ($transaction->getPublishedAt() !== null) {
+            if (!$existing || $transaction->getPublishedAt() !== null) {
                 $entity->setPublishedAt($transaction->getPublishedAt());
             }
-            if ($transaction->getPublicationFlags() !== null) {
-                $entity->setPublicationFlags($transaction->getPublicationFlags());
-            }
+            $entity->setPublicationFlags($transaction->getPublicationFlags());
 
             return null;
         });

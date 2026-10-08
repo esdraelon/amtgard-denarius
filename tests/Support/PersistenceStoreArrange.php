@@ -22,6 +22,8 @@ use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\Impl\KingdomCate
 use Amtgard\Denarius\Persistence\Record\KingdomCategoryRuleRecord;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\TransactionRepository;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
+use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use PDO;
 
@@ -238,8 +240,11 @@ final class PersistenceStoreArrange
         $transactions = Orm::repository(TransactionRepository::class);
         $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn-rent')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-100)->category('expense.site_rental')->providerCategory('RENT')->categorySource(CategorySource::ProviderHint->value)->categoryRuleId('hint.test')->categoryConfidence(70)->categorySuggested('expense.feast_groceries')->taxonomyVersion('taxonomy/v1')->description('paper')->counterparty('Shop')->status('posted')->publishableAfter('2026-09-05T23:59:59+00:00')->build());
         $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn-grocery')->tellerAccountId('acc')->postedOn('2026-09-03')->amountCents(-200)->category('expense.feast_groceries')->description('gas')->counterparty('Station')->status('posted')->publishedAt('2026-09-04T00:00:00+00:00')->publishableAfter('2026-09-06T23:59:59+00:00')->build());
-        $transactions->findByTellerTransactionId('txn-rent');
-        $transactions->findByTellerTransactionId('txn-grocery');
+        $rent = $transactions->findByTellerTransactionId('txn-rent');
+        $transactions->upsert(TransactionRecordRebuilder::from($rent)->publicationFlags(PublicationFlags::empty()->withManagerRedactDescription(true)->encode())->build());
+        $transactions->upsert(TransactionRecordRebuilder::from($rent)->publicationFlags(null)->build());
+        $grocery = $transactions->findByTellerTransactionId('txn-grocery');
+        $transactions->upsert(TransactionRecordRebuilder::from($grocery)->publicationFlags(PublicationFlags::empty()->withManagerEmbargoWaived(true)->encode())->build());
         $transactions->forKingdom((int) $saved->getId());
         $transactions->forKingdomPublished((int) $saved->getId());
         $transactions->markPublished((int) $saved->getId(), 'txn-grocery', '2026-09-05T12:00:00+00:00');

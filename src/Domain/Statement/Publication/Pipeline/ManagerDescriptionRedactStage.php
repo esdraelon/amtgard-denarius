@@ -30,6 +30,7 @@ final class ManagerDescriptionRedactStage implements PublicationStage
                     ->postedOn($line->getPostedOn())
                     ->amountCents($line->getAmountCents())
                     ->category($line->getCategory())
+                    ->categoryFlow($line->getCategoryFlow())
                     ->description(PublicationManagerRedactCopy::LINE_DESCRIPTION)
                     ->counterparty('')
                     ->status($line->getStatus())
