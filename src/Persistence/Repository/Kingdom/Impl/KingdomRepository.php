@@ -39,6 +39,13 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
         });
     }
 
+    public function findById(int $kingdomId): ?KingdomRecord
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdomId): ?KingdomRecord {
+            return $this->record($this->fetch($kingdomId));
+        });
+    }
+
     public function findByOrkId(int $orkKingdomId): ?KingdomRecord
     {
         return DenariusLog::trace(__METHOD__, function () use ($orkKingdomId): ?KingdomRecord {
@@ -123,6 +130,9 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
             $entity->setProvider($kingdom->getProvider());
             $entity->setEnrollmentStatus($kingdom->getEnrollmentStatus());
             $entity->setLastSyncedAt($kingdom->getLastSyncedAt());
+            $entity->setLastSyncAttemptedAt($kingdom->getLastSyncAttemptedAt());
+            $entity->setLastSyncStatus($kingdom->getLastSyncStatus());
+            $entity->setLastSyncError($kingdom->getLastSyncError());
             $entity->setEmbargoDays($kingdom->getEmbargoDays());
             $entity->setInitialBackfillCompletedAt($kingdom->getInitialBackfillCompletedAt());
             $entity->setAmountQuantumCents($kingdom->getAmountQuantumCents());
@@ -154,6 +164,9 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
                 ->provider($entity->getProvider())
                 ->enrollmentStatus((string) ($entity->getEnrollmentStatus() ?? 'none'))
                 ->lastSyncedAt($entity->getLastSyncedAt())
+                ->lastSyncAttemptedAt($entity->getLastSyncAttemptedAt())
+                ->lastSyncStatus($entity->getLastSyncStatus())
+                ->lastSyncError($entity->getLastSyncError())
                 ->embargoDays((int) ($entity->getEmbargoDays() ?? 3))
                 ->initialBackfillCompletedAt($entity->getInitialBackfillCompletedAt())
                 ->amountQuantumCents((int) ($entity->getAmountQuantumCents() ?? PublicationPlatformLimits::DEFAULT_AMOUNT_QUANTUM_CENTS))

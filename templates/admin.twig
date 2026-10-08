@@ -45,7 +45,7 @@
                 </label>
             </div>
             <p class="ork-kingdom-hint alert alert-warning d-none w-100 mb-0">
-                No ORK kingdom directory loaded. Import a GetKingdoms snapshot with <code class="small">bin/ork-kingdoms-import.php</code> (see script header).
+                No ORK kingdom directory is available yet. Denarius seeds from ORK (server or your browser) and falls back to the bundled snapshot when Cloudflare blocks the server.
             </p>
             <input type="hidden" name="kingdom_name" value="">
             <div class="col-auto d-flex flex-wrap gap-2">
@@ -128,11 +128,16 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
 jQuery(function ($) {
+    var orkApiBase = {{ ork_api_base_url|json_encode|raw }};
+    var csrfToken = {{ csrf|json_encode|raw }};
+
     function fillKingdomSelects(kingdoms) {
+        $('.ork-kingdom').empty();
         if (!kingdoms.length) {
             $('.ork-kingdom-hint').removeClass('d-none');
             return;
         }
+        $('.ork-kingdom-hint').addClass('d-none');
         kingdoms.forEach(function (kingdom) {
             $('select.ork-kingdom').append(
                 $('<option>').val(String(kingdom.id)).text(kingdom.name)
@@ -140,9 +145,46 @@ jQuery(function ($) {
         });
     }
 
-    $.getJSON('/admin/kingdoms').done(function (payload) {
-        fillKingdomSelects(payload.kingdoms || []);
-    });
+    function fetchOrkFromBrowser() {
+        var url = String(orkApiBase).replace(/\/$/, '') + '/orkservice/Json/index.php?request=';
+        return fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'call=Kingdom/GetKingdoms&request=' + encodeURIComponent('{}'),
+            credentials: 'include',
+        }).then(function (response) {
+            return response.text();
+        });
+    }
+
+    function syncOrkJson(raw) {
+        return $.ajax({
+            url: '/admin/kingdoms/sync',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({csrf: csrfToken, ork_json: raw}),
+        });
+    }
+
+    function loadKingdoms() {
+        $.getJSON('/admin/kingdoms').done(function (payload) {
+            var kingdoms = payload.kingdoms || [];
+            if (kingdoms.length) {
+                fillKingdomSelects(kingdoms);
+                return;
+            }
+            fetchOrkFromBrowser()
+                .then(function (raw) { return syncOrkJson(raw); })
+                .done(function (synced) {
+                    fillKingdomSelects(synced.kingdoms || []);
+                })
+                .fail(function () {
+                    fillKingdomSelects([]);
+                });
+        });
+    }
+
+    loadKingdoms();
 
     var suggestTimer = null;
     var $email = $('#admin-email');

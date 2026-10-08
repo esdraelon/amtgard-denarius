@@ -50,6 +50,7 @@ final class BankDomainArrange
         self::run(StripeAdapterTest::class, 'testStripeSignatureRejectsStaleAndBlankSecrets');
         self::run(StripeAdapterTest::class, 'testConfiguredProvidersKeepReadyOnesInOrder');
         StripeAdapterTest::exerciseCurlForMethodLog();
+        self::run(\Amtgard\Denarius\Tests\Unit\StripeTransactionRefreshWaitTest::class, 'testWaitsUntilRefreshSucceeds');
 
         self::exerciseTellerHttpClients();
         self::exerciseCurlFetchPaths();

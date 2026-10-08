@@ -53,6 +53,15 @@ class KingdomEntity extends RepositoryEntity
     #[Field('last_synced_at')]
     private ?string $lastSyncedAt = null;
 
+    #[Field('last_sync_attempted_at')]
+    private ?string $lastSyncAttemptedAt = null;
+
+    #[Field('last_sync_status')]
+    private ?string $lastSyncStatus = null;
+
+    #[Field('last_sync_error')]
+    private ?string $lastSyncError = null;
+
     #[Field('embargo_days')]
     private ?int $embargoDays = null;
 

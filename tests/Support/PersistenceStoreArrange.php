@@ -208,6 +208,7 @@ final class PersistenceStoreArrange
         $kingdoms = Orm::repository(KingdomRepository::class);
         $saved = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('all')->enrollmentId('enr')->institutionName('Bank')->provider('teller')->enrollmentStatus('connected')->build());
         $kingdoms->findBySlug('golden-plains');
+        $kingdoms->findById((int) $saved->getId());
         $kingdoms->findByOrkId(4);
         $kingdoms->findByEnrollmentId('enr');
         $kingdoms->findByProviderEnrollment('teller', 'enr');
