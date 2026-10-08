@@ -307,6 +307,13 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Statement posted sort (P8)
+
+- Branch: `publication/p08-statement-posted-sort` (stacked on `publication/p07-stripe-refresh-and-errors`).
+- `MonthStatementBuilder::build` orders in-month lines newest first by `postedOn` before presenting; the `?KingdomRecord $kingdom` argument for summarized category roll-up stays. No new decision branches (rest trace catalog at 293).
+- Line coverage: 95.74% (6723/7022).
+- Infection covered MSI: 100% on `MonthStatementBuilder` (scoped `--filter`).
+
 ## Stripe refresh and errors (P7)
 
 - Branch: `publication/p07-stripe-refresh-and-errors` (stacked on `publication/p06-bank-disconnect-reset`).

@@ -112,6 +112,9 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertSame('', $redacted->rows[0]->getCounterparty());
         $this->assertSame(250, $redacted->rows[0]->getAmountCents());
         $this->assertSame('2026-01-02', $redacted->rows[0]->getPostedOn());
+        $later = LedgerLine::builder()->postedOn('2026-01-20')->amountCents(75)->category('fuel')->categoryFlow('expense')->build();
+        $sorted = $builder->build([$line, $other, $later], DisplayMode::Redacted, $month);
+        $this->assertSame(['2026-01-20', '2026-01-02'], array_map(static fn (LedgerLine $row) => $row->getPostedOn(), $sorted->rows));
         $summary = $builder->build([
             $line,
             LedgerLine::builder()->postedOn('2026-01-03')->amountCents(50)->category('dining')->categoryFlow('income')->build(),

@@ -33,7 +33,7 @@ final class MonthStatementBuilder
     public function build(array $lines, DisplayMode $mode, MonthWindow $month, ?KingdomRecord $kingdom = null): MonthStatement
     {
         return DenariusLog::trace(__METHOD__, function () use ($lines, $mode, $month, $kingdom): MonthStatement {
-            $inMonth = $this->inMonth($lines, $month);
+            $inMonth = $this->newestFirst($this->inMonth($lines, $month));
             $minLines = $this->settings->clampSummarizedCategoryMinLines(
                 $kingdom?->getSummarizedCategoryMinLines()
                     ?? \Amtgard\Denarius\Domain\Statement\Publication\PublicationPlatformLimits::DEFAULT_SUMMARIZED_CATEGORY_MIN_LINES,
@@ -58,6 +58,19 @@ final class MonthStatementBuilder
             }
 
             return $inMonth;
+        });
+    }
+
+    /**
+     * @param list<LedgerLine> $lines
+     * @return list<LedgerLine>
+     */
+    private function newestFirst(array $lines): array
+    {
+        return DenariusLog::trace(__METHOD__, static function () use ($lines): array {
+            usort($lines, static fn (LedgerLine $a, LedgerLine $b): int => strcmp($b->getPostedOn(), $a->getPostedOn()));
+
+            return $lines;
         });
     }
 }
