@@ -287,7 +287,7 @@ final class ServiceWorkerArrange
             }
         };
         $catalog = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog();
-        $reader = new CachingMonthReader($origin, $cache, $catalog);
+        $reader = new CachingMonthReader($origin, $cache, new MonthCacheWriter($cache, $catalog));
         $reader->statement($kingdomRow, $month);
         $reader->statement($kingdomRow, $month);
         $cache->set('denarius:month:4:0:all:2026-09:taxonomy/v1', 'not-json', 10);
@@ -304,7 +304,7 @@ final class ServiceWorkerArrange
                 );
             }
         };
-        $cachedSummary = new CachingMonthReader($summaryOrigin, $cache, $catalog);
+        $cachedSummary = new CachingMonthReader($summaryOrigin, $cache, new MonthCacheWriter($cache, $catalog));
         $cachedSummary->statement($summaryKingdom, $month);
         $cachedSummary->statement($summaryKingdom, $month);
 

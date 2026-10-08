@@ -101,7 +101,10 @@ use Amtgard\Denarius\Service\Kingdom\KingdomPublicationLineSource;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Kingdom\ManagerKingdomPageQuery;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
+use Amtgard\Denarius\Service\Month\MonthCacheKeys;
+use Amtgard\Denarius\Service\Month\MonthCacheWriter;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
+use Amtgard\Denarius\Service\Month\MonthStatementCacheCodec;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Service\Access\AccountNavBuilder;
 use Amtgard\Denarius\Service\Access\SiteNavBuilder;
@@ -425,10 +428,18 @@ return [
         new DateTimeImmutable('now'),
     ),
     MonthInvalidator::class => fn (RedisKeyValueStore $store) => new MonthInvalidator($store),
+    MonthStatementCacheCodec::class => fn () => new MonthStatementCacheCodec(),
+    MonthCacheWriter::class => fn (ContainerInterface $c) => new MonthCacheWriter(
+        $c->get(RedisKeyValueStore::class),
+        $c->get(TaxonomyCatalog::class),
+        new MonthCacheKeys(),
+        $c->get(MonthStatementCacheCodec::class),
+    ),
     MonthReader::class => fn (ContainerInterface $c) => new CachingMonthReader(
         $c->get(KingdomPageQuery::class),
         $c->get(RedisKeyValueStore::class),
-        $c->get(TaxonomyCatalog::class),
+        $c->get(MonthCacheWriter::class),
+        $c->get(MonthStatementCacheCodec::class),
     ),
     StatementPresenterRegistry::class => fn () => StatementPresenterRegistry::standard(),
     VisibilityPolicyRegistry::class => fn () => VisibilityPolicyRegistry::standard(),

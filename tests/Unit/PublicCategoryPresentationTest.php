@@ -166,7 +166,7 @@ final class PublicCategoryPresentationTest extends AmtgardTestCase
 
         $origin = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $store = new ArrayStore();
-        $reader = new CachingMonthReader($origin, $store, TaxonomyCatalogFixture::load());
+        $reader = new CachingMonthReader($origin, $store, new \Amtgard\Denarius\Service\Month\MonthCacheWriter($store, TaxonomyCatalogFixture::load()));
 
         $statement = $reader->statement($kingdom, new MonthWindow(2026, 9));
         $this->assertNotEmpty($statement->rows);
