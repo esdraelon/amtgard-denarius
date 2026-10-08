@@ -316,6 +316,7 @@ final class Strategies
             $months ?? self::months(),
             new \Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator($catalog),
             $catalog,
+            new PublicationEmbargoCalculator(),
             $now ?? new \DateTimeImmutable('2026-10-01'),
         );
     }

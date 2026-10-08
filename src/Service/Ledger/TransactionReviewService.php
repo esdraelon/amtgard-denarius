@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Ledger;
 
+use Amtgard\Denarius\Domain\Statement\MonthWindow;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator;
@@ -16,7 +19,7 @@ use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInt
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
-/** Facade: manager publish, category override, and withhold actions on transaction rows. */
+/** Facade: manager publish, category override, withhold, and batch publication selections on transaction rows. */
 final class TransactionReviewService
 {
     public function __construct(
@@ -25,6 +28,7 @@ final class TransactionReviewService
         private readonly MonthInvalidator $months,
         private readonly ReviewCategoryValidator $categoryValidator,
         private readonly TaxonomyCatalog $catalog,
+        private readonly PublicationEmbargoCalculator $embargo,
         private readonly \DateTimeImmutable $now,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
@@ -83,12 +87,40 @@ final class TransactionReviewService
 
                 return null;
             }
-            $stamp = $this->now->format('Y-m-d\TH:i:sP');
-            $this->transactions->markPublished((int) $kingdom->getId(), $tellerTransactionId, $stamp);
+            $this->markPublished($kingdom, $tellerTransactionId, $method);
             $this->months->forget((int) $kingdom->getId());
-            DenariusLog::infoBranch('transaction_review_published', $method, [
-                'teller_transaction_id' => $tellerTransactionId,
-                'published_at' => $stamp,
+
+            return null;
+        });
+    }
+
+    /** Batch publish/redact/embargo update; validates every id before writing and skips rows that cannot publish yet. */
+    public function applyPublicationSelections(KingdomRecord $kingdom, PublicationSelection ...$selections): void
+    {
+        $method = __METHOD__;
+
+        DenariusLog::trace($method, function () use ($method, $kingdom, $selections): mixed {
+            if ($selections === []) {
+                DenariusLog::debugBranch('transaction_review_selections_empty', $method, []);
+
+                return null;
+            }
+            $rows = array_map(fn (PublicationSelection $selection): TransactionRecord => $this->requireReviewable($kingdom, $selection->tellerTransactionId()), $selections);
+            $touched = [];
+            foreach ($selections as $index => $selection) {
+                $row = $this->applySelectionFlags($kingdom, $rows[$index], $selection);
+                $month = MonthWindow::fromQuery(substr($row->getPostedOn(), 0, 7), $this->now);
+                $touched[$month->key()] = $month;
+                if ($selection->wantsPublished()) {
+                    $this->publishSelected($kingdom, $row, $method);
+                } elseif ($this->isPublished($row)) {
+                    $this->markWithheld($kingdom, $row->getTellerTransactionId(), $method);
+                }
+            }
+            $this->months->invalidate((int) $kingdom->getId(), ...array_values($touched));
+            DenariusLog::infoBranch('transaction_review_selections_applied', $method, [
+                'row_count' => count($selections),
+                'months' => array_keys($touched),
             ]);
 
             return null;
@@ -108,8 +140,73 @@ final class TransactionReviewService
 
                 return null;
             }
-            $this->transactions->markUnpublished((int) $kingdom->getId(), $tellerTransactionId);
+            $this->markWithheld($kingdom, $tellerTransactionId, $method);
             $this->months->forget((int) $kingdom->getId());
+
+            return null;
+        });
+    }
+
+    private function applySelectionFlags(KingdomRecord $kingdom, TransactionRecord $row, PublicationSelection $selection): TransactionRecord
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $row, $selection): TransactionRecord {
+            $flags = PublicationFlags::parse($row->getPublicationFlags())
+                ->withManagerRedactDescription($selection->redact())
+                ->withManagerEmbargoWaived(!$selection->embargo());
+            $publishableAfter = $selection->embargo()
+                ? $this->embargo->publishableAfter($row->getPostedOn(), $kingdom->getEmbargoDays(), $this->now, false)
+                : $this->now->setTime(0, 0)->format('c');
+            $updated = TransactionRecordRebuilder::from($row)
+                ->publishableAfter($publishableAfter)
+                ->publicationFlags($flags->encode())
+                ->build();
+            $this->transactions->upsert($updated);
+
+            return $updated;
+        });
+    }
+
+    private function publishSelected(KingdomRecord $kingdom, TransactionRecord $row, string $method): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdom, $row, $method): mixed {
+            $id = $row->getTellerTransactionId();
+            if ($this->isPublished($row)) {
+                return null;
+            }
+            if (!$this->embargoOpen($row)) {
+                DenariusLog::debugBranch('transaction_review_skipped_embargo', $method, ['teller_transaction_id' => $id]);
+
+                return null;
+            }
+            if ($row->getCategory() === 'uncategorized' && !$this->isHard($row)) {
+                DenariusLog::debugBranch('transaction_review_skipped_uncategorized', $method, ['teller_transaction_id' => $id]);
+
+                return null;
+            }
+            $this->markPublished($kingdom, $id, $method);
+
+            return null;
+        });
+    }
+
+    private function markPublished(KingdomRecord $kingdom, string $tellerTransactionId, string $method): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdom, $tellerTransactionId, $method): mixed {
+            $stamp = $this->now->format('Y-m-d\TH:i:sP');
+            $this->transactions->markPublished((int) $kingdom->getId(), $tellerTransactionId, $stamp);
+            DenariusLog::infoBranch('transaction_review_published', $method, [
+                'teller_transaction_id' => $tellerTransactionId,
+                'published_at' => $stamp,
+            ]);
+
+            return null;
+        });
+    }
+
+    private function markWithheld(KingdomRecord $kingdom, string $tellerTransactionId, string $method): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdom, $tellerTransactionId, $method): mixed {
+            $this->transactions->markUnpublished((int) $kingdom->getId(), $tellerTransactionId);
             DenariusLog::infoBranch('transaction_review_withheld', $method, [
                 'teller_transaction_id' => $tellerTransactionId,
             ]);

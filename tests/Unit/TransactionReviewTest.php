@@ -6,6 +6,7 @@ namespace Amtgard\Denarius\Tests\Unit;
 
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
@@ -368,6 +369,105 @@ final class TransactionReviewTest extends AmtgardTestCase
         $rows = Strategies::reviewQueue($transactions, $kingdom['accounts'])->rowsForManage($kingdom['record'], new MonthWindow(2026, 9), true);
         $this->assertCount(2, $rows);
         $this->assertSame('low', $rows[0]['tellerTransactionId']);
+    }
+
+    public function testApplyPublicationSelectionsUpdatesFlagsPublishesAndInvalidatesTouchedMonths(): void
+    {
+        $kingdom = $this->kingdomWithAccount();
+        $transactions = $kingdom['transactions'];
+        $kingdomId = (int) $kingdom['record']->getId();
+        $seed = static function (string $id, string $posted, string $category, string $after, ?string $publishedAt = null) use ($transactions, $kingdomId): void {
+            $transactions->upsert(TransactionRecord::builder()
+                ->kingdomId($kingdomId)
+                ->tellerTransactionId($id)
+                ->tellerAccountId('acc')
+                ->postedOn($posted)
+                ->amountCents(-100)
+                ->category($category)
+                ->publishableAfter($after)
+                ->publishedAt($publishedAt)
+                ->build());
+        };
+        $seed('open', '2026-09-01', 'expense.feast_groceries', '2026-09-05T00:00:00+00:00');
+        $seed('waive', '2026-09-20', 'expense.feast_groceries', '2026-09-24T23:59:59+00:00');
+        $seed('hold', '2026-09-20', 'expense.feast_groceries', '2026-09-24T23:59:59+00:00');
+        $seed('uncat', '2026-09-02', 'uncategorized', '2026-09-05T00:00:00+00:00');
+        $seed('live', '2026-08-10', 'expense.feast_groceries', '2026-08-14T00:00:00+00:00', '2026-08-15T00:00:00+00:00');
+        $cache = new ArrayStore();
+        $version = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog()->taxonomyVersion();
+        $warm = static fn (string $month): string => sprintf('denarius:month:%d:less_redacted:%s:%s', $kingdomId, $month, $version);
+        foreach (['2026-07', '2026-08', '2026-09'] as $month) {
+            $cache->setPersistent($warm($month), '{}');
+        }
+        $reviews = Strategies::reviewService($transactions, $kingdom['accounts'], Strategies::months($cache, null, $transactions), new \DateTimeImmutable('2026-09-21T12:00:00+00:00'));
+        MethodLogAssert::reset();
+
+        $reviews->applyPublicationSelections(
+            $kingdom['record'],
+            new PublicationSelection('open', true, false, true),
+            new PublicationSelection('waive', true, false, false),
+            new PublicationSelection('hold', true, false, true),
+            new PublicationSelection('uncat', false, true, true),
+            new PublicationSelection('live', false, false, true),
+        );
+
+        $this->assertSame('2026-09-21T12:00:00+00:00', $transactions->findByTellerTransactionId('open')?->getPublishedAt());
+        $waived = $transactions->findByTellerTransactionId('waive');
+        $this->assertNotNull($waived?->getPublishedAt());
+        $this->assertSame('2026-09-21T00:00:00+00:00', $waived?->getPublishableAfter());
+        $this->assertTrue(PublicationFlags::parse($waived?->getPublicationFlags())->isManagerEmbargoWaived());
+        $held = $transactions->findByTellerTransactionId('hold');
+        $this->assertNull($held?->getPublishedAt());
+        $this->assertFalse(PublicationFlags::parse($held?->getPublicationFlags())->isManagerEmbargoWaived());
+        $uncat = $transactions->findByTellerTransactionId('uncat');
+        $this->assertNull($uncat?->getPublishedAt());
+        $this->assertTrue(PublicationFlags::parse($uncat?->getPublicationFlags())->isManagerRedactDescription());
+        $this->assertNull($transactions->findByTellerTransactionId('live')?->getPublishedAt());
+        $this->assertNull($cache->get($warm('2026-09')));
+        $this->assertNull($cache->get($warm('2026-08')));
+        $this->assertSame('{}', $cache->get($warm('2026-07')));
+
+        $method = TransactionReviewService::class . '::applyPublicationSelections';
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Info, 'transaction_review_selections_applied', $method);
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Info, 'transaction_review_published', $method);
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Info, 'transaction_review_withheld', $method);
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_skipped_embargo', $method);
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_skipped_uncategorized', $method);
+
+        $rows = Strategies::reviewQueue($transactions, $kingdom['accounts'], new \DateTimeImmutable('2026-09-21T12:00:00+00:00'))
+            ->rowsForManage($kingdom['record'], new MonthWindow(2026, 9));
+        $byId = array_column($rows, null, 'tellerTransactionId');
+        $this->assertSame(['publish' => true, 'redact' => false, 'embargo' => false], array_intersect_key($byId['open'], ['publish' => 1, 'redact' => 1, 'embargo' => 1]));
+        $this->assertSame(['publish' => false, 'redact' => true, 'embargo' => false], array_intersect_key($byId['uncat'], ['publish' => 1, 'redact' => 1, 'embargo' => 1]));
+        $this->assertTrue($byId['hold']['embargo']);
+    }
+
+    public function testApplyPublicationSelectionsValidatesEveryRowBeforeWriting(): void
+    {
+        $kingdom = $this->kingdomWithAccount();
+        $this->seedReviewRow($kingdom, 'valid');
+        $cache = new ArrayStore();
+        $warmKey = sprintf(
+            'denarius:month:%d:less_redacted:2026-09:%s',
+            $kingdom['record']->getId(),
+            \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog()->taxonomyVersion(),
+        );
+        $cache->setPersistent($warmKey, '{}');
+        $reviews = Strategies::reviewService($kingdom['transactions'], $kingdom['accounts'], Strategies::months($cache, null, $kingdom['transactions']));
+        MethodLogAssert::reset();
+        $reviews->applyPublicationSelections($kingdom['record']);
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_selections_empty', TransactionReviewService::class . '::applyPublicationSelections');
+        $this->assertSame('{}', $cache->get($warmKey));
+        try {
+            $reviews->applyPublicationSelections(
+                $kingdom['record'],
+                new PublicationSelection('valid', false, true, false),
+                new PublicationSelection('missing', true, false, false),
+            );
+            $this->fail('Expected missing row rejection.');
+        } catch (\InvalidArgumentException) {
+            $this->assertNull($kingdom['transactions']->findByTellerTransactionId('valid')?->getPublicationFlags());
+        }
     }
 
     public function testUpdateWithPublishRejectsUncategorized(): void

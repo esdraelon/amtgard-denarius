@@ -296,7 +296,12 @@ final class RestDomainArrange
             0,
             'uncategorized',
             'Expense · Uncategorized',
+            $selection = new \Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection('review-tx', false, true, true),
         ))->view();
+        $selection->tellerTransactionId();
+        $selection->redact();
+        $selection->embargo();
+        $selection->wantsPublished();
         $catalog = (new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader(dirname(__DIR__, 2), 'data/taxonomy'))->load();
         $catalog->assignableDefinitions();
         (new \Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator($catalog))->assertAssignable('expense.feast_groceries', -100);

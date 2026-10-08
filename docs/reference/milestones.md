@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Apply publication selections (P5a)
+
+- Branch: `publication/p05a-apply-publication-selections` (stacked on `publication/p04-review-month-pagination`).
+- `PublicationSelection` value object carries publish / redact / embargo per row; `TransactionReviewRow::view()` exposes the current state (`publish` = published, `redact` = manager description redaction, `embargo` = still inside the window). `TransactionReviewService::applyPublicationSelections` validates every id first, writes `manager_redact_description` and `manager_embargo_waived` (waived rows become publishable today; kept rows get the standard `publishable_after`), publishes rows that want it (redact implies publish), withholds the rest, and invalidates only the touched months once. Rows still embargoed or uncategorized (non-HARD) are skipped with a log rather than aborting the batch. The taxonomy `update` category method is unchanged.
+- Line coverage: 95.60% (6622/6927).
+- Infection covered MSI: 94% on `TransactionReviewService`, `TransactionReviewQueue`, `PublicationSelection`, `TransactionReviewRow` (scoped `--filter`; escapes are log-context array items).
+- Log-tested branches: `transaction_review_selections_applied`, `transaction_review_selections_empty`, `transaction_review_skipped_embargo`, `transaction_review_skipped_uncategorized`, plus `transaction_review_published` / `transaction_review_withheld` from the batch method (`TransactionReviewTest`).
+
 ## Review month pagination (P4)
 
 - Branch: `publication/p04-review-month-pagination` (stacked on `publication/p03-manager-redact-embargo-flags` @ `598e23b`). Stash reconcile slice from `backup/wip-pre-taxonomy`.

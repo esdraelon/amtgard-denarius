@@ -207,6 +207,11 @@ final class ServiceWorkerArrange
                 ->publishableAfter('2026-09-01T00:00:00+00:00')
                 ->build());
             $reviews->publish($reviewKingdom, 'hard-review');
+            $reviews->applyPublicationSelections(
+                $reviewKingdom,
+                new \Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection('review-tx', true, false, false),
+                new \Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection('hard-review', false, false, true),
+            );
             $reviewQueue = Strategies::reviewQueue($transactions, $accounts, new \DateTimeImmutable('2026-10-01'));
             $reviewQueue->rowsForManage($reviewKingdom, $reviewQueue->reviewMonth($reviewKingdom, ''), true);
             Strategies::categorySearch()->search('site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);

@@ -28,7 +28,7 @@ final class TracedRestMethodsTest extends AmtgardTestCase
         RestDomainArrange::exerciseAll();
 
         $scope = $this->methodsInRestScope();
-        $this->assertCount(286, $scope);
+        $this->assertCount(292, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);
