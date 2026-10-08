@@ -10,8 +10,13 @@ services:
       - "41193:9003"
     volumes:
       - .:/var/www/denarius.amtgard.com
+    env_file:
+      - .env
     environment:
       - ENVIRONMENT=DEV
+    networks:
+      - amtgard-denarius-net
+      - amtgard-denarius-shared
     container_name: amtgard-denarius
     hostname: amtgard-denarius
     depends_on:
@@ -63,3 +68,6 @@ volumes:
 networks:
   amtgard-denarius-net:
     name: amtgard-denarius-net
+  amtgard-denarius-shared:
+    name: amtgard-denarius-shared
+    external: true
