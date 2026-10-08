@@ -161,7 +161,25 @@ use Slim\App;
 use Twig\Environment as TwigEnvironment;
 use Twig\Loader\FilesystemLoader;
 
-$denariusEnvironment = $_ENV['ENVIRONMENT'] ?? 'PROD';
+if (!function_exists('denariusEnv')) {
+    /** Process env (php-fpm pool, Docker, shell) wins over Dotenv values in $_ENV. */
+    function denariusEnv(string $key): string
+    {
+        $fromGetenv = getenv($key);
+        if (is_string($fromGetenv) && $fromGetenv !== '') {
+            return $fromGetenv;
+        }
+
+        $fromSuperglobal = $_ENV[$key] ?? null;
+        if (is_string($fromSuperglobal) && $fromSuperglobal !== '') {
+            return $fromSuperglobal;
+        }
+
+        return '';
+    }
+}
+
+$denariusEnvironment = denariusEnv('ENVIRONMENT') !== '' ? denariusEnv('ENVIRONMENT') : 'PROD';
 $outboundDefinitions = __DIR__ . '/container/outbound.php';
 if ($denariusEnvironment === 'DEV_INTEG') {
     $outboundDefinitions = __DIR__ . '/container/integ/outbound.php';
@@ -229,11 +247,11 @@ return array_merge(
         $c->get(TellerApi::class),
         $c->get(TellerWebhookVerifier::class),
         TellerLedgerProvider::actions(),
-        new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? '']),
-        $_ENV['TELLER_APPLICATION_ID'] ?? '',
-        $_ENV['TELLER_ENVIRONMENT'] ?? 'sandbox',
+        new PresentCredentials([denariusEnv('TELLER_APPLICATION_ID')]),
+        denariusEnv('TELLER_APPLICATION_ID'),
+        denariusEnv('TELLER_ENVIRONMENT') !== '' ? denariusEnv('TELLER_ENVIRONMENT') : 'sandbox',
     ),
-    StripeWebhookVerifier::class => fn () => new StripeWebhookVerifier($_ENV['STRIPE_WEBHOOK_SECRET'] ?? ''),
+    StripeWebhookVerifier::class => fn () => new StripeWebhookVerifier(denariusEnv('STRIPE_WEBHOOK_SECRET')),
     StripeTransactionRefreshWait::class => fn (ContainerInterface $c) => new StripeTransactionRefreshWait(
         $c->get(StripeApi::class),
     ),
@@ -241,7 +259,7 @@ return array_merge(
         $c->get(StripeApi::class),
         $c->get(StripeWebhookVerifier::class),
         StripeLedgerProvider::actions(),
-        new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? '']),
+        new PresentCredentials([denariusEnv('STRIPE_SECRET_KEY')]),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
         $c->get(StripeTransactionRefreshWait::class),
         $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
@@ -251,13 +269,13 @@ return array_merge(
         $c->get(PlaidApi::class),
         $c->get(PlaidWebhookVerifier::class),
         PlaidLedgerProvider::actions(),
-        new PresentCredentials([$_ENV['PLAID_CLIENT_ID'] ?? '', $_ENV['PLAID_SECRET'] ?? '']),
+        new PresentCredentials([denariusEnv('PLAID_CLIENT_ID'), denariusEnv('PLAID_SECRET')]),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
     ),
     LedgerProviderRegistry::class => fn (ContainerInterface $c) => (new ConfiguredLedgerProviders([
-        new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? ''])),
-        new ProviderAdmission($c->get(PlaidLedgerProvider::class), new PresentCredentials([$_ENV['PLAID_CLIENT_ID'] ?? '', $_ENV['PLAID_SECRET'] ?? ''])),
-        new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? ''])),
+        new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([denariusEnv('STRIPE_SECRET_KEY')])),
+        new ProviderAdmission($c->get(PlaidLedgerProvider::class), new PresentCredentials([denariusEnv('PLAID_CLIENT_ID'), denariusEnv('PLAID_SECRET')])),
+        new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([denariusEnv('TELLER_APPLICATION_ID')])),
         new ProviderAdmission($c->get(SimpleFinLedgerProvider::class), new PresentCredentials([
             $_ENV['SIMPLEFIN_APP_ID'] ?? '',
             $_ENV['SIMPLEFIN_APP_TOKEN'] ?? '',
@@ -372,7 +390,7 @@ return array_merge(
         $c->get(TransactionPublicationApplier::class),
         $c->get(MicroDepositPairReconciler::class),
     ),
-    TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier($_ENV['TELLER_WEBHOOK_SECRET'] ?? ''),
+    TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier(denariusEnv('TELLER_WEBHOOK_SECRET')),
     ProviderWebhookHandler::class => fn (ContainerInterface $c) => new ProviderWebhookHandler(
         $c->get(LedgerProviderRegistry::class),
         $c->get(KingdomRepositoryInterface::class),

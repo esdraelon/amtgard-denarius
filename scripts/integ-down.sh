@@ -75,6 +75,9 @@ docker exec "$APP_CONTAINER" bash -lc "
     sed -i '/^env\[SESSION_REDIS_HOST\]/d' \"\$POOL\"
     sed -i '/^env\[REDIS_HOST\]/d' \"\$POOL\"
     sed -i '/^env\[ENVIRONMENT\]/d' \"\$POOL\"
+    for key in TELLER_APPLICATION_ID TELLER_ENVIRONMENT TELLER_WEBHOOK_SECRET STRIPE_SECRET_KEY STRIPE_PUBLISHABLE_KEY STRIPE_WEBHOOK_SECRET PLAID_CLIENT_ID PLAID_SECRET; do
+        sed -i \"/^env\\\\[\${key}\\\\]/d\" \"\$POOL\"
+    done
     echo \"env[ENVIRONMENT] = DEV\" >> \"\$POOL\"
     echo \"env[DB_HOST] = ${DEV_DB_HOST}\" >> \"\$POOL\"
     echo \"env[DB_NAME] = ${DEV_DB_NAME}\" >> \"\$POOL\"

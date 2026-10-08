@@ -628,3 +628,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ webhooks (D3)
+
+- Branch: `stack/denarius-integ-d3-webhooks`
+- `WebhooksTest`: live `POST /webhooks/teller`, `/webhooks/stripe`, and `/webhooks/plaid` with signatures from `WebhookSignatureFixtures` (verifier-aligned HMAC; Plaid JWT via `IntegPlaidVerificationKey` / `IntegPlaidApi`). Mode B: fresh `CookieJar`, no session cookies. `IntegHttp::postRaw` sends signed JSON bodies. Harness: integ compose webhook secrets (`whsec_test`); `integ-up.sh` wires ledger provider + webhook env into php-fpm; skip body parsing on `/webhooks/*`; `denariusEnv()` prefers process env over Dotenv for integ overlays. Route matrix: three webhook rows **y** (9/32 in-scope, 28.1%).
+- Line coverage: 95.54% (7030/7358).
+- Infection: not run (small `src/` harness fixes; prior gate holds).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).

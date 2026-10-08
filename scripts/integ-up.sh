@@ -103,25 +103,42 @@ compose_sessions up -d
 echo "==> Applying integ overlay on web stack (${WEB_PROJECT})..."
 compose_web_integ up -d --build --remove-orphans --force-recreate denariusapp
 
-echo "==> Wiring php-fpm env for integ (DB/Redis hosts, ENVIRONMENT)..."
+echo "==> Wiring php-fpm env for integ (DB/Redis, ENVIRONMENT, ledger provider creds)..."
 DB_HOST="$(docker exec "$APP_CONTAINER" printenv DB_HOST || true)"
 DB_NAME="$(docker exec "$APP_CONTAINER" printenv DB_NAME || true)"
 SESSION_REDIS_HOST="$(docker exec "$APP_CONTAINER" printenv SESSION_REDIS_HOST || true)"
-REDIS_HOST="$(docker exec "$APP_CONTAINER" printenv REDIS_HOST || true)"
+INTEG_FPM_ENV_KEYS=(
+    DB_HOST
+    DB_NAME
+    SESSION_REDIS_HOST
+    REDIS_HOST
+    TELLER_APPLICATION_ID
+    TELLER_ENVIRONMENT
+    TELLER_WEBHOOK_SECRET
+    STRIPE_SECRET_KEY
+    STRIPE_PUBLISHABLE_KEY
+    STRIPE_WEBHOOK_SECRET
+    PLAID_CLIENT_ID
+    PLAID_SECRET
+)
+FPM_ENV_LINES=( 'env[ENVIRONMENT] = DEV_INTEG' )
+for key in "${INTEG_FPM_ENV_KEYS[@]}"; do
+    value="$(docker exec "$APP_CONTAINER" printenv "$key" || true)"
+    if [[ "$key" == "TELLER_ENVIRONMENT" && "$value" == "" ]]; then
+        value="sandbox"
+    fi
+    FPM_ENV_LINES+=( "env[${key}] = ${value}" )
+done
 docker exec "$APP_CONTAINER" bash -lc "
     POOL=/etc/php/8.4/fpm/pool.d/www.conf
-    sed -i '/^env\[DB_HOST\]/d' \"\$POOL\"
-    sed -i '/^env\[DB_NAME\]/d' \"\$POOL\"
-    sed -i '/^env\[SESSION_REDIS_HOST\]/d' \"\$POOL\"
-    sed -i '/^env\[REDIS_HOST\]/d' \"\$POOL\"
-    sed -i '/^env\[ENVIRONMENT\]/d' \"\$POOL\"
-    echo \"env[ENVIRONMENT] = DEV_INTEG\" >> \"\$POOL\"
-    echo \"env[DB_HOST] = ${DB_HOST}\" >> \"\$POOL\"
-    echo \"env[DB_NAME] = ${DB_NAME}\" >> \"\$POOL\"
-    echo \"env[SESSION_REDIS_HOST] = ${SESSION_REDIS_HOST}\" >> \"\$POOL\"
-    echo \"env[REDIS_HOST] = ${REDIS_HOST}\" >> \"\$POOL\"
-    service php8.4-fpm restart
+    for key in ENVIRONMENT DB_HOST DB_NAME SESSION_REDIS_HOST REDIS_HOST TELLER_APPLICATION_ID TELLER_ENVIRONMENT TELLER_WEBHOOK_SECRET STRIPE_SECRET_KEY STRIPE_PUBLISHABLE_KEY STRIPE_WEBHOOK_SECRET PLAID_CLIENT_ID PLAID_SECRET; do
+        sed -i \"/^env\\\\[\${key}\\\\]/d\" \"\$POOL\"
+    done
 "
+for line in "${FPM_ENV_LINES[@]}"; do
+    docker exec "$APP_CONTAINER" bash -lc "echo $(printf '%q' "$line") >> /etc/php/8.4/fpm/pool.d/www.conf"
+done
+docker exec "$APP_CONTAINER" service php8.4-fpm restart
 
 echo "==> Flushing integ session Redis..."
 SESSION_REDIS_DB="$(docker exec "$APP_CONTAINER" printenv SESSION_REDIS_DB || echo 1)"

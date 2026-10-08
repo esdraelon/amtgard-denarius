@@ -39,6 +39,7 @@
         <env name="TELLER_APPLICATION_ID" value="app_test"/>
         <env name="TELLER_ENVIRONMENT" value="sandbox"/>
         <env name="TELLER_WEBHOOK_SECRET" value="whsec_test"/>
+        <env name="STRIPE_WEBHOOK_SECRET" value="whsec_test"/>
         <env name="TELLER_CERT_PATH" value=""/>
         <env name="TELLER_KEY_PATH" value=""/>
     </php>

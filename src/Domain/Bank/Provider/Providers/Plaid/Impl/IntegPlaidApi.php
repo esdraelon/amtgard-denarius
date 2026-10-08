@@ -16,21 +16,7 @@ final class IntegPlaidApi implements PlaidApi
     public function __construct()
     {
         $entered = DenariusLog::enter(__METHOD__);
-        $key = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
-        if ($key === false) {
-            throw new \RuntimeException('Unable to create integ Plaid verification key.');
-        }
-        $details = openssl_pkey_get_details($key);
-        $this->verificationKey = [
-            'alg' => 'ES256',
-            'crv' => 'P-256',
-            'kid' => 'integ_plaid_kid',
-            'kty' => 'EC',
-            'use' => 'sig',
-            'x' => rtrim(strtr(base64_encode($details['ec']['x']), '+/', '-_'), '='),
-            'y' => rtrim(strtr(base64_encode($details['ec']['y']), '+/', '-_'), '='),
-            'expired_at' => null,
-        ];
+        $this->verificationKey = IntegPlaidVerificationKey::jwk();
     }
 
     public function institutions(string $query): array
