@@ -563,3 +563,11 @@ Suggested stack (one branch each):
 - Line coverage: 95.64% (6859/7172; no `src/` change).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ wire hosts (C2)
+
+- Branch: `stack/denarius-integ-c2-integ-wire-hosts`
+- IDP-style `docker/compose.integ.yml` overlay (`ENVIRONMENT=DEV_INTEG`, `DB_HOST=amtgard-denarius-db-integ`, `SESSION_REDIS_HOST=amtgard-denarius-sessions-integ`) and wired `scripts/integ-up.sh` / `integ-down.sh` / `integ.sh` (infra up, php-fpm env, migrate + placeholder `tests/Integration/seed.php`, flush integ session Redis only; down restores dev from `.env`).
+- Line coverage: 95.64% (6859/7172; no `src/` change).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).

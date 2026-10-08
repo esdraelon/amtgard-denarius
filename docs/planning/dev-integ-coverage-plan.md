@@ -17,7 +17,7 @@ Companion to [dev-integ-coverage-checklist.md](./dev-integ-coverage-checklist.md
 | Routes | 36 in `config/routes.php` |
 | HTTP integ | **None** — no `phpunit.integ.xml`, no `composer integ` |
 | `tests/Integration/` | 3 classes, MariaDB/persistence only (included in `composer test`) |
-| Docker | `scripts/dev-up.sh`; integ DB/Redis in `docker/compose.integ-infra.yml` (C1); web overlay pending C2 |
+| Docker | `scripts/dev-up.sh`; integ DB/Redis in `docker/compose.integ-infra.yml` (C1); web overlay + `scripts/integ*.sh` (C2) |
 
 ## Architecture target
 
