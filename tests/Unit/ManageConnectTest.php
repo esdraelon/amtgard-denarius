@@ -15,6 +15,7 @@ use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
@@ -38,6 +39,8 @@ use Twig\Loader\FilesystemLoader;
 final class ManageConnectTest extends AmtgardTestCase
 {
     private ManagerController $manager;
+
+    private MemoryTransactions $transactions;
 
     protected function setUp(): void
     {
@@ -78,6 +81,7 @@ final class ManageConnectTest extends AmtgardTestCase
             }, new AlwaysReady(), new PreviousMonthWindow(new DateTimeImmutable('2026-09-28')), new SimpleFinApplicationConfig('amtgard_denarius_dev', 'token', 'https://bridge.simplefin.org/simplefin')),
         ]);
         $transactions = new MemoryTransactions();
+        $this->transactions = $transactions;
         $this->manager = new ManagerController(
             new SessionAuthStore('test_session'),
             $permissions,
@@ -157,6 +161,45 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::ledgerSyncFeedback(),
         );
         $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), 'golden-plains')->getStatusCode());
+    }
+
+    public function testReviewQueueDefaultsToLatestMonthAndRedirectsKeepMonth(): void
+    {
+        $this->transactions->upsert(TransactionRecord::builder()
+            ->kingdomId(1)
+            ->tellerTransactionId('aug-row')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-08-14')
+            ->amountCents(-100)
+            ->description('August supplies')
+            ->category('expense.feast_groceries')
+            ->publishableAfter('2026-08-01T00:00:00+00:00')
+            ->build());
+
+        $latest = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
+        $this->assertStringContainsString('Showing transactions posted in 2026-08.', $latest);
+        $this->assertStringContainsString('August supplies', $latest);
+        $this->assertStringContainsString('review_month=2026-07', $latest);
+        $this->assertStringContainsString('review_month=2026-09', $latest);
+
+        $july = $this->body($this->manager->show(
+            $this->request('GET', '/manage/golden-plains')->withQueryParams(['review_month' => '2026-07', 'uncategorized' => '1']),
+            new Response(),
+            'golden-plains',
+        ));
+        $this->assertStringContainsString('Showing transactions posted in 2026-07.', $july);
+        $this->assertStringContainsString('No transactions on published accounts for this month.', $july);
+        $this->assertStringContainsString('review_month=2026-06&amp;uncategorized=1', $july);
+
+        $published = $this->manager->publishTransaction($this->request('POST', '/manage/golden-plains/transactions/publish', [
+            'csrf' => 'token',
+            'teller_transaction_id' => 'aug-row',
+            'review_month' => '2026-08',
+        ]), new Response(), 'golden-plains');
+        $this->assertSame('/manage/golden-plains?review_month=2026-08', $published->getHeaderLine('Location'));
+
+        $refreshed = $this->manager->refresh($this->request('POST', '/manage/golden-plains/refresh', ['csrf' => 'token']), new Response(), 'golden-plains');
+        $this->assertSame('/manage/golden-plains', $refreshed->getHeaderLine('Location'));
     }
 
     public function testStripeAndPlaidWidgetsRenderFromConnectConfig(): void

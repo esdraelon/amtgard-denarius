@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Review month pagination (P4)
+
+- Branch: `publication/p04-review-month-pagination` (stacked on `publication/p03-manager-redact-embargo-flags` @ `598e23b`). Stash reconcile slice from `backup/wip-pre-taxonomy`.
+- `TransactionReviewQueue::rowsForManage(kingdom, MonthWindow, uncategorizedOnly)` scopes the manage queue to one posted month and keeps the taxonomy uncategorized filter. `reviewMonth` honors `?review_month=YYYY-MM`, else `latestReviewMonth` (latest posted month, current month when empty). `manage.twig` adds previous/next month nav that preserves the filter; per-row taxonomy forms post `review_month`, and `ManagerController::manageRedirect` returns to that month.
+- Line coverage: 95.52% (6545/6852).
+- Infection covered MSI: 93% on `TransactionReviewQueue` (scoped `--filter`); new `ManagerController` lines killed (file-level escapes are pre-existing pattern/CSRF responses).
+- Log-tested branches: `transaction_review_queue_loaded` (now with `month`), `transaction_review_month_current` (`TransactionReviewTest`).
+
 ## Publication docs privacy
 
 - Branch: `publication-docs-privacy` (stacked on `publication-pattern-registry`).

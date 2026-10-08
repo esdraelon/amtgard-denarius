@@ -61,9 +61,10 @@ final class ManagerController
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
-            $uncategorizedOnly = ($request->getQueryParams()['uncategorized'] ?? '') === '1';
+            $params = $request->getQueryParams();
+            $uncategorizedOnly = ($params['uncategorized'] ?? '') === '1';
 
-            return $this->page($response, $kingdom, $this->connects->idle(), $uncategorizedOnly);
+            return $this->page($response, $kingdom, $this->connects->idle(), trim((string) ($params['review_month'] ?? '')), $uncategorizedOnly);
         });
     }
 
@@ -114,7 +115,7 @@ final class ManagerController
                 (int) ($body['embargo_days'] ?? 3),
             );
 
-            return $response->withHeader('Location', '/manage/' . $kingdom->getSlug())->withStatus(302);
+            return $this->manageRedirect($response, $kingdom, '');
         });
     }
 
@@ -136,7 +137,7 @@ final class ManagerController
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->connect($kingdom, $payload);
 
-            return $response->withHeader('Location', '/manage/' . $kingdom->getSlug())->withStatus(302);
+            return $this->manageRedirect($response, $kingdom, '');
         });
     }
 
@@ -161,7 +162,7 @@ final class ManagerController
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->setPublished($kingdom, $flags);
 
-            return $response->withHeader('Location', '/manage/' . $kingdom->getSlug())->withStatus(302);
+            return $this->manageRedirect($response, $kingdom, '');
         });
     }
 
@@ -178,7 +179,7 @@ final class ManagerController
             }
             $this->queue->publishLedger($kingdom->getOrkKingdomId());
 
-            return $response->withHeader('Location', '/manage/' . $kingdom->getSlug())->withStatus(302);
+            return $this->manageRedirect($response, $kingdom, '');
         });
     }
 
@@ -357,13 +358,10 @@ final class ManagerController
                 return $this->html->html($response, 'message.twig', ['title' => 'Cannot update', 'message' => $exception->getMessage()], 400);
             }
 
-            return $response->withHeader('Location', '/manage/' . $kingdom->getSlug())->withStatus(302);
+            return $this->manageRedirect($response, $kingdom, trim((string) ($body['review_month'] ?? '')));
         });
     }
 
-    /**
-     * @param array<string, mixed> $connect
-     */
     /**
      * @param array<string, mixed> $connect
      */
@@ -371,10 +369,12 @@ final class ManagerController
         ResponseInterface $response,
         KingdomRecord $kingdom,
         array $connect,
+        string $requestedMonth = '',
         bool $uncategorizedOnly = false,
     ): ResponseInterface {
-        return DenariusLog::trace(__METHOD__, function () use ($response, $kingdom, $connect, $uncategorizedOnly): ResponseInterface {
-            $reviewQueue = $this->reviewQueue->rowsForManage($kingdom, $uncategorizedOnly);
+        return DenariusLog::trace(__METHOD__, function () use ($response, $kingdom, $connect, $requestedMonth, $uncategorizedOnly): ResponseInterface {
+            $reviewMonth = $this->reviewQueue->reviewMonth($kingdom, $requestedMonth);
+            $reviewQueue = $this->reviewQueue->rowsForManage($kingdom, $reviewMonth, $uncategorizedOnly);
 
             return $this->html->html($response, 'manage.twig', [
                 'csrf' => CsrfToken::issue(),
@@ -382,9 +382,24 @@ final class ManagerController
                 'accounts' => $this->accountViews((int) $kingdom->getId()),
                 'connect' => $connect,
                 'reviewQueue' => $reviewQueue,
+                'reviewMonth' => $reviewMonth->key(),
+                'reviewPrevious' => $reviewMonth->previous()->key(),
+                'reviewNext' => $reviewMonth->next()->key(),
                 'uncategorizedOnly' => $uncategorizedOnly,
                 'ledgerSync' => $this->ledgerSyncFeedback->forManage($kingdom, $reviewQueue !== []),
             ]);
+        });
+    }
+
+    private function manageRedirect(ResponseInterface $response, KingdomRecord $kingdom, string $reviewMonth): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($response, $kingdom, $reviewMonth): ResponseInterface {
+            $url = '/manage/' . $kingdom->getSlug();
+            if ($reviewMonth !== '') {
+                $url .= '?review_month=' . rawurlencode($reviewMonth);
+            }
+
+            return $response->withHeader('Location', $url)->withStatus(302);
         });
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service\Ledger;
 
 use Amtgard\Denarius\Domain\Statement\Line\Money;
+use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationCandidateLine;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionReviewRow;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
@@ -27,14 +28,17 @@ final class TransactionReviewQueue
     /**
      * @return list<array<string, mixed>>
      */
-    public function rowsForManage(KingdomRecord $kingdom, bool $uncategorizedOnly = false): array
+    public function rowsForManage(KingdomRecord $kingdom, MonthWindow $month, bool $uncategorizedOnly = false): array
     {
         $method = __METHOD__;
 
-        return DenariusLog::trace($method, function () use ($method, $kingdom, $uncategorizedOnly): array {
+        return DenariusLog::trace($method, function () use ($method, $kingdom, $month, $uncategorizedOnly): array {
             $asOf = $this->now;
             $built = [];
             foreach ($this->lines->candidates($kingdom) as $line) {
+                if (!$month->contains($line->getPostedOn())) {
+                    continue;
+                }
                 if ($uncategorizedOnly && $line->getCategory() !== 'uncategorized') {
                     continue;
                 }
@@ -55,11 +59,46 @@ final class TransactionReviewQueue
             }
             DenariusLog::debugBranch('transaction_review_queue_loaded', $method, [
                 'kingdom_id' => $kingdom->getId(),
+                'month' => $month->key(),
                 'row_count' => count($built),
                 'uncategorized_only' => $uncategorizedOnly,
             ]);
 
             return $built;
+        });
+    }
+
+    /** Requested `YYYY-MM` when present; otherwise the latest month with review rows. */
+    public function reviewMonth(KingdomRecord $kingdom, string $requested): MonthWindow
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $requested): MonthWindow {
+            if ($requested === '') {
+                return $this->latestReviewMonth($kingdom);
+            }
+
+            return MonthWindow::fromQuery($requested, $this->now);
+        });
+    }
+
+    public function latestReviewMonth(KingdomRecord $kingdom): MonthWindow
+    {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $kingdom): MonthWindow {
+            $latest = '';
+            foreach ($this->lines->candidates($kingdom) as $line) {
+                $key = substr($line->getPostedOn(), 0, 7);
+                if (strcmp($key, $latest) > 0) {
+                    $latest = $key;
+                }
+            }
+            if ($latest === '') {
+                DenariusLog::debugBranch('transaction_review_month_current', $method, [
+                    'kingdom_id' => $kingdom->getId(),
+                ]);
+            }
+
+            return MonthWindow::fromQuery($latest, $this->now);
         });
     }
 

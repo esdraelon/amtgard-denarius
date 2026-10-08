@@ -105,13 +105,21 @@
     {% import "macros.twig" as ui %}
     {% block section_body %}
         <p class="small text-body-secondary">Assign a category before publishing. Auto-matched rows (confidence ≥ 70) can publish directly. Optional patterns never block save or publish.</p>
+        {% set reviewBase = '/manage/' ~ kingdom.slug ~ '?review_month=' %}
+        {% set filterSuffix = uncategorizedOnly ? '&uncategorized=1' : '' %}
+        <div class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary mb-2">
+            {{ ui.btn_secondary('Previous month', reviewBase ~ reviewPrevious ~ filterSuffix) }}
+            <span class="fw-semibold text-denarius-tertiary">{{ reviewMonth }}</span>
+            {{ ui.btn_secondary('Next month', reviewBase ~ reviewNext ~ filterSuffix) }}
+        </div>
         <p class="mb-2">
             {% if uncategorizedOnly %}
-                <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}">Show all rows</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth }}">Show all rows</a>
             {% else %}
-                <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}?uncategorized=1">Uncategorized only (least confident first)</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth }}&amp;uncategorized=1">Uncategorized only (least confident first)</a>
             {% endif %}
         </p>
+        <p class="small text-body-secondary">Showing transactions posted in {{ reviewMonth }}.</p>
         {% if ledgerSync.showImportNotice %}
             {% include 'components/alert.twig' with {
                 variant: 'info',
@@ -134,7 +142,7 @@
         {% if reviewQueue is empty %}
             {% include 'components/alert.twig' with {
                 variant: 'info',
-                message: 'No transactions on published accounts yet.'
+                message: 'No transactions on published accounts for this month.'
             } %}
         {% else %}
             <div class="table-responsive">
@@ -161,6 +169,7 @@
                                     {% set flow = row.amountCents > 0 ? 'income' : (row.amountCents < 0 ? 'expense' : 'transfer') %}
                                     <form method="post" action="/manage/{{ kingdom.slug }}/transactions/update" class="review-category-form">
                                         <input type="hidden" name="csrf" value="{{ csrf }}">
+                                        <input type="hidden" name="review_month" value="{{ reviewMonth }}">
                                         <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
                                         {% include 'components/category-typeahead.twig' with {
                                             inputId: 'cat-' ~ row.tellerTransactionId,
@@ -203,12 +212,14 @@
                                     {% if row.status == 'pending' %}
                                         <form method="post" action="/manage/{{ kingdom.slug }}/transactions/publish" class="d-inline">
                                             <input type="hidden" name="csrf" value="{{ csrf }}">
+                                            <input type="hidden" name="review_month" value="{{ reviewMonth }}">
                                             <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
                                             <button type="submit" class="btn btn-primary btn-sm">Publish</button>
                                         </form>
                                     {% elseif row.status == 'published' %}
                                         <form method="post" action="/manage/{{ kingdom.slug }}/transactions/withhold" class="d-inline">
                                             <input type="hidden" name="csrf" value="{{ csrf }}">
+                                            <input type="hidden" name="review_month" value="{{ reviewMonth }}">
                                             <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
                                             <button type="submit" class="btn btn-outline-danger btn-sm">Withhold</button>
                                         </form>
