@@ -60,7 +60,7 @@ final class IntegAuth
      *
      * @throws \RuntimeException when the IDP client, credentials, or consent flow cannot complete
      */
-    public static function loginViaIdp(IntegHttp $denariusHttp): void
+    public static function loginViaIdp(IntegHttp $denariusHttp, string $idpEmail = IntegFixtures::ADMIN_EMAIL): void
     {
         $denariusBase = rtrim((string) (getenv('DENARIUS_BASE_URL') ?: $_ENV['DENARIUS_BASE_URL'] ?? ''), '/');
         if ($denariusBase === '') {
@@ -82,7 +82,7 @@ final class IntegAuth
         }
 
         $idpHttp = new IntegHttp(self::baseUrlFromLocation($idpAuthorizeLocation));
-        self::loginIdpFixtureUser($idpHttp, IntegFixtures::ADMIN_EMAIL);
+        self::loginIdpFixtureUser($idpHttp, $idpEmail);
 
         $callbackLocation = self::completeIdpAuthorization(
             $idpHttp,
@@ -122,6 +122,62 @@ final class IntegAuth
             $test->markTestSkipped(
                 'IntegAuth::loginViaIdp unavailable: ' . $exception->getMessage()
                 . ' (register OAuth client ' . self::clientId() . ' on the IDP integ stack).',
+            );
+        }
+    }
+
+    /**
+     * Grants {@see IntegFixtures::MANAGER_EMAIL} kingdom-manager on the seed kingdom (requires admin session).
+     */
+    public static function grantSeedKingdomManager(IntegHttp $adminHttp): void
+    {
+        $email = IntegFixtures::MANAGER_EMAIL;
+        $adminPage = $adminHttp->get('/admin?email=' . rawurlencode($email));
+        if ($adminPage->getStatusCode() !== 200) {
+            throw new \RuntimeException(
+                'Admin principal page failed; status=' . $adminPage->getStatusCode(),
+            );
+        }
+
+        $html = (string) $adminPage->getBody();
+        $response = $adminHttp->postForm('/admin/grant', [
+            'csrf' => $adminHttp->parseCsrfToken($html),
+            'idp_user_id' => $adminHttp->parseHiddenField($html, 'idp_user_id'),
+            'target_email' => $adminHttp->parseHiddenField($html, 'target_email'),
+            'action' => 'grant-manager',
+            'ork_kingdom_id' => (string) IntegFixtures::KINGDOM_ORK_ID,
+            'kingdom_name' => IntegFixtures::KINGDOM_NAME,
+        ]);
+        if (!$adminHttp->isRedirectToPath($response, '/admin')) {
+            throw new \RuntimeException(
+                'grant-manager failed; status=' . $response->getStatusCode()
+                . ' location=' . $response->getHeaderLine('Location'),
+            );
+        }
+    }
+
+    /**
+     * Admin grant for seed manager, then OAuth login as {@see IntegFixtures::MANAGER_EMAIL}.
+     */
+    public static function loginKingdomManagerViaIdpOrSkip(IntegHttp $managerHttp, TestCase $test): void
+    {
+        self::skipIfIdpUnavailable($test);
+
+        $denariusBase = rtrim((string) (getenv('DENARIUS_BASE_URL') ?: $_ENV['DENARIUS_BASE_URL'] ?? ''), '/');
+        if ($denariusBase === '') {
+            $test->markTestSkipped('DENARIUS_BASE_URL is not set.');
+        }
+
+        try {
+            $adminHttp = new IntegHttp($denariusBase);
+            self::loginViaIdp($adminHttp);
+            self::grantSeedKingdomManager($adminHttp);
+            self::loginViaIdp($managerHttp, IntegFixtures::MANAGER_EMAIL);
+        } catch (\Throwable $exception) {
+            $test->markTestSkipped(
+                'IntegAuth kingdom manager login unavailable: ' . $exception->getMessage()
+                . ' (IdP seed user ' . IntegFixtures::MANAGER_EMAIL . ' and OAuth client '
+                . self::clientId() . ' required).',
             );
         }
     }
