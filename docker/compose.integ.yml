@@ -21,7 +21,9 @@ services:
       PLAID_API_BASE: https://integ-plaid.invalid
       SIMPLEFIN_BRIDGE_ROOT: https://integ-simplefin.invalid/simplefin
       TELLER_APPLICATION_ID: integ_teller_app
+      TELLER_WEBHOOK_SECRET: whsec_test
       STRIPE_SECRET_KEY: sk_integ_test
+      STRIPE_WEBHOOK_SECRET: whsec_test
       STRIPE_PUBLISHABLE_KEY: pk_integ_test
       PLAID_CLIENT_ID: integ_plaid_client
       PLAID_SECRET: integ_plaid_secret

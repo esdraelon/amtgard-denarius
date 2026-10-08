@@ -10,11 +10,19 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Slim\App;
 use Slim\Exception\HttpNotFoundException;
+use Slim\Middleware\BodyParsingMiddleware;
 
 return function (App $app): void {
     $app->add(PostCsrfMiddleware::class);
 
-    $app->addBodyParsingMiddleware();
+    $bodyParsing = new BodyParsingMiddleware();
+    $app->add(function (ServerRequestInterface $request, RequestHandlerInterface $handler) use ($bodyParsing): ResponseInterface {
+        if (str_starts_with($request->getUri()->getPath(), '/webhooks/')) {
+            return $handler->handle($request);
+        }
+
+        return $bodyParsing->process($request, $handler);
+    });
 
     $app->add(function (ServerRequestInterface $request, RequestHandlerInterface $handler) use ($app): ResponseInterface {
         if (session_status() !== PHP_SESSION_ACTIVE) {
