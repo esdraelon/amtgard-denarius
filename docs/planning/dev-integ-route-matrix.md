@@ -12,18 +12,18 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** | In scope; not covered yet (Phase D backlog). |
 | **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
 
-## Summary (D3)
+## Summary (D4)
 
 | Metric | Count |
 |--------|------:|
 | Routes in `config/routes.php` | 36 |
 | **excluded** | 4 |
 | In scope (total − excluded) | 32 |
-| **y** (covered today) | 9 |
-| **n** (uncovered in scope) | 23 |
-| Coverage `y / in-scope` | 28.1% (target ≥ 90% at D14) |
+| **y** (covered today) | 10 |
+| **n** (uncovered in scope) | 22 |
+| Coverage `y / in-scope` | 31.3% (target ≥ 90% at D14) |
 
-**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
+**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
 
 ## Matrix
 
@@ -64,4 +64,4 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | POST | `/manage/{slug}/patterns/{ruleId}/delete` | n | — | D10 patterns (delete) |
 | GET | `/bank/simplefin/return` | n | — | D11 SimpleFIN return |
 | POST | `/bank/simplefin/return` | n | — | D11 SimpleFIN return |
-| GET | `/{slug}` | n | — | D4 kingdom public page (`SessionMiddleware` + `SyncPrincipalMiddleware`) |
+| GET | `/{slug}` | y | `KingdomPageTest` | Public statement page; seed slug `golden-plains` (public visibility); unknown slug 404 |

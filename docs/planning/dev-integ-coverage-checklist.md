@@ -24,7 +24,7 @@ Plan: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | D1 | `stack/denarius-integ-d1-public-static` | [x] |
 | D2 | `stack/denarius-integ-d2-auth-session` | [x] |
 | D3 | `stack/denarius-integ-d3-webhooks` | [x] |
-| D4 | `stack/denarius-integ-d4-kingdom-public` | [ ] |
+| D4 | `stack/denarius-integ-d4-kingdom-public` | [x] |
 | D5 | `stack/denarius-integ-d5-admin-read` | [ ] |
 | D6 | `stack/denarius-integ-d6-admin-write` | [ ] |
 | D7 | `stack/denarius-integ-d7-manage-read` | [ ] |

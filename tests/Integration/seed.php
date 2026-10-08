@@ -112,7 +112,7 @@ function seedBaselineFixtures(PDO $pdo): void
         IntegFixtures::KINGDOM_ORK_ID,
         IntegFixtures::KINGDOM_NAME,
         IntegFixtures::KINGDOM_SLUG,
-        'kingdom_only',
+        'public',
         'summarized',
         'none',
         'teller',

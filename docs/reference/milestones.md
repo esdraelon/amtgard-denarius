@@ -636,3 +636,11 @@ Suggested stack (one branch each):
 - Line coverage: 95.54% (7030/7358).
 - Infection: not run (small `src/` harness fixes; prior gate holds).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ kingdom public page (D4)
+
+- Branch: `stack/denarius-integ-d4-kingdom-public`
+- `KingdomPageTest`: live `GET /golden-plains` (seed slug, public visibility) returns 200 with kingdom statement markers; unknown slug returns 404 with not-published message. Integ seed/fixtures use `golden-plains` / Golden Plains for later manage milestones. Route matrix: `GET /{slug}` **y** (10/32 in-scope, 31.3%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
