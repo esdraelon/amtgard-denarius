@@ -105,6 +105,7 @@
     {% import "macros.twig" as ui %}
     {% block section_body %}
         <p class="small text-body-secondary">Assign a category before publishing. Auto-matched rows (confidence ≥ 70) can publish directly. Optional patterns never block save or publish.</p>
+        <p class="small text-body-secondary">Use <strong>Publish</strong>, <strong>Redact</strong>, and <strong>Embargo</strong> for this month, then <strong>Update publication</strong>. Redact publishes with generic description copy. Clearing Embargo makes a row publishable today. Clear both Publish and Redact to withhold a row.</p>
         {% set reviewBase = '/manage/' ~ kingdom.slug ~ '?review_month=' %}
         {% set filterSuffix = uncategorizedOnly ? '&uncategorized=1' : '' %}
         <div class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary mb-2">
@@ -155,6 +156,9 @@
                             <th scope="col">Amount</th>
                             <th scope="col">Category</th>
                             <th scope="col">Status</th>
+                            <th scope="col" class="text-center">Publish</th>
+                            <th scope="col" class="text-center">Redact</th>
+                            <th scope="col" class="text-center">Embargo</th>
                             <th scope="col">Action</th>
                         </tr>
                     </thead>
@@ -208,6 +212,16 @@
                                         <span class="badge text-bg-success">Published</span>
                                     {% endif %}
                                 </td>
+                                <td class="text-center">
+                                    <input type="hidden" name="review_id[]" value="{{ row.tellerTransactionId }}" form="review-batch-form">
+                                    <input class="form-check-input" type="checkbox" name="review[{{ row.tellerTransactionId }}][publish]" value="1" form="review-batch-form" aria-label="Publish" {% if row.publish %}checked{% endif %}>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="review[{{ row.tellerTransactionId }}][redact]" value="1" form="review-batch-form" aria-label="Redact description" {% if row.redact %}checked{% endif %}>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="review[{{ row.tellerTransactionId }}][embargo]" value="1" form="review-batch-form" aria-label="Keep embargo" {% if row.embargo %}checked{% endif %}>
+                                </td>
                                 <td>
                                     {% if row.status == 'pending' %}
                                         <form method="post" action="/manage/{{ kingdom.slug }}/transactions/publish" class="d-inline">
@@ -232,6 +246,11 @@
                     </tbody>
                 </table>
             </div>
+            <form id="review-batch-form" method="post" action="/manage/{{ kingdom.slug }}/transactions/review" class="mt-3">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <input type="hidden" name="review_month" value="{{ reviewMonth }}">
+                {{ ui.submit('Update publication') }}
+            </form>
         {% endif %}
     {% endblock %}
 {% endembed %}

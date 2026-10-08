@@ -26,6 +26,7 @@ use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill;
 use Amtgard\Denarius\Utilities\Http\JsonBody;
+use Amtgard\Denarius\Utilities\Http\ReviewSelectionParser;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
@@ -212,6 +213,15 @@ final class ManagerController
                     ($body['publish'] ?? '') === '1',
                     ($body['bulk_counterparty'] ?? '') === '1',
                 );
+            });
+        });
+    }
+
+    public function updateTransactionReview(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            return $this->reviewPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
+                $this->reviewActions->applyPublicationSelections($kingdom, ...ReviewSelectionParser::fromBody($body));
             });
         });
     }

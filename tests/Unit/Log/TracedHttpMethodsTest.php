@@ -307,6 +307,12 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('pub-me')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('uncategorized')->publishedAt('2026-09-03T00:00:00+00:00')->build());
         $manager->withholdTransaction($this->request('POST', '/manage/golden-plains/transactions/withhold', [], ['csrf' => 'token', 'teller_transaction_id' => 'pub-me']), new Response(), 'golden-plains');
         $manager->publishTransaction($this->request('POST', '/manage/golden-plains/transactions/publish', [], ['csrf' => 'nope', 'teller_transaction_id' => 'pub-me']), new Response(), 'golden-plains');
+        $manager->updateTransactionReview($this->request('POST', '/manage/golden-plains/transactions/review', [], [
+            'csrf' => 'token',
+            'review_month' => '2026-09',
+            'review_id' => ['pub-me'],
+            'review' => ['pub-me' => ['publish' => '1']],
+        ]), new Response(), 'golden-plains');
         $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), 'golden-plains');
 
         $_ENV['APP_PUBLIC_URL'] = 'http://localhost:37180';
@@ -390,7 +396,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'https://idp.example.test/resources/client/service-format'));
 
         $scope = $this->methodsInScope();
-        $this->assertCount(82, $scope);
+        $this->assertCount(83, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);
