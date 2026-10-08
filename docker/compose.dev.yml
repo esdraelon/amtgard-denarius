@@ -50,6 +50,7 @@ services:
       - "36316:3306"
     volumes:
       - data-db:/var/lib/mysql
+      - ./mariadb-init:/docker-entrypoint-initdb.d:ro
     container_name: amtgard-denarius-db
     hostname: amtgard-denarius-db
     networks:
