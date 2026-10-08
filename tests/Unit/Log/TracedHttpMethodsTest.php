@@ -152,21 +152,21 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $grantTargets = Strategies::grantTargets($principals);
         $grants = new MemoryGrants();
         $grantedRoles = Strategies::grantedRoles($grants, $principals, $kingdoms);
-        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles);
-        (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
+        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles, Strategies::principalSuggester($principals));
+        (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
             ->index($this->request('GET', '/admin'), new Response());
         $member = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        (new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
+        (new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
             ->index($this->request('GET', '/admin'), new Response());
-        $admin->index($this->request('GET', '/admin', ['email' => 'person']), new Response());
-        $admin->index($this->request('GET', '/admin', ['email' => 'legacy']), new Response());
+        $admin->index($this->request('GET', '/admin', ['email' => 'person@example.com']), new Response());
+        $admin->index($this->request('GET', '/admin', ['email' => 'legacy@example.com']), new Response());
         $admin->index($this->request('GET', '/admin', ['perm_email' => 'person', 'perm_kingdom' => '']), new Response());
         $admin->kingdoms($this->request('GET', '/admin/kingdoms'), new Response());
-        $suggestions = $admin->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person']), new Response());
+        $suggestions = $admin->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person@example.com']), new Response());
         $this->assertSame(200, $suggestions->getStatusCode());
         $admin->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => '']), new Response());
-        (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
-            ->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person']), new Response());
+        (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
+            ->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person@example.com']), new Response());
         $orkKingdoms->list();
         $orkKingdoms->nameForOrkId(4);
         OrkKingdomDirectory::parse('{}');

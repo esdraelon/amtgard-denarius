@@ -6,9 +6,11 @@ namespace Amtgard\Denarius\Tests\Unit\Service;
 
 use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester;
+use Amtgard\Denarius\Tests\Support\MethodLogAssert;
 use Amtgard\Denarius\Tests\Unit\ApplicationTest;
 use Amtgard\Denarius\Tests\Unit\Strategies;
 use Amtgard\Denarius\Utilities\Http\IdpUserDirectory;
+use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
 use Amtgard\IdpClient\Config\IdpClientEnvironmentFactory;
 use Amtgard\PHPUnit\AmtgardTestCase;
 use Nyholm\Psr7\Factory\Psr17Factory;
@@ -32,6 +34,7 @@ final class AdminPrincipalSuggesterTest extends AmtgardTestCase
         $this->assertCount(1, $matches);
         $this->assertSame('person@example.com', $matches[0]->getEmail());
         $this->assertSame('9', $matches[0]->getIdpUserId());
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'admin_principal_suggest_idp', AdminPrincipalSuggester::class . '::match');
     }
 
     public function testMatchProbesIdpWhenLocalPartHasNoLocalRow(): void

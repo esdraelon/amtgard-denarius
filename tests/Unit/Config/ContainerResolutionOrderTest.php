@@ -14,8 +14,11 @@ use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeTransactionRefreshWait;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Service\Access\PermissionService;
+use Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Kingdom\ManagerKingdomPageQuery;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
@@ -81,6 +84,18 @@ final class ContainerResolutionOrderTest extends TestCase
         $this->assertInstanceOf(KingdomPageController::class, $this->resolveOrSkip(KingdomPageController::class));
         $this->assertInstanceOf(AdminController::class, $this->resolveOrSkip(AdminController::class));
         $this->assertInstanceOf(ManagerController::class, $this->resolveOrSkip(ManagerController::class));
+    }
+
+    public function testStripeProviderWaitsOnTheContainerRefreshWait(): void
+    {
+        $provider = $this->resolveOrSkip(StripeLedgerProvider::class);
+        $this->assertInstanceOf(StripeTransactionRefreshWait::class, (new \ReflectionProperty($provider, 'refreshWait'))->getValue($provider));
+    }
+
+    public function testAdminControllerSuggestsThroughThePrincipalSuggester(): void
+    {
+        $admin = $this->resolveOrSkip(AdminController::class);
+        $this->assertInstanceOf(AdminPrincipalSuggester::class, (new \ReflectionProperty($admin, 'principalSuggester'))->getValue($admin));
     }
 
     public function testNamedRoutesMatchContainerControllers(): void

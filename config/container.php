@@ -119,6 +119,7 @@ use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
 use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
+use Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester;
 use Amtgard\Denarius\Service\Admin\Impl\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeAdminCommand;
@@ -566,6 +567,11 @@ return [
         $c->get(PrincipalRepositoryInterface::class),
         $c->get(PrincipalSync::class),
     ),
+    AdminPrincipalSuggester::class => fn (ContainerInterface $c) => new AdminPrincipalSuggester(
+        $c->get(PrincipalRepositoryInterface::class),
+        $c->get(IdpUserDirectory::class),
+        $c->get(PrincipalSync::class),
+    ),
     AdminGrantedRoleIndex::class => fn (ContainerInterface $c) => new AdminGrantedRoleIndex(
         $c->get(RoleGrantRepositoryInterface::class),
         $c->get(PrincipalRepositoryInterface::class),
@@ -596,6 +602,7 @@ return [
         $c->get(OrkKingdomDirectory::class),
         $c->get(AdminGrantTargetResolver::class),
         $c->get(AdminGrantedRoleIndex::class),
+        $c->get(AdminPrincipalSuggester::class),
     ),
     ManagerLedgerSyncFeedback::class => fn () => new ManagerLedgerSyncFeedback(),
     ManagerController::class => fn (ContainerInterface $c) => new ManagerController(

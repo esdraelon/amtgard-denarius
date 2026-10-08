@@ -17,6 +17,7 @@ use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
 use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
+use Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
 use Amtgard\IdpClient\Exception\ClientIamException;
@@ -39,6 +40,7 @@ final class AdminController
         private readonly OrkKingdomDirectory $orkKingdoms,
         private readonly AdminGrantTargetResolver $grantTargets,
         private readonly AdminGrantedRoleIndex $grantedRoles,
+        private readonly AdminPrincipalSuggester $principalSuggester,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -56,7 +58,7 @@ final class AdminController
             $permKingdom = trim((string) ($query['perm_kingdom'] ?? ''));
 
             $principalViews = [];
-            foreach ($term === '' ? [] : $this->principals->searchByEmail($term) as $principal) {
+            foreach ($term === '' ? [] : $this->principalSuggester->match($term) as $principal) {
                 $principalViews[] = $this->grantTargets->viewForAdmin($principal);
             }
 
@@ -130,7 +132,7 @@ final class AdminController
 
             $suggestions = array_map(
                 static fn ($principal) => $principal->view(),
-                $this->principals->searchByEmail($term),
+                $this->principalSuggester->match($term),
             );
 
             return JsonBody::write($response, ['suggestions' => $suggestions]);
