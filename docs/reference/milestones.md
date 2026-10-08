@@ -692,3 +692,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ SimpleFIN return (D11)
+
+- Branch: `stack/denarius-integ-d11-simplefin-return`
+- `SimpleFinReturnTest`: kingdom-manager session; `GET /bank/simplefin/return` form HTML and claim via query `setup_token` + `kingdom`; `POST …/return` with CSRF after manage connect wizard remembers kingdom (`IntegSimpleFinApi`). Route matrix: two SimpleFIN return rows **y** (30/32 in-scope, 93.75%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
