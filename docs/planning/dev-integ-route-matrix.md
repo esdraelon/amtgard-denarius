@@ -12,16 +12,16 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** | In scope; not covered yet (Phase D backlog). |
 | **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
 
-## Summary (D9)
+## Summary (D10)
 
 | Metric | Count |
 |--------|------:|
 | Routes in `config/routes.php` | 36 |
 | **excluded** | 4 |
 | In scope (total − excluded) | 32 |
-| **y** (covered today) | 24 |
-| **n** (uncovered in scope) | 8 |
-| Coverage `y / in-scope` | 75.00% (target ≥ 90% at D14) |
+| **y** (covered today) | 28 |
+| **n** (uncovered in scope) | 4 |
+| Coverage `y / in-scope` | 87.50% (target ≥ 90% at D14) |
 
 **`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`); kingdom-manager **`GET /manage/golden-plains`**, **`GET …/connect`** (302 to manage index), **`GET …/patterns`**, **`GET …/patterns/new`**, and **`GET …/taxonomy/categories?q=rent`** (JSON typeahead) (`ManageReadTest`, `IntegAuth::loginKingdomManagerViaIdpOrSkip` grants seed manager then logs in as `integ-manager@example.com`); kingdom-manager **`POST …/settings`**, **`POST …/enrollment`** (Teller stub via `IntegTellerApi`), **`POST …/accounts`**, and **`POST …/disconnect`** with CSRF scraped from the manage index (`ManageSettingsEnrollmentTest`); kingdom-manager **`POST …/transactions/review`** with CSRF from `#review-batch-form` and batch publish / redact on seed review rows (`ManageTransactionsTest`, integ seed published account + transactions). Legacy **`POST …/transactions/publish`**, **`…/withhold`**, and **`…/update`** stay **excluded**. Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
 
@@ -58,10 +58,10 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | GET | `/manage/{slug}/taxonomy/categories` | y | `ManageReadTest` | JSON typeahead; `q=rent` matches `expense.site_rental` |
 | GET | `/manage/{slug}/patterns` | y | `ManageReadTest` | Patterns list HTML (writes in D10) |
 | GET | `/manage/{slug}/patterns/new` | y | `ManageReadTest` | New pattern form (create POST in D10) |
-| POST | `/manage/{slug}/patterns/bulk` | n | — | D10 patterns |
-| POST | `/manage/{slug}/patterns` | n | — | D10 patterns (create) |
-| POST | `/manage/{slug}/patterns/{ruleId}` | n | — | D10 patterns (update) |
-| POST | `/manage/{slug}/patterns/{ruleId}/delete` | n | — | D10 patterns (delete) |
+| POST | `/manage/{slug}/patterns/bulk` | y | `ManagePatternsTest` | CSRF from patterns list bulk form |
+| POST | `/manage/{slug}/patterns` | y | `ManagePatternsTest` | CSRF from new-pattern form; token create |
+| POST | `/manage/{slug}/patterns/{ruleId}` | y | `ManagePatternsTest` | CSRF from list; update token match |
+| POST | `/manage/{slug}/patterns/{ruleId}/delete` | y | `ManagePatternsTest` | CSRF from list; formaction delete |
 | GET | `/bank/simplefin/return` | n | — | D11 SimpleFIN return |
 | POST | `/bank/simplefin/return` | n | — | D11 SimpleFIN return |
 | GET | `/{slug}` | y | `KingdomPageTest` | Public statement page; seed slug `golden-plains` (public visibility); unknown slug 404 |

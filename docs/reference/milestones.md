@@ -684,3 +684,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ manage category patterns (D10)
+
+- Branch: `stack/denarius-integ-d10-patterns`
+- `ManagePatternsTest`: kingdom-manager session exercises create (`POST …/patterns`), update (`POST …/patterns/{ruleId}`), bulk (`POST …/patterns/bulk`), and delete (`POST …/patterns/{ruleId}/delete`) with CSRF from the new-pattern and list forms. Route matrix: four pattern POST rows **y** (28/32 in-scope, 87.50%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
