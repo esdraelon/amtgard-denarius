@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
-use Amtgard\Denarius\Utilities\Auth\Impl\IdpPolicyGateway;
 use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AlwaysReady;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ConfiguredLedgerProviders;
@@ -67,8 +66,6 @@ use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
 use Amtgard\Denarius\Utilities\Http\BuildInfo;
 use Amtgard\Denarius\Utilities\Http\IdpUserDirectory;
-use Amtgard\Denarius\Utilities\Http\LoggingIdpHttpClient;
-use Amtgard\Denarius\Utilities\Http\Impl\CurlOrkGetKingdomsGateway;
 use Amtgard\Denarius\Utilities\Http\OrkGetKingdomsGateway;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
@@ -88,8 +85,6 @@ use Amtgard\Denarius\Utilities\Queue\Message\MessageQueue;
 use Amtgard\Denarius\Utilities\Queue\Message\Impl\PubSubMessageQueue;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\Impl\RedisKeyValueStore;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\Impl\CurlSimpleFinApi;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinHost;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinLedgerProvider;
 use Amtgard\Denarius\Controller\SimpleFinReturnController;
@@ -124,12 +119,10 @@ use Amtgard\Denarius\Service\Admin\Impl\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeManagerCommand;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\Impl\CurlPlaidApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\PlaidApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\PlaidLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\PlaidWebhookVerifier;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeTransactionRefreshWait;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier;
@@ -153,12 +146,9 @@ use Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob;
 use Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 use Amtgard\Denarius\Utilities\Session\RedisSessionHandler;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\Impl\CurlTellerApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerWebhookVerifier;
 use Amtgard\Denarius\Worker\LedgerWorker;
 use Amtgard\IdpClient\Client\IdpClient;
-use Amtgard\IdpClient\Config\IdpClientEnvironmentFactory;
-use Amtgard\IdpClient\Config\IdpClientFactory;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Amtgard\IdpClient\Slim\IdpAuthController;
 use Amtgard\SetQueue\DataStructure\Impl\Redis\RedisDataStructureConfig;
@@ -171,7 +161,15 @@ use Slim\App;
 use Twig\Environment as TwigEnvironment;
 use Twig\Loader\FilesystemLoader;
 
-return [
+$denariusEnvironment = $_ENV['ENVIRONMENT'] ?? 'PROD';
+$outboundDefinitions = __DIR__ . '/container/outbound.php';
+if ($denariusEnvironment === 'DEV_INTEG') {
+    $outboundDefinitions = __DIR__ . '/container/integ/outbound.php';
+}
+
+return array_merge(
+    require $outboundDefinitions,
+    [
     KingdomRepositoryInterface::class => fn () => Orm::repository(KingdomRepository::class),
     PrincipalRepositoryInterface::class => fn () => Orm::repository(PrincipalRepository::class),
     AccountRepositoryInterface::class => fn () => Orm::repository(AccountRepository::class),
@@ -180,19 +178,6 @@ return [
     KingdomCategoryRuleRepositoryInterface::class => fn () => Orm::repository(KingdomCategoryRuleRepository::class),
     RoleGrantRepositoryInterface::class => fn () => Orm::repository(RoleGrantRepository::class),
     SessionAuthStore::class => fn () => new SessionAuthStore(),
-    LoggingIdpHttpClient::class => function () {
-        $environment = IdpClientEnvironmentFactory::fromEnvVars();
-        $inner = new \GuzzleHttp\Client([
-            'headers' => [
-                'User-Agent' => $environment->httpUserAgent(),
-                'Accept' => 'application/json',
-            ],
-        ]);
-
-        return new LoggingIdpHttpClient($inner);
-    },
-    IdpClient::class => fn (ContainerInterface $c) => IdpClientFactory::fromEnvVars(null, null, $c->get(LoggingIdpHttpClient::class)),
-    PolicyGateway::class => fn (IdpClient $idp) => new IdpPolicyGateway($idp->clientIam()),
     BootstrapAdmins::class => fn () => BootstrapAdmins::fromEnv($_ENV['DENARIUS_BOOTSTRAP_ADMIN_IDP_USER_IDS'] ?? null),
     DenariusAuthorizer::class => fn () => new DenariusAuthorizer(),
     Redis::class => function () {
@@ -238,18 +223,8 @@ return [
         $c->get(KingdomRepositoryInterface::class),
         $c->get(OrkKingdomDirectory::class),
     ),
-    OrkGetKingdomsGateway::class => fn () => new CurlOrkGetKingdomsGateway(
-        $_ENV['ORK_API_BASE_URL'] ?? 'https://ork.amtgard.com',
-        $_ENV['ORK_API_USER_AGENT'] ?? 'Amtgard-Denarius',
-        $_ENV['ORK_API_REFERER'] ?? 'https://denarius.amtgard.com',
-    ),
     OrkKingdomCacheWriter::class => fn () => new OrkKingdomCacheWriter(),
     TokenCipher::class => fn () => new TokenCipher($_ENV['APP_KEY'] ?? ''),
-    TellerApi::class => fn () => new CurlTellerApi(
-        $_ENV['TELLER_API_BASE'] ?? 'https://api.teller.io',
-        $_ENV['TELLER_CERT_PATH'] ?? '',
-        $_ENV['TELLER_KEY_PATH'] ?? '',
-    ),
     LedgerProvider::class => fn (ContainerInterface $c) => new TellerLedgerProvider(
         $c->get(TellerApi::class),
         $c->get(TellerWebhookVerifier::class),
@@ -257,10 +232,6 @@ return [
         new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? '']),
         $_ENV['TELLER_APPLICATION_ID'] ?? '',
         $_ENV['TELLER_ENVIRONMENT'] ?? 'sandbox',
-    ),
-    StripeApi::class => fn () => new CurlStripeApi(
-        $_ENV['STRIPE_API_BASE'] ?? 'https://api.stripe.com',
-        $_ENV['STRIPE_SECRET_KEY'] ?? '',
     ),
     StripeWebhookVerifier::class => fn () => new StripeWebhookVerifier($_ENV['STRIPE_WEBHOOK_SECRET'] ?? ''),
     StripeTransactionRefreshWait::class => fn (ContainerInterface $c) => new StripeTransactionRefreshWait(
@@ -274,12 +245,6 @@ return [
         new PreviousMonthWindow(new DateTimeImmutable('now')),
         $c->get(StripeTransactionRefreshWait::class),
         $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
-    ),
-    PlaidApi::class => fn () => new CurlPlaidApi(
-        $_ENV['PLAID_API_BASE'] ?? 'https://sandbox.plaid.com',
-        $_ENV['PLAID_CLIENT_ID'] ?? '',
-        $_ENV['PLAID_SECRET'] ?? '',
-        $_ENV['PLAID_CLIENT_NAME'] ?? 'Denarius',
     ),
     PlaidWebhookVerifier::class => fn (ContainerInterface $c) => new PlaidWebhookVerifier($c->get(PlaidApi::class)),
     PlaidLedgerProvider::class => fn (ContainerInterface $c) => new PlaidLedgerProvider(
@@ -299,7 +264,6 @@ return [
         ])),
     ]))->registry(),
     SimpleFinApplicationConfig::class => fn () => SimpleFinApplicationConfig::fromEnv(),
-    SimpleFinApi::class => fn () => new CurlSimpleFinApi(new SimpleFinHost(['simplefin.org'])),
     SimpleFinLedgerProvider::class => fn (ContainerInterface $c) => new SimpleFinLedgerProvider(
         $c->get(SimpleFinApi::class),
         new PresentCredentials([
@@ -559,15 +523,6 @@ return [
         $c->get(SessionAuthStore::class),
         $c->get(TwigHtmlRenderer::class),
     ),
-    IdpUserDirectory::class => function (ContainerInterface $c) {
-        $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();
-
-        return new IdpUserDirectory(
-            IdpClientEnvironmentFactory::fromEnvVars(),
-            $c->get(LoggingIdpHttpClient::class),
-            $psr17,
-        );
-    },
     AdminGrantTargetResolver::class => fn (ContainerInterface $c) => new AdminGrantTargetResolver(
         $c->get(IdpUserDirectory::class),
         $c->get(PrincipalRepositoryInterface::class),
@@ -679,4 +634,5 @@ return [
         ],
         new CreditPositiveProviderAmountSign(),
     ),
-];
+    ],
+);

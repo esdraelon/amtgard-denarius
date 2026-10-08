@@ -587,3 +587,12 @@ Suggested stack (one branch each):
 - Line coverage: 95.64% (6859/7172; no `src/` change).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ outbound stubs (C5)
+
+- Branch: `stack/denarius-integ-c5-outbound-stubs`
+- IDP-style split outbound DI: `config/container/outbound.php` (live curl clients) and `config/container/integ/outbound.php` when `ENVIRONMENT=DEV_INTEG` (stub Teller/Stripe/Plaid/SimpleFIN/ORK GetKingdoms; IDP via `IntegIdpHttpGuard` allowing local integ only). `docker/compose.integ.yml` documents integ IDP URL and placeholder provider bases/credentials.
+- Line coverage: 95.55% (7027/7354).
+- Infection: not run (milestone scope).
+- Log-tested branches: `integ_*_stub_answered`, `integ_idp_http_forwarded`, `integ_idp_production_blocked`, `integ_ork_kingdoms_stub_empty` (`IntegOutboundStubsTest`).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
