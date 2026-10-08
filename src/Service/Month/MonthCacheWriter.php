@@ -51,7 +51,7 @@ final class MonthCacheWriter
         });
     }
 
-    private function statementKey(int $kingdomId, DisplayMode $mode, MonthWindow $month): string
+    public function statementKey(int $kingdomId, DisplayMode $mode, MonthWindow $month): string
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdomId, $mode, $month): string {
             $generation = (int) ($this->store->get($this->keys->generation($kingdomId)) ?? '0');

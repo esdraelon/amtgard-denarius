@@ -10,6 +10,7 @@ use Amtgard\Denarius\Domain\Statement\MonthStatement;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceReason;
+use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 /** Strategy: JSON encode/decode for month statement cache blobs. */
@@ -66,6 +67,7 @@ final class MonthStatementCacheCodec
                 'postedOn' => $row->getPostedOn(),
                 'amountCents' => $row->getAmountCents(),
                 'category' => $row->getCategory(),
+                'categoryFlow' => $row->getCategoryFlow(),
                 'description' => $row->getDescription(),
                 'counterparty' => $row->getCounterparty(),
                 'status' => $row->getStatus(),
@@ -80,12 +82,20 @@ final class MonthStatementCacheCodec
     private function total(CategoryTotal $row): array
     {
         return DenariusLog::trace(__METHOD__, function () use ($row): array {
-            return [
+            $encoded = [
                 'kind' => 'total',
                 'category' => $row->category,
                 'count' => $row->count,
                 'amountCents' => $row->amountCents,
             ];
+            if ($row->flowSection !== null) {
+                $encoded['flowSection'] = $row->flowSection->value;
+            }
+            if ($row->isNetTotal) {
+                $encoded['isNetTotal'] = true;
+            }
+
+            return $encoded;
         });
     }
 
@@ -121,6 +131,7 @@ final class MonthStatementCacheCodec
                 ->postedOn((string) ($row['postedOn'] ?? ''))
                 ->amountCents((int) ($row['amountCents'] ?? 0))
                 ->category((string) ($row['category'] ?? ''))
+                ->categoryFlow((string) ($row['categoryFlow'] ?? ''))
                 ->description((string) ($row['description'] ?? ''))
                 ->counterparty((string) ($row['counterparty'] ?? ''))
                 ->status((string) ($row['status'] ?? ''))
@@ -135,7 +146,13 @@ final class MonthStatementCacheCodec
     private function totalFrom(array $row): CategoryTotal
     {
         return DenariusLog::trace(__METHOD__, function () use ($row): CategoryTotal {
-            return new CategoryTotal((string) ($row['category'] ?? ''), (int) ($row['count'] ?? 0), (int) ($row['amountCents'] ?? 0));
+            return new CategoryTotal(
+                (string) ($row['category'] ?? ''),
+                (int) ($row['count'] ?? 0),
+                (int) ($row['amountCents'] ?? 0),
+                TransactionFlow::fromStored((string) ($row['flowSection'] ?? '')),
+                (bool) ($row['isNetTotal'] ?? false),
+            );
         });
     }
 }

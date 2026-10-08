@@ -103,7 +103,11 @@ final class StatementAbsenceTest extends AmtgardTestCase
                 );
             }
         };
-        $reader = new CachingMonthReader($origin, $store, \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog());
+        $reader = new CachingMonthReader(
+            $origin,
+            $store,
+            new \Amtgard\Denarius\Service\Month\MonthCacheWriter($store, \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog()),
+        );
         $first = $reader->statement($kingdom, $month);
         $second = $reader->statement($kingdom, $month);
         $this->assertSame('Unreviewed', $first->absenceReason?->message());
