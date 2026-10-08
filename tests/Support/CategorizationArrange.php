@@ -7,6 +7,7 @@ namespace Amtgard\Denarius\Tests\Support;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\CategoryMatcherChain;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\FallbackMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\KingdomRuleMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\ProviderHintMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
@@ -24,15 +25,17 @@ final class CategorizationArrange
         return (new TaxonomyCatalogLoader(dirname(__DIR__, 2), 'data/taxonomy'))->load();
     }
 
-    public static function categorizer(?TaxonomyCatalog $catalog = null): TransactionCategorizer
-    {
+    public static function categorizer(
+        ?TaxonomyCatalog $catalog = null,
+        ?MemoryKingdomCategoryRules $kingdomRules = null,
+    ): TransactionCategorizer {
         $catalog ??= self::bundledCatalog();
 
         return new TransactionCategorizer(
             $catalog,
             new DescriptionNormalizer(),
             self::amountSignRegistry(),
-            self::matcherChain($catalog),
+            self::matcherChain($catalog, null, $kingdomRules),
         );
     }
 
@@ -49,12 +52,19 @@ final class CategorizationArrange
         );
     }
 
-    public static function matcherChain(TaxonomyCatalog $catalog): CategoryMatcherChain
-    {
+    public static function matcherChain(
+        TaxonomyCatalog $catalog,
+        ?KingdomRuleMatcher $kingdomMatcher = null,
+        ?MemoryKingdomCategoryRules $kingdomRules = null,
+    ): CategoryMatcherChain {
+        $keywords = new KeywordRuleMatcher($catalog);
+        $rules = $kingdomRules ?? new MemoryKingdomCategoryRules();
+
         return new CategoryMatcherChain([
             new ManagerLockMatcher(),
             new ProviderHintMatcher($catalog),
-            new KeywordRuleMatcher($catalog),
+            $kingdomMatcher ?? new KingdomRuleMatcher($rules, $keywords),
+            $keywords,
             new FallbackMatcher(),
         ]);
     }

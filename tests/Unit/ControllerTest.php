@@ -145,6 +145,8 @@ final class ControllerTest extends AmtgardTestCase
             Strategies::reviewQueue($transactions, $accounts),
             Strategies::reviewService($transactions, $accounts),
             Strategies::categorySearch(),
+            Strategies::kingdomPatternService($kingdoms, $transactions),
+            Strategies::patternPrefill(),
         );
         $manage = $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $this->assertStringContainsString('manage golden-plains', (string) $manage->getBody());

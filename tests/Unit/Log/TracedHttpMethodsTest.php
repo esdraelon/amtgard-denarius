@@ -73,6 +73,8 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             'kingdom.twig' => '{{ mode }} {{ rows|length }}',
             'admin.twig' => 'admin',
             'manage.twig' => 'manage',
+            'manage-patterns.twig' => 'patterns',
+            'pattern-form.twig' => 'pattern-form',
             'privacy-policy.twig' => 'privacy',
             'simplefin-return.twig' => 'simplefin-return',
         ])));
@@ -172,14 +174,46 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             Strategies::reviewQueue($transactions, $accounts),
             Strategies::reviewService($transactions, $accounts),
             Strategies::categorySearch(),
+            Strategies::kingdomPatternService($kingdoms, $transactions),
+            Strategies::patternPrefill(),
         );
-        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch()))
+        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternPrefill()))
             ->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/missing'), new Response(), 'missing');
         $manager->show($this->request('GET', '/manage/golden-plains', ['uncategorized' => '1']), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->categorySearch($this->request('GET', '/manage/golden-plains/taxonomy/categories', ['flow' => 'expense', 'q' => 'site']), new Response(), 'golden-plains');
+        $manager->patterns($this->request('GET', '/manage/golden-plains/patterns'), new Response(), 'golden-plains');
         $manager->patternNew($this->request('GET', '/manage/golden-plains/patterns/new', ['counterparty' => 'Shop', 'category' => 'expense.site_rental']), new Response(), 'golden-plains');
+        $_SESSION['_csrf'] = 'token';
+        $manager->patternCreate($this->request('POST', '/manage/golden-plains/patterns', [], [
+            'csrf' => 'token',
+            'category' => 'expense.storage',
+            'match_type' => 'token',
+            'token' => 'VENDOR TRACE',
+            'fields' => ['description'],
+            'flows' => ['expense'],
+        ]), new Response(), 'golden-plains');
+        $manager->patternUpdate($this->request('POST', '/manage/golden-plains/patterns/1', [], [
+            'csrf' => 'token',
+            'category' => 'expense.storage',
+            'match_type' => 'token',
+            'token' => 'VENDOR TRACE UPDATED',
+            'fields' => ['description'],
+            'flows' => ['expense'],
+        ]), new Response(), 'golden-plains', '1');
+        $manager->patternBulk($this->request('POST', '/manage/golden-plains/patterns/bulk', [], [
+            'csrf' => 'token',
+            'patterns' => [
+                1 => [
+                    'category' => 'expense.storage',
+                    'match_type' => 'token',
+                    'token' => 'BULK TOKEN',
+                ],
+            ],
+        ]), new Response(), 'golden-plains');
+        $manager->patternDelete($this->request('POST', '/manage/golden-plains/patterns/1/delete', [], ['csrf' => 'token']), new Response(), 'golden-plains', '1');
+        $manager->patternCreate($this->request('POST', '/manage/golden-plains/patterns', [], ['csrf' => 'nope', 'category' => 'expense.storage', 'token' => 'X']), new Response(), 'golden-plains');
         $manager->connect($this->request('POST', '/manage/golden-plains/connect', [], ['csrf' => 'token']), new Response(), 'golden-plains');
         $manager->connectGet($this->request('GET', '/manage/golden-plains/connect'), new Response(), 'golden-plains');
         $manager->settings($this->request('POST', '/manage/golden-plains/settings', [], ['csrf' => 'token', 'visibility' => 'public', 'display_mode' => 'all', 'embargo_days' => '3']), new Response(), 'golden-plains');
@@ -277,7 +311,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'https://idp.example.test/resources/client/service-format'));
 
         $scope = $this->methodsInScope();
-        $this->assertCount(67, $scope);
+        $this->assertCount(69, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

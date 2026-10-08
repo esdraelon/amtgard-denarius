@@ -1,0 +1,71 @@
+{% extends "base.twig" %}
+{% import "macros.twig" as ui %}
+
+{% block title %}Patterns — {{ kingdom.name }}{% endblock %}
+{% block container_class %}container-lg{% endblock %}
+
+{% block content %}
+{% embed 'components/page-header.twig' with { title: 'Category patterns' } %}
+    {% block header_actions %}
+        <p class="mb-0 d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}">Back to review</a>
+            <a class="btn btn-primary btn-sm" href="/manage/{{ kingdom.slug }}/patterns/new">New pattern</a>
+        </p>
+    {% endblock %}
+{% endembed %}
+
+<p class="small text-body-secondary">Kingdom-only rules match normalized description and counterparty text. They override shared keywords and never appear on public statements. Saving runs a recategorize pass for non-manager rows.</p>
+
+{% embed 'components/section-card.twig' with { title: 'Patterns' } %}
+    {% block section_body %}
+        {% if patterns is empty %}
+            {% include 'components/alert.twig' with {
+                variant: 'info',
+                message: 'No patterns yet. Create one from review or add a new pattern.'
+            } %}
+        {% else %}
+            <form method="post" action="/manage/{{ kingdom.slug }}/patterns/bulk">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-3">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Rule</th>
+                                <th scope="col">Match</th>
+                                <th scope="col">Category</th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in patterns %}
+                                <tr>
+                                    <td class="small text-body-secondary">{{ row.ruleId }}</td>
+                                    <td>
+                                        <input type="hidden" name="patterns[{{ row.id }}][match_type]" value="{{ row.matchType }}">
+                                        {% if row.matchType == 'regex' %}
+                                            <input class="form-control form-control-sm" name="patterns[{{ row.id }}][regex_pattern]" value="{{ row.regexPattern }}">
+                                        {% elseif row.matchType == 'anyOf' %}
+                                            <input class="form-control form-control-sm" name="patterns[{{ row.id }}][any_of]" value="{{ row.anyOfTokens }}">
+                                        {% else %}
+                                            <input class="form-control form-control-sm" name="patterns[{{ row.id }}][token]" value="{{ row.token }}">
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <input class="form-control form-control-sm" name="patterns[{{ row.id }}][category]" value="{{ row.category }}" aria-label="Category slug">
+                                        <span class="small text-body-secondary">{{ row.categoryLabel }}</span>
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}/patterns/new?category={{ row.category|url_encode }}">Duplicate</a>
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" formaction="/manage/{{ kingdom.slug }}/patterns/{{ row.id }}/delete">Delete</button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {{ ui.submit('Save bulk edits') }}
+            </form>
+        {% endif %}
+    {% endblock %}
+{% endembed %}
+{% endblock %}

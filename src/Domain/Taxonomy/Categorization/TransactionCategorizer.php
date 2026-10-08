@@ -25,12 +25,16 @@ final class TransactionCategorizer
         $entered = DenariusLog::enter(__METHOD__);
     }
 
-    public function decide(string $providerId, TransactionRecord $incoming, ?TransactionRecord $existing): CategoryDecision
-    {
+    public function decide(
+        string $providerId,
+        TransactionRecord $incoming,
+        ?TransactionRecord $existing,
+        ?int $kingdomId = null,
+    ): CategoryDecision {
         $method = __METHOD__;
 
-        return DenariusLog::trace($method, function () use ($method, $providerId, $incoming, $existing): CategoryDecision {
-            $input = $this->input($providerId, $incoming, $existing);
+        return DenariusLog::trace($method, function () use ($method, $providerId, $incoming, $existing, $kingdomId): CategoryDecision {
+            $input = $this->input($providerId, $incoming, $existing, $kingdomId);
             $chain = $this->chain->resolve($input);
             $decision = $this->decisionFromChain($chain);
             DenariusLog::debugBranch('transaction_categorized', self::class . '::decide', [
@@ -44,9 +48,13 @@ final class TransactionCategorizer
         });
     }
 
-    private function input(string $providerId, TransactionRecord $incoming, ?TransactionRecord $existing): CategorizationInput
-    {
-        return DenariusLog::trace(__METHOD__, function () use ($providerId, $incoming, $existing): CategorizationInput {
+    private function input(
+        string $providerId,
+        TransactionRecord $incoming,
+        ?TransactionRecord $existing,
+        ?int $kingdomId,
+    ): CategorizationInput {
+        return DenariusLog::trace(__METHOD__, function () use ($providerId, $incoming, $existing, $kingdomId): CategorizationInput {
             $signedCents = $this->amountSigns->forProvider($providerId)->signedCents(
                 $this->decimalAmount($incoming->getAmountCents()),
             );
@@ -56,7 +64,8 @@ final class TransactionCategorizer
                 ->normalizedCounterparty($this->normalizer->normalize($incoming->getCounterparty()))
                 ->providerId($providerId)
                 ->providerCategory((string) ($incoming->getProviderCategory() ?? ''))
-                ->defaultFlow($defaultFlow);
+                ->defaultFlow($defaultFlow)
+                ->kingdomId($kingdomId ?? $incoming->getKingdomId());
             if ($existing !== null) {
                 $builder
                     ->existingCategory($existing->getCategory())

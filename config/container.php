@@ -46,8 +46,15 @@ use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\CategoryMatcherChain;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\FallbackMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\KingdomRuleMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\ProviderHintMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternValidator;
+use Amtgard\Denarius\Domain\Taxonomy\RegexPatternGuard;
+use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\Impl\KingdomCategoryRuleRepository;
+use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\KingdomCategoryRuleRepositoryInterface;
+use Amtgard\Denarius\Service\Ledger\KingdomPatternService;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
 use Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
@@ -152,6 +159,7 @@ return [
     AccountRepositoryInterface::class => fn () => Orm::repository(AccountRepository::class),
     SecretRepositoryInterface::class => fn () => Orm::repository(SecretRepository::class),
     TransactionRepositoryInterface::class => fn () => Orm::repository(TransactionRepository::class),
+    KingdomCategoryRuleRepositoryInterface::class => fn () => Orm::repository(KingdomCategoryRuleRepository::class),
     RoleGrantRepositoryInterface::class => fn () => Orm::repository(RoleGrantRepository::class),
     SessionAuthStore::class => fn () => new SessionAuthStore(),
     LoggingIdpHttpClient::class => function () {
@@ -303,12 +311,31 @@ return [
     LedgerProviderIdResolver::class => fn (ContainerInterface $c) => new LedgerProviderIdResolver(
         $c->get(LedgerProviderRegistry::class),
     ),
+    KeywordRuleMatcher::class => fn (ContainerInterface $c) => new KeywordRuleMatcher($c->get(TaxonomyCatalog::class)),
+    KingdomRuleMatcher::class => fn (ContainerInterface $c) => new KingdomRuleMatcher(
+        $c->get(KingdomCategoryRuleRepositoryInterface::class),
+        $c->get(KeywordRuleMatcher::class),
+    ),
     CategoryMatcherChain::class => fn (ContainerInterface $c) => new CategoryMatcherChain([
         new ManagerLockMatcher(),
         new ProviderHintMatcher($c->get(TaxonomyCatalog::class)),
-        new KeywordRuleMatcher($c->get(TaxonomyCatalog::class)),
+        $c->get(KingdomRuleMatcher::class),
+        $c->get(KeywordRuleMatcher::class),
         new FallbackMatcher(),
     ]),
+    KingdomPatternValidator::class => fn (ContainerInterface $c) => new KingdomPatternValidator(
+        $c->get(TaxonomyCatalog::class),
+        new RegexPatternGuard(),
+    ),
+    KingdomPatternPrefill::class => fn (ContainerInterface $c) => new KingdomPatternPrefill(
+        $c->get(DescriptionNormalizer::class),
+    ),
+    KingdomPatternService::class => fn (ContainerInterface $c) => new KingdomPatternService(
+        $c->get(KingdomCategoryRuleRepositoryInterface::class),
+        $c->get(KingdomPatternValidator::class),
+        $c->get(TaxonomyCatalog::class),
+        $c->get(TransactionRecategorizer::class),
+    ),
     TransactionCategorizer::class => fn (ContainerInterface $c) => new TransactionCategorizer(
         $c->get(TaxonomyCatalog::class),
         $c->get(DescriptionNormalizer::class),
@@ -520,6 +547,8 @@ return [
         $c->get(TransactionReviewQueue::class),
         $c->get(TransactionReviewService::class),
         $c->get(TaxonomyCategorySearch::class),
+        $c->get(KingdomPatternService::class),
+        $c->get(KingdomPatternPrefill::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(

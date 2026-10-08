@@ -18,6 +18,9 @@ use Amtgard\Denarius\Persistence\Repository\Kingdom\Impl\KingdomRepository;
 use Amtgard\Denarius\Persistence\Repository\Principal\Impl\PrincipalRepository;
 use Amtgard\Denarius\Persistence\Repository\RoleGrant\Impl\RoleGrantRepository;
 use Amtgard\Denarius\Persistence\Repository\Secret\Impl\SecretRepository;
+use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\Impl\KingdomCategoryRuleRepository;
+use Amtgard\Denarius\Persistence\Record\KingdomCategoryRuleRecord;
+use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\TransactionRepository;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use PDO;
@@ -40,7 +43,7 @@ final class PersistenceStoreArrange
 
     public static function migrateFresh(PDO $pdo): void
     {
-        foreach (['role_grants', 'transactions', 'enrollment_secrets', 'published_accounts_audit', 'published_accounts', 'kingdoms_audit', 'kingdoms', 'principals', 'phinxlog'] as $table) {
+        foreach (['kingdom_category_rules', 'role_grants', 'transactions', 'enrollment_secrets', 'published_accounts_audit', 'published_accounts', 'kingdoms_audit', 'kingdoms', 'principals', 'phinxlog'] as $table) {
             $pdo->exec('DROP TABLE IF EXISTS ' . $table);
         }
         $phinx = dirname(__DIR__, 2) . '/vendor/bin/phinx';
@@ -94,6 +97,8 @@ final class PersistenceStoreArrange
         TransactionRepository::getEntityClass();
         RoleGrantRepository::getTableName();
         RoleGrantRepository::getEntityClass();
+        KingdomCategoryRuleRepository::getTableName();
+        KingdomCategoryRuleRepository::getEntityClass();
 
         $kingdoms = Orm::repository(KingdomRepository::class);
         $saved = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('all')->enrollmentId('enr')->institutionName('Bank')->provider('teller')->enrollmentStatus('connected')->build());
@@ -137,5 +142,33 @@ final class PersistenceStoreArrange
         $grants = Orm::repository(RoleGrantRepository::class);
         $grants->append(RoleGrantRecord::builder()->actorIdpUserId('15')->targetIdpUserId('9')->action('grant')->resource('Denarius/Admin')->createdAt('2026-09-01T00:00:00+00:00')->build());
         $grants->listChronological();
+
+        $catalog = (new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader(dirname(__DIR__, 2), 'data/taxonomy'))->load();
+        $patternRules = Orm::repository(KingdomCategoryRuleRepository::class);
+        $pattern = $patternRules->save(KingdomCategoryRuleRecord::builder()
+            ->kingdomId((int) $saved->getId())
+            ->category('expense.storage')
+            ->matchType('token')
+            ->token('STORAGE UNIT')
+            ->fields(['description'])
+            ->flows([TransactionFlow::Expense])
+            ->confidence(100)
+            ->build());
+        $patternRules->forKingdom((int) $saved->getId());
+        $patternRules->findById((int) $saved->getId(), (int) $pattern->getId());
+        $pattern->publicRuleId();
+        $pattern->toKeywordRule();
+        $pattern->manageView($catalog);
+        $patternRules->save(KingdomCategoryRuleRecord::builder()
+            ->id($pattern->getId())
+            ->kingdomId((int) $saved->getId())
+            ->category('expense.storage')
+            ->matchType('token')
+            ->token('STORAGE LOCKER')
+            ->fields(['description'])
+            ->flows([TransactionFlow::Expense])
+            ->confidence(100)
+            ->build());
+        $patternRules->removeRule((int) $saved->getId(), (int) $pattern->getId());
     }
 }

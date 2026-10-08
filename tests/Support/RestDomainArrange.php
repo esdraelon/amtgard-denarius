@@ -47,6 +47,11 @@ final class RestDomainArrange
         self::exercisePublicationEnvelopeBalanceFields();
         self::exerciseTaxonomyDomain();
         self::exerciseCategorizationDomain();
+        self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testKingdomRuleOverridesSharedKeyword');
+        self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testRecategorizeAfterPatternSaveUpdatesNonManagerRows');
+        self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testDeletePatternStopsMatchingOnRecategorize');
+        self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testPatternPrefillUsesNormalizedCounterparty');
+        self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testPatternLogsUseRuleIdOnly');
 
         MonthWindow::current(new \DateTimeImmutable('2026-09-15'));
 
@@ -140,14 +145,50 @@ final class RestDomainArrange
         $input->existingRuleId();
         $input->existingSuggested();
         $input->existingTaxonomyVersion();
+        $input->kingdomId();
         (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher())->match($input);
         (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ProviderHintMatcher(
             \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
         ))->match($input);
-        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher(
+        $keywords = new \Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher(
             \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
-        ))->match($input);
+        );
+        $keywords->match($input);
+        $memoryRules = new MemoryKingdomCategoryRules();
+        $memoryRules->save(\Amtgard\Denarius\Persistence\Record\KingdomCategoryRuleRecord::builder()
+            ->kingdomId(1)
+            ->category('expense.storage')
+            ->matchType('token')
+            ->token('SHOP')
+            ->fields(['counterparty'])
+            ->flows([\Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense])
+            ->confidence(100)
+            ->build());
+        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\KingdomRuleMatcher($memoryRules, $keywords))->match(
+            \Amtgard\Denarius\Domain\Taxonomy\Categorization\CategorizationInput::builder()
+                ->kingdomId(1)
+                ->normalizedCounterparty('SHOP')
+                ->defaultFlow(\Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense)
+                ->build(),
+        );
         (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\FallbackMatcher())->match($input);
+        $catalog = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog();
+        (new \Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill(new \Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer()))
+            ->fromReviewQuery('Shop', 'POS DEBIT', 'expense.storage');
+        $patternValidator = new \Amtgard\Denarius\Domain\Taxonomy\KingdomPatternValidator($catalog, new \Amtgard\Denarius\Domain\Taxonomy\RegexPatternGuard());
+        $patternValidator->assertCategorySlug('expense.storage');
+        try {
+            $patternValidator->assertMatch('anyOf', '', '', '', 'draft');
+        } catch (\InvalidArgumentException) {
+        }
+        try {
+            $patternValidator->assertMatch('token', '', '', '', 'draft');
+        } catch (\InvalidArgumentException) {
+        }
+        try {
+            $patternValidator->assertMatch('unsupported', 'x', '', '', 'draft');
+        } catch (\InvalidArgumentException) {
+        }
         $hintInput = \Amtgard\Denarius\Domain\Taxonomy\Categorization\CategorizationInput::builder()
             ->normalizedDescription('COSTCO WHOLESALE')
             ->providerId('teller')

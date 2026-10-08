@@ -20,8 +20,10 @@ use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
+use Amtgard\Denarius\Service\Ledger\KingdomPatternService;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill;
 use Amtgard\Denarius\Utilities\Http\JsonBody;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\IdpClient\Session\SessionAuthStore;
@@ -44,6 +46,8 @@ final class ManagerController
         private readonly TransactionReviewQueue $reviewQueue,
         private readonly TransactionReviewService $reviewActions,
         private readonly TaxonomyCategorySearch $categorySearch,
+        private readonly KingdomPatternService $patterns,
+        private readonly KingdomPatternPrefill $patternPrefill,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -225,6 +229,22 @@ final class ManagerController
         });
     }
 
+    public function patterns(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
+            if ($kingdom instanceof ResponseInterface) {
+                return $kingdom;
+            }
+
+            return $this->html->html($response, 'manage-patterns.twig', [
+                'csrf' => CsrfToken::issue(),
+                'kingdom' => $kingdom->view(),
+                'patterns' => $this->patterns->listViews($kingdom),
+            ]);
+        });
+    }
+
     public function patternNew(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
@@ -233,23 +253,80 @@ final class ManagerController
                 return $kingdom;
             }
             $params = $request->getQueryParams();
+            $prefill = $this->patternPrefill->fromReviewQuery(
+                (string) ($params['counterparty'] ?? ''),
+                (string) ($params['description'] ?? ''),
+                (string) ($params['category'] ?? ''),
+            );
 
-            $prefill = [
-                'counterparty' => (string) ($params['counterparty'] ?? ''),
-                'description' => (string) ($params['description'] ?? ''),
-                'category' => (string) ($params['category'] ?? ''),
-            ];
-
-            return $this->html->html($response, 'message.twig', [
-                'title' => 'Create pattern (preview)',
-                'message' => sprintf(
-                    'Pattern editor stub for %s. Counterparty: %s. Description: %s. Category: %s.',
-                    $kingdom->getName(),
-                    $prefill['counterparty'],
-                    $prefill['description'],
-                    $prefill['category'],
-                ),
+            return $this->html->html($response, 'pattern-form.twig', [
+                'csrf' => CsrfToken::issue(),
+                'kingdom' => $kingdom->view(),
+                'prefill' => $prefill,
+                'ruleId' => null,
+                'formAction' => '/manage/' . $kingdom->getSlug() . '/patterns',
             ]);
+        });
+    }
+
+    public function patternCreate(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return $this->patternPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
+            $this->patterns->saveNew($kingdom, $body);
+        });
+    }
+
+    public function patternUpdate(ServerRequestInterface $request, ResponseInterface $response, string $slug, string $ruleId): ResponseInterface
+    {
+        return $this->patternPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body) use ($ruleId): void {
+            $this->patterns->update($kingdom, (int) $ruleId, $body);
+        });
+    }
+
+    public function patternDelete(ServerRequestInterface $request, ResponseInterface $response, string $slug, string $ruleId): ResponseInterface
+    {
+        return $this->patternPost($request, $response, $slug, function (KingdomRecord $kingdom) use ($ruleId): void {
+            $this->patterns->delete($kingdom, (int) $ruleId);
+        });
+    }
+
+    public function patternBulk(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return $this->patternPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
+            $rows = $body['patterns'] ?? [];
+            if (! is_array($rows)) {
+                return;
+            }
+            $this->patterns->bulkSave($kingdom, $rows);
+        });
+    }
+
+    /**
+     * @param callable(KingdomRecord, array<string, mixed>): void $action
+     */
+    private function patternPost(
+        ServerRequestInterface $request,
+        ResponseInterface $response,
+        string $slug,
+        callable $action,
+    ): ResponseInterface {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug, $action): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
+            if ($kingdom instanceof ResponseInterface) {
+                return $kingdom;
+            }
+            $body = (array) $request->getParsedBody();
+            if (! CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
+                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            }
+            try {
+                CurrentActor::set((string) $this->auth->get()->profile->id);
+                $action($kingdom, $body);
+            } catch (\InvalidArgumentException $exception) {
+                return $this->html->html($response, 'message.twig', ['title' => 'Cannot save pattern', 'message' => $exception->getMessage()], 400);
+            }
+
+            return $response->withHeader('Location', '/manage/' . $kingdom->getSlug() . '/patterns')->withStatus(302);
         });
     }
 

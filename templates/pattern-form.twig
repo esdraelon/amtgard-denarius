@@ -1,0 +1,41 @@
+{% extends "base.twig" %}
+{% import "macros.twig" as ui %}
+
+{% block title %}Pattern — {{ kingdom.name }}{% endblock %}
+{% block container_class %}container-md{% endblock %}
+
+{% block content %}
+{% embed 'components/page-header.twig' with { title: ruleId ? 'Edit pattern' : 'Create pattern' } %}
+    {% block header_actions %}
+        <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}/patterns">Back to patterns</a>
+    {% endblock %}
+{% endembed %}
+
+<form method="post" action="{{ formAction }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="match_type" value="{{ prefill.matchType|default('token') }}">
+    <div class="mb-3">
+        <label class="form-label" for="pattern-token">Match text (token)</label>
+        <input class="form-control" id="pattern-token" name="token" value="{{ prefill.token|default('') }}" required maxlength="255">
+        <p class="small text-body-secondary mb-0">Matched against normalized description and counterparty (uppercase).</p>
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="pattern-category">Category slug</label>
+        <input class="form-control" id="pattern-category" name="category" value="{{ prefill.category|default('') }}" required>
+    </div>
+    <div class="mb-3">
+        <span class="form-label d-block">Search fields</span>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="fields[]" value="description" id="field-desc" checked>
+            <label class="form-check-label" for="field-desc">Description</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="fields[]" value="counterparty" id="field-cp" checked>
+            <label class="form-check-label" for="field-cp">Counterparty</label>
+        </div>
+    </div>
+    <input type="hidden" name="flows[]" value="expense">
+    <input type="hidden" name="flows[]" value="income">
+    {{ ui.submit('Save pattern') }}
+</form>
+{% endblock %}
