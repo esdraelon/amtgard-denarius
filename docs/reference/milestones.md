@@ -676,3 +676,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ manage transactions review (D9)
+
+- Branch: `stack/denarius-integ-d9-transactions`
+- Integ seed adds published `acc_integ_1` and two September review transactions; `ManageTransactionsTest` kingdom-manager session posts `POST /manage/golden-plains/transactions/review` with CSRF from `#review-batch-form` and batch publish / redact selections. Route matrix: review row **y**; legacy publish / withhold / update remain **excluded** (24/32 in-scope, 75.00%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).

@@ -24,4 +24,12 @@ final class IntegFixtures
 
     /** Matches IDP integ seed (`IntegFixtures::PASSWORD` in amtgard-idp). */
     public const IDP_FIXTURE_PASSWORD = 'integ-fixture-pass';
+
+    public const REVIEW_ACCOUNT_ID = 'acc_integ_1';
+
+    public const REVIEW_MONTH = '2026-09';
+
+    public const TXN_REVIEW_PUBLISH = 'txn_integ_d9_publish';
+
+    public const TXN_REVIEW_REDACT = 'txn_integ_d9_redact';
 }
