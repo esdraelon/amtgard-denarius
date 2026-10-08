@@ -57,6 +57,9 @@ final class StoreTest extends AmtgardTestCase
         $this->assertSame('RENT', $pdo->query("SELECT provider_category FROM transactions WHERE teller_transaction_id = 'txn-rent'")->fetchColumn());
         $this->assertSame(70, (int) $pdo->query("SELECT category_confidence FROM transactions WHERE teller_transaction_id = 'txn-rent'")->fetchColumn());
         $this->assertSame(-200, (int) $pdo->query("SELECT amount_cents FROM transactions WHERE teller_transaction_id = 'txn-grocery'")->fetchColumn());
+        $this->assertNull($pdo->query("SELECT publication_flags FROM transactions WHERE teller_transaction_id = 'txn-rent'")->fetchColumn());
+        $groceryFlags = (string) $pdo->query("SELECT publication_flags FROM transactions WHERE teller_transaction_id = 'txn-grocery'")->fetchColumn();
+        $this->assertTrue(\Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags::parse($groceryFlags)->isManagerEmbargoWaived());
         $this->assertSame(1, (int) $pdo->query('SELECT COUNT(*) FROM role_grants')->fetchColumn());
     }
 }

@@ -354,6 +354,7 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testMicroDepositPairReconcilerMarksCluster');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testHardRedactionStageStubsLine');
         self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testPublicationFlagsRoundTrip');
+        self::run(\Amtgard\Denarius\Tests\Unit\PublicationHardRedactTest::class, 'testPublicationFlagsCarryManagerRedactAndEmbargoWaiver');
     }
 
     /**
