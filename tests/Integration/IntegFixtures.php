@@ -21,4 +21,7 @@ final class IntegFixtures
     public const MANAGER_IDP_USER_ID = '91002';
 
     public const MANAGER_EMAIL = 'integ-manager@example.com';
+
+    /** Matches IDP integ seed (`IntegFixtures::PASSWORD` in amtgard-idp). */
+    public const IDP_FIXTURE_PASSWORD = 'integ-fixture-pass';
 }

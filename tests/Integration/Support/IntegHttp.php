@@ -106,7 +106,7 @@ final class IntegHttp
     public function isRedirectToPath(ResponseInterface $response, string $path): bool
     {
         $status = $response->getStatusCode();
-        if ($status !== 301 && $status !== 302) {
+        if ($status !== 301 && $status !== 302 && $status !== 303) {
             return false;
         }
         $location = $this->redirectLocation($response);
