@@ -620,3 +620,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ auth session (D2)
+
+- Branch: `stack/denarius-integ-d2-auth-session`
+- `AuthSessionTest`: `GET /login` redirects to IDP authorize (302/303); logged-out `GET /admin` redirects to `/login`; `GET /logout` after `IntegAuth::loginViaIdp` clears the session (skips with a clear message when IDP OAuth client login is unavailable). `IntegAuth::loginViaIdp` implements the Denarius → IDP → callback cookie dance. Route matrix: `/login`, `/logout`, and unauthenticated `/admin` set to **y** (6/32 in-scope, 18.8%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
