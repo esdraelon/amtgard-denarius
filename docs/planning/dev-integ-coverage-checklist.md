@@ -8,7 +8,7 @@ Plan: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | # | Branch | Done |
 |---|--------|------|
 | C0 | `stack/denarius-integ-c0-phpunit-split` | [x] |
-| C1 | `stack/denarius-integ-c1-integ-infra-compose` | [ ] |
+| C1 | `stack/denarius-integ-c1-integ-infra-compose` | [x] |
 | C2 | `stack/denarius-integ-c2-integ-wire-hosts` | [ ] |
 | C3 | `stack/denarius-integ-c3-per-test-reseed` | [ ] |
 | C4 | `stack/denarius-integ-c4-http-support` | [ ] |

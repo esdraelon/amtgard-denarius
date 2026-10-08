@@ -555,3 +555,11 @@ Suggested stack (one branch each):
 - Line coverage: 95.64% (6859/7172).
 - Infection covered MSI: 93% (`composer infection:ci`, `--threads=4`, ~22m; no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ infra (C1)
+
+- Branch: `stack/denarius-integ-c1-integ-infra-compose`
+- IDP-style isolated integ MariaDB + session Redis: `docker/compose.integ-infra.yml` (project `amtgard-denarius-integ`, host DB port 36317, dedicated volumes). Integ hosts documented in `.env.example`; `scripts/integ*.sh` still stub until C2.
+- Line coverage: 95.64% (6859/7172; no `src/` change).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
