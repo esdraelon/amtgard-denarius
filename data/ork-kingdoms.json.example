@@ -1,6 +1,7 @@
 {
     "kingdoms": [
-        {"id": 4, "name": "Golden Plains"},
-        {"id": 9, "name": "Dragonspine"}
+        {"id": 11, "name": "The Kingdom of the Golden Plains"},
+        {"id": 12, "name": "The Kingdom of Dragonspine"},
+        {"id": 14, "name": "The Celestial Kingdom"}
     ]
 }

@@ -6,6 +6,17 @@
 
 {% block content %}
 <h1 class="font-serif display-6 text-denarius-secondary mb-4">Roles</h1>
+{% if email == '' %}
+    {% include 'components/alert.twig' with {
+        variant: 'info',
+        message: 'Search by full Amtgard ID email or username (at least two characters). Denarius resolves users through IdP Client IAM email lookup (requires IDP_CLIENT_SECRET).'
+    } %}
+{% elseif principals is empty %}
+    {% include 'components/alert.twig' with {
+        variant: 'warning',
+        message: 'IdP did not resolve that address. Use the exact account email on file at idp.amtgard.com, or try the username before @ (e.g. megiddo for megiddo@esdraelon.com).'
+    } %}
+{% endif %}
 <form method="get" action="/admin" class="mb-4 row g-3 align-items-end" id="admin-principal-form">
     <input type="hidden" name="perm_email" value="{{ perm_email }}">
     <input type="hidden" name="perm_kingdom" value="{{ perm_kingdom }}">
