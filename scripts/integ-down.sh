@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 WEB_PROJECT="${WEB_PROJECT:-amtgard-denarius}"
+WORKER_PROJECT="${WORKER_PROJECT:-amtgard-denarius-worker}"
 APP_CONTAINER="${APP_CONTAINER:-amtgard-denarius}"
 
 require_docker() {
@@ -41,6 +42,13 @@ compose_web_dev() {
         -f docker/compose.prod.yml \
         -f docker/compose.blue.yml \
         -f docker/compose.dev.yml \
+        "$@"
+}
+
+compose_worker_dev() {
+    docker compose --project-directory "$ROOT" -p "$WORKER_PROJECT" \
+        -f docker/compose.worker.yml \
+        -f docker/compose.worker.dev.yml \
         "$@"
 }
 
@@ -101,5 +109,8 @@ if ! curl -sf --max-time 5 "http://localhost:37180/version" >/dev/null 2>&1; the
     echo "Dev app did not respond at http://localhost:37180/version after integ-down" >&2
     exit 1
 fi
+
+echo "==> Restoring ledger-worker for dev (.env DB/Redis)..."
+compose_worker_dev up -d --force-recreate
 
 echo "Dev stack restored."

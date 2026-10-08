@@ -8,6 +8,7 @@ NETWORK="${NETWORK:-amtgard-denarius-shared}"
 INTEG_PROJECT="${INTEG_PROJECT:-amtgard-denarius-integ}"
 WEB_PROJECT="${WEB_PROJECT:-amtgard-denarius}"
 SESSIONS_PROJECT="${SESSIONS_PROJECT:-amtgard-denarius-sessions}"
+WORKER_PROJECT="${WORKER_PROJECT:-amtgard-denarius-worker}"
 APP_CONTAINER="${APP_CONTAINER:-amtgard-denarius}"
 INTEG_DB_CONTAINER="${INTEG_DB_CONTAINER:-amtgard-denarius-db-integ}"
 INTEG_SESSIONS_CONTAINER="${INTEG_SESSIONS_CONTAINER:-amtgard-denarius-sessions-integ}"
@@ -46,6 +47,14 @@ compose_web_integ() {
         -f docker/compose.blue.yml \
         -f docker/compose.dev.yml \
         -f docker/compose.integ.yml \
+        "$@"
+}
+
+compose_worker() {
+    docker compose --project-directory "$ROOT" -p "$WORKER_PROJECT" \
+        -f docker/compose.worker.yml \
+        -f docker/compose.worker.dev.yml \
+        -f docker/compose.worker.integ.yml \
         "$@"
 }
 
@@ -118,6 +127,10 @@ echo "==> Flushing integ session Redis..."
 SESSION_REDIS_DB="$(docker exec "$APP_CONTAINER" printenv SESSION_REDIS_DB || echo 1)"
 docker exec "$INTEG_SESSIONS_CONTAINER" redis-cli -n "$SESSION_REDIS_DB" FLUSHDB
 
+echo "==> Flushing integ ledger Redis (month cache + refresh queue)..."
+LEDGER_REDIS_DB="$(docker exec "$APP_CONTAINER" printenv REDIS_DB || echo 0)"
+docker exec "$INTEG_SESSIONS_CONTAINER" redis-cli -n "$LEDGER_REDIS_DB" FLUSHDB
+
 echo "==> Migrating integ database (schema ${DB_NAME} on ${INTEG_DB_CONTAINER})..."
 docker exec "$APP_CONTAINER" bash -lc \
     'cd /var/www/denarius.amtgard.com && vendor/robmorgan/phinx/bin/phinx migrate'
@@ -125,6 +138,9 @@ docker exec "$APP_CONTAINER" bash -lc \
 echo "==> Seeding integ fixtures..."
 docker exec "$APP_CONTAINER" bash -lc \
     'cd /var/www/denarius.amtgard.com && php tests/Integration/seed.php'
+
+echo "==> Starting ledger-worker (${WORKER_PROJECT})..."
+compose_worker up -d --build
 
 echo "==> Waiting for app health..."
 wait_for_app

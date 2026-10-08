@@ -596,3 +596,11 @@ Suggested stack (one branch each):
 - Infection: not run (milestone scope).
 - Log-tested branches: `integ_*_stub_answered`, `integ_idp_http_forwarded`, `integ_idp_production_blocked`, `integ_ork_kingdoms_stub_empty` (`IntegOutboundStubsTest`).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ ledger worker (C6)
+
+- Branch: `stack/denarius-integ-c6-worker-integ`
+- IDP-style `docker/compose.worker.integ.yml` overlay (`ENVIRONMENT=DEV_INTEG`, integ MariaDB + session/ledger Redis); `scripts/integ-up.sh` starts `ledger-worker` with that overlay and flushes integ Redis DB 0 (refresh queue + month cache) before migrate/seed; `integ-down.sh` restores dev worker from `.env`.
+- Line coverage: 95.55% (7027/7354).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
