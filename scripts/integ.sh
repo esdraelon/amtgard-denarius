@@ -34,19 +34,24 @@ if [[ "$fail" -eq 0 ]]; then
         integ_summary="$(php -r '
             $path = $argv[1];
             $xml = @simplexml_load_file($path);
-            if ($xml === false || !isset($xml->testsuite)) {
+            if ($xml === false) {
                 fwrite(STDERR, "Could not read JUnit summary from {$path}\n");
                 exit(1);
             }
-            $attrs = $xml->testsuite->attributes();
+            $root = $xml->testsuites->testsuite ?? $xml->testsuite ?? null;
+            if ($root === null) {
+                fwrite(STDERR, "Could not read JUnit summary from {$path}\n");
+                exit(1);
+            }
+            $attrs = $root->attributes();
             $tests = (int) ($attrs["tests"] ?? 0);
             $failures = (int) ($attrs["failures"] ?? 0);
             $errors = (int) ($attrs["errors"] ?? 0);
             $skipped = (int) ($attrs["skipped"] ?? 0);
             $failed = $failures + $errors;
-            $passed = $tests - $failed - $skipped;
+            $passed = max(0, $tests - $failed - $skipped);
             echo "{$passed} passed, {$failed} failed";
-        ' "$INTEG_JUNIT")"
+        ' "$INTEG_JUNIT")" || fail=1
     fi
 fi
 

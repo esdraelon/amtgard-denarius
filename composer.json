@@ -17,7 +17,7 @@
         "guzzlehttp/guzzle": "^7.9",
         "jedibc/optional": "^1.0",
         "monolog/monolog": "^3.7",
-        "php-di/php-di": "^6.3",
+        "php-di/php-di": "^7.0",
         "php-di/slim-bridge": "^3.2",
         "robmorgan/phinx": "^0.16.8",
         "slim/psr7": "^1.5",
@@ -44,7 +44,7 @@
     "scripts": {
         "test": "phpunit --coverage-clover build/coverage.xml && php bin/check-coverage.php build/coverage.xml 95",
         "test:unit": "phpunit --testsuite Unit",
-        "integ": "phpunit -c phpunit.integ.xml --testdox --order-by=random",
+        "integ": "@php -d display_errors=0 -d error_reporting=24575 vendor/bin/phpunit -c phpunit.integ.xml --testdox --order-by=random",
         "infection": "infection --min-msi=80 --min-covered-msi=80 --threads=max",
         "infection:ci": [
             "@php -d display_errors=0 -d error_reporting=8191 vendor/bin/phpunit --coverage-xml build/coverage-xml --log-junit build/junit.xml",

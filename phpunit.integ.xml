@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="tests/bootstrap.php"
+         bootstrap="tests/bootstrap-integ.php"
          colors="true"
          cacheDirectory=".phpunit.cache"
          executionOrder="default"
@@ -12,10 +12,9 @@
             <directory suffix="Test.php">tests/Integration/Http</directory>
         </testsuite>
     </testsuites>
-    <extensions>
-        <bootstrap class="Amtgard\Denarius\Tests\Support\MethodLogBalanceExtension"/>
-    </extensions>
     <php>
+        <ini name="display_errors" value="0"/>
+        <ini name="error_reporting" value="24575"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_DEBUG" value="true"/>
         <env name="APP_KEY" value="test-only-app-key-not-for-production"/>
