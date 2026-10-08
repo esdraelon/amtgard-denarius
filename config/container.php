@@ -130,6 +130,7 @@ use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\PlaidWebhookVerifier;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeTransactionRefreshWait;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler;
@@ -261,12 +262,16 @@ return [
         $_ENV['STRIPE_SECRET_KEY'] ?? '',
     ),
     StripeWebhookVerifier::class => fn () => new StripeWebhookVerifier($_ENV['STRIPE_WEBHOOK_SECRET'] ?? ''),
+    StripeTransactionRefreshWait::class => fn (ContainerInterface $c) => new StripeTransactionRefreshWait(
+        $c->get(StripeApi::class),
+    ),
     StripeLedgerProvider::class => fn (ContainerInterface $c) => new StripeLedgerProvider(
         $c->get(StripeApi::class),
         $c->get(StripeWebhookVerifier::class),
         StripeLedgerProvider::actions(),
         new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? '']),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
+        $c->get(StripeTransactionRefreshWait::class),
         $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
     ),
     PlaidApi::class => fn () => new CurlPlaidApi(

@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Stripe refresh and errors (P7)
+
+- Branch: `publication/p07-stripe-refresh-and-errors` (stacked on `publication/p06-bank-disconnect-reset`).
+- `StripeApi` gains `account()` and `refreshTransactions()`; `CurlStripeApi` implements both and turns HTTP failures into `Stripe request failed (HTTP n) [code]: message.` from the Stripe error body. `StripeLedgerProvider` takes `StripeTransactionRefreshWait` (container-bound) and waits for the Financial Connections refresh before listing transactions. Sessions request `balances` permission and prefetch, and `financial_connections.account.refreshed_balance` maps to a refresh notice; the Stripe setup guide lists the new webhook event.
+- Line coverage: 95.74% (6719/7018).
+- Infection covered MSI: 100% on `src/Domain/Bank/Provider/Providers/Stripe` (scoped `--filter`).
+- Log-tested branches: `stripe_transaction_refresh_ready`, `stripe_transaction_refresh_requested` (`StripeTransactionRefreshWaitTest`; `beforeListing` now passes its own method name to the branch logs). Bank trace catalog at 189.
+
 ## Bank disconnect reset (P6)
 
 - Branch: `publication/p06-bank-disconnect-reset` (stacked on `publication/p05b-review-batch-form-ui`).

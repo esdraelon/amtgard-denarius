@@ -27,6 +27,7 @@ final class StripeLedgerProvider implements LedgerProvider
         private readonly array $actions,
         private readonly ProviderReady $ready,
         private readonly PreviousMonthWindow $window,
+        private readonly StripeTransactionRefreshWait $refreshWait,
         private readonly string $publishableKey = '',
     ) {
         $entered = DenariusLog::enter(__METHOD__);
@@ -109,6 +110,8 @@ final class StripeLedgerProvider implements LedgerProvider
                 return [];
             }
 
+            $this->refreshWait->beforeListing($accountId);
+
             $transactions = [];
             foreach ($this->api->transactions($accountId, $this->window->startsAt(), $this->window->endsAt()) as $row) {
                 $transaction = $this->transaction($row);
@@ -150,6 +153,7 @@ final class StripeLedgerProvider implements LedgerProvider
         return DenariusLog::trace(__METHOD__, static function (): array {
             return [
                 'financial_connections.account.refreshed_transactions' => ProviderNotice::REFRESH,
+                'financial_connections.account.refreshed_balance' => ProviderNotice::REFRESH,
                 'financial_connections.account.disconnected' => ProviderNotice::DISCONNECT,
             ];
         });
