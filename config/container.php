@@ -102,6 +102,7 @@ use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Kingdom\ManagerKingdomPageQuery;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthCacheKeys;
+use Amtgard\Denarius\Service\Month\MonthCacheRefreshPublisher;
 use Amtgard\Denarius\Service\Month\MonthCacheWriter;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthStatementCacheCodec;
@@ -142,6 +143,7 @@ use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
+use Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob;
 use Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 use Amtgard\Denarius\Utilities\Session\RedisSessionHandler;
@@ -199,6 +201,7 @@ return [
         $config->setConfig([
             'host' => $_ENV['REDIS_HOST'] ?? '127.0.0.1',
             'port' => (int) ($_ENV['REDIS_PORT'] ?? 6379),
+            'database' => (int) ($_ENV['REDIS_DB'] ?? 0),
         ]);
         $queue = new PubSubQueue();
         $queue->addQueue(LedgerWorker::QUEUE, new SetQueue(
@@ -427,13 +430,20 @@ return [
         ),
         new DateTimeImmutable('now'),
     ),
-    MonthInvalidator::class => fn (RedisKeyValueStore $store) => new MonthInvalidator($store),
     MonthStatementCacheCodec::class => fn () => new MonthStatementCacheCodec(),
     MonthCacheWriter::class => fn (ContainerInterface $c) => new MonthCacheWriter(
         $c->get(RedisKeyValueStore::class),
         $c->get(TaxonomyCatalog::class),
         new MonthCacheKeys(),
         $c->get(MonthStatementCacheCodec::class),
+    ),
+    MonthCacheRefreshPublisher::class => fn (ContainerInterface $c) => new MonthCacheRefreshPublisher(
+        $c->get(MessageQueue::class),
+        $c->get(TransactionRepositoryInterface::class),
+    ),
+    MonthInvalidator::class => fn (ContainerInterface $c) => new MonthInvalidator(
+        $c->get(MonthCacheWriter::class),
+        $c->get(MonthCacheRefreshPublisher::class),
     ),
     MonthReader::class => fn (ContainerInterface $c) => new CachingMonthReader(
         $c->get(KingdomPageQuery::class),
@@ -447,6 +457,7 @@ return [
     KingdomSettings::class => fn (ContainerInterface $c) => new KingdomSettings(
         $c->get(KingdomRepositoryInterface::class),
         $c->get(PublicationSettingsValidator::class),
+        $c->get(MonthInvalidator::class),
     ),
     ReviewCategoryValidator::class => fn (ContainerInterface $c) => new ReviewCategoryValidator(
         $c->get(TaxonomyCatalog::class),
@@ -597,6 +608,11 @@ return [
         new RefreshJobRegistry([
             new LedgerRefreshJob($c->get(TransactionSynchronizer::class)),
             new TransactionRecategorizeJob($c->get(TransactionRecategorizer::class)),
+            new MonthCacheRefreshJob(
+                $c->get(KingdomRepositoryInterface::class),
+                $c->get(KingdomPageQuery::class),
+                $c->get(MonthCacheWriter::class),
+            ),
         ]),
     ),
     RedisSessionHandler::class => function () {

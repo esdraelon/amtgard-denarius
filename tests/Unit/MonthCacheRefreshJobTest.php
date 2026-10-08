@@ -79,13 +79,12 @@ final class MonthCacheRefreshJobTest extends AmtgardTestCase
         );
 
         $keys = new MonthCacheKeys();
-        $generation = 0;
         $taxonomy = $catalog->taxonomyVersion();
         foreach (MonthCacheWriter::WARM_MODES as $mode) {
-            $this->assertNotNull($store->get($keys->statement($kingdomId, $generation, $mode->value, '2026-09', $taxonomy)));
+            $this->assertNotNull($store->get($keys->statement($kingdomId, $mode->value, '2026-09', $taxonomy)));
         }
         $this->assertSame(DisplayMode::LessRedacted->value, json_decode(
-            (string) $store->get($keys->statement($kingdomId, $generation, DisplayMode::LessRedacted->value, '2026-09', $taxonomy)),
+            (string) $store->get($keys->statement($kingdomId, DisplayMode::LessRedacted->value, '2026-09', $taxonomy)),
             true,
             flags: JSON_THROW_ON_ERROR,
         )['mode']);

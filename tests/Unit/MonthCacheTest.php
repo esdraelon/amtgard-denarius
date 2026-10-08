@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Domain\Statement\Line\CategoryTotal;
 use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;
@@ -11,10 +12,13 @@ use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Tests\Support\CategorizationArrange;
+use Amtgard\Denarius\Tests\Support\MethodLogAssert;
+use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
+use Amtgard\Denarius\Service\Month\MonthCacheRefreshPublisher;
 use Amtgard\Denarius\Service\Month\MonthCacheWriter;
-use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
 use Amtgard\PHPUnit\AmtgardTestCase;
@@ -47,11 +51,11 @@ final class MonthCacheTest extends AmtgardTestCase
         $this->assertSame('expense', $second->rows[0]->getCategoryFlow());
         $this->assertSame('paper', $first->rows[0]->getDescription());
 
-        (new MonthInvalidator($store))->forget(4);
+        Strategies::months($store)->invalidate(4, $month);
         $reader->statement($kingdom, $month);
         $this->assertSame(2, $origin->calls);
 
-        $store->set('denarius:month:4:1:less_redacted:2026-09:taxonomy/v1', 'not-json', 10);
+        $store->set('denarius:month:4:less_redacted:2026-09:taxonomy/v1', 'not-json', 10);
         $reader->statement($kingdom, $month);
         $this->assertSame(3, $origin->calls);
 
@@ -94,9 +98,38 @@ final class MonthCacheTest extends AmtgardTestCase
         $reader->statement($kingdom, $month);
         $reader->statement($kingdom, $month);
 
-        $expectedKey = sprintf('denarius:month:7:0:summarized:2026-09:%s', $catalog->taxonomyVersion());
+        $expectedKey = sprintf('denarius:month:7:summarized:2026-09:%s', $catalog->taxonomyVersion());
         $this->assertSame([$expectedKey], $store->persistentWrites);
         $this->assertSame([], $store->ttlWrites);
+    }
+
+    public function testKingdomSettingsSaveDropsWarmMonthsAndSchedulesRebuild(): void
+    {
+        $store = new ArrayStore();
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $messages = new MemoryMessages();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(8)->name('Golden Plains')->slug('golden-plains')->displayMode('less_redacted')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('t1')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-02')
+            ->amountCents(-100)
+            ->category('general')
+            ->build());
+        $warmKey = sprintf('denarius:month:%d:summarized:2026-09:%s', $kingdomId, CategorizationArrange::bundledCatalog()->taxonomyVersion());
+        $store->setPersistent($warmKey, '{}');
+        $months = Strategies::months($store, new MonthCacheRefreshPublisher($messages, $transactions));
+
+        MethodLogAssert::reset();
+        Strategies::kingdomSettings($kingdoms, $months)->update($kingdom, Visibility::Public, DisplayMode::Summarized, 3);
+
+        $this->assertNull($store->get($warmKey));
+        $this->assertCount(1, $messages->published);
+        $this->assertSame($kingdomId . ':2026-09', $messages->published[0]['key']);
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'month_cache_refresh_scheduled', MonthCacheRefreshPublisher::class . '::schedule');
     }
 }
 

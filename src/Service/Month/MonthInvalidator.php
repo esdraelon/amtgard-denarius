@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Month;
 
-use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
+use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
+/** Facade: drop cached month blobs and schedule worker rebuilds. */
 final class MonthInvalidator
 {
     public function __construct(
-        private readonly KeyValueStore $store,
-        private readonly MonthCacheKeys $keys = new MonthCacheKeys(),
+        private readonly MonthCacheWriter $cache,
+        private readonly MonthCacheRefreshPublisher $publisher,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -19,9 +20,20 @@ final class MonthInvalidator
     public function forget(int $kingdomId): void
     {
         DenariusLog::trace(__METHOD__, function () use ($kingdomId): mixed {
-            $key = $this->keys->generation($kingdomId);
-            $next = ((int) ($this->store->get($key) ?? '0')) + 1;
-            $this->store->set($key, (string) $next, 86400 * 30);
+            $this->invalidate($kingdomId);
+
+            return null;
+        });
+    }
+
+    public function invalidate(int $kingdomId, MonthWindow ...$months): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdomId, $months): mixed {
+            $targets = $this->publisher->targetMonths($kingdomId, ...$months);
+            foreach ($targets as $month) {
+                $this->cache->deleteMonth($kingdomId, $month);
+            }
+            $this->publisher->schedule($kingdomId, ...$targets);
 
             return null;
         });

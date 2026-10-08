@@ -42,7 +42,7 @@ class KingdomRepository extends Repository implements EntityRepositoryInterface,
     public function findById(int $kingdomId): ?KingdomRecord
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdomId): ?KingdomRecord {
-            return $this->record($this->fetch($kingdomId));
+            return $this->record($this->fetchBy('id', $kingdomId));
         });
     }
 

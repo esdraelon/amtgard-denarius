@@ -120,7 +120,13 @@ final class ContainerResolutionOrderTest extends TestCase
     public function testWorkerAndPermissionGraphResolveWhenInfrastructureIsReachable(): void
     {
         $this->assertInstanceOf(PermissionService::class, $this->resolveOrSkip(PermissionService::class));
-        $this->assertInstanceOf(LedgerWorker::class, $this->resolveOrSkip(LedgerWorker::class));
+        $worker = $this->resolveOrSkip(LedgerWorker::class);
+        $this->assertInstanceOf(LedgerWorker::class, $worker);
+        $jobs = (new \ReflectionProperty($worker, 'jobs'))->getValue($worker);
+        $this->assertInstanceOf(
+            \Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob::class,
+            $jobs->find('month_cache'),
+        );
     }
 
     public function testCategorizerChainIsWiredInContainer(): void

@@ -26,7 +26,6 @@ use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthCacheWriter;
-use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob;
@@ -290,7 +289,7 @@ final class ServiceWorkerArrange
         $reader = new CachingMonthReader($origin, $cache, new MonthCacheWriter($cache, $catalog));
         $reader->statement($kingdomRow, $month);
         $reader->statement($kingdomRow, $month);
-        $cache->set('denarius:month:4:0:all:2026-09:taxonomy/v1', 'not-json', 10);
+        $cache->set('denarius:month:4:all:2026-09:taxonomy/v1', 'not-json', 10);
         $reader->statement($kingdomRow, $month);
 
         $summaryKingdom = KingdomRecord::builder()->id(5)->orkKingdomId(8)->name('Golden Plains')->slug('golden-plains')->displayMode('summarized')->build();
@@ -308,7 +307,7 @@ final class ServiceWorkerArrange
         $cachedSummary->statement($summaryKingdom, $month);
         $cachedSummary->statement($summaryKingdom, $month);
 
-        (new MonthInvalidator($cache))->forget(4);
+        Strategies::months($cache, null, $transactions)->forget(4);
 
         $sweep = new DailySweep($kingdoms, $queue);
         $sweep->enqueueConnected();
@@ -365,7 +364,7 @@ final class ServiceWorkerArrange
         (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle(['orkKingdomId' => 4]);
         (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle([]);
         (new \Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver(Strategies::providers($teller)))->forKingdom($saved);
-        (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->statement(4, 0, 'all', '2026-09', 'taxonomy/v1');
+        (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->statement(4, 'all', '2026-09', 'taxonomy/v1');
         (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->taxonomyNamespace();
 
         $monthWriter = new MonthCacheWriter($cache, $catalog);

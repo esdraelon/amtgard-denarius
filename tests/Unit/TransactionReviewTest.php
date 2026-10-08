@@ -125,7 +125,7 @@ final class TransactionReviewTest extends AmtgardTestCase
     {
         $kingdom = $this->kingdomWithAccount();
         $cache = new ArrayStore();
-        $reviews = Strategies::reviewService($kingdom['transactions'], $kingdom['accounts'], Strategies::months($cache), new \DateTimeImmutable('2026-10-01'));
+        $reviews = Strategies::reviewService($kingdom['transactions'], $kingdom['accounts'], Strategies::months($cache, null, $kingdom['transactions']), new \DateTimeImmutable('2026-10-01'));
         $kingdom['transactions']->upsert(TransactionRecord::builder()
             ->kingdomId((int) $kingdom['record']->getId())
             ->tellerTransactionId('edit')
@@ -134,15 +134,19 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->amountCents(-100)
             ->category('uncategorized')
             ->build());
-        $genKey = 'denarius:month-gen:' . $kingdom['record']->getId();
-        $cache->set($genKey, '2', 3600);
+        $warmKey = sprintf(
+            'denarius:month:%d:less_redacted:2026-09:%s',
+            $kingdom['record']->getId(),
+            \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog()->taxonomyVersion(),
+        );
+        $cache->setPersistent($warmKey, '{}');
         MethodLogAssert::reset();
         $reviews->update($kingdom['record'], 'edit', 'expense.feast_groceries', false, false);
         $stored = $kingdom['transactions']->findByTellerTransactionId('edit');
         $this->assertSame('expense.feast_groceries', $stored?->getCategory());
         $this->assertSame(CategorySource::Manager->value, $stored?->getCategorySource());
         $this->assertSame(100, $stored?->getCategoryConfidence());
-        $this->assertSame('3', $cache->get($genKey));
+        $this->assertNull($cache->get($warmKey));
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Info, 'transaction_review_category_set', TransactionReviewService::class . '::update');
     }
 

@@ -255,7 +255,8 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertThrows(\RuntimeException::class, fn () => $cipher->decrypt(base64_encode('short')));
 
         $transactions = new MemoryTransactions();
-        $sync = Strategies::synchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
+        $monthMessages = new MemoryMessages();
+        $sync = Strategies::synchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache, new \Amtgard\Denarius\Service\Month\MonthCacheRefreshPublisher($monthMessages, $transactions)));
         $enrollment->setPublished($kingdoms->findByOrkId(4), ['acc_1' => true]);
         $kingdoms->save(KingdomRecord::builder()
             ->id($connected->getId())
@@ -270,7 +271,7 @@ final class ApplicationTest extends AmtgardTestCase
             ->provider('teller')
             ->build());
         $this->assertTrue($sync->sync(4));
-        $this->assertGreaterThan(0, (int) $cache->get('denarius:month-gen:1'));
+        $this->assertSame('month_cache', json_decode($monthMessages->published[0]['message'], true, flags: JSON_THROW_ON_ERROR)['type']);
         $this->assertFalse($sync->sync(99));
         $this->assertSame(2, count($transactions->forKingdom((int) $connected->getId())));
         $this->assertNotNull($kingdoms->findByOrkId(4)->getLastSyncedAt());

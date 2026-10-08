@@ -13,6 +13,8 @@ use Amtgard\Denarius\Domain\Bank\Notice\Impl\RefreshLedgerNotice;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\KeyValueStore;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerApi;
+use Amtgard\Denarius\Service\Month\MonthCacheRefreshPublisher;
+use Amtgard\Denarius\Service\Month\MonthCacheWriter;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Principal\PrincipalRepositoryInterface;
@@ -200,9 +202,17 @@ final class Strategies
         );
     }
 
-    public static function months(?KeyValueStore $store = null): MonthInvalidator
-    {
-        return new MonthInvalidator($store ?? new ArrayStore());
+    public static function months(
+        ?KeyValueStore $store = null,
+        ?MonthCacheRefreshPublisher $publisher = null,
+        ?TransactionRepositoryInterface $transactions = null,
+    ): MonthInvalidator {
+        $publisher ??= new MonthCacheRefreshPublisher(new MemoryMessages(), $transactions ?? new MemoryTransactions());
+
+        return new MonthInvalidator(
+            new MonthCacheWriter($store ?? new ArrayStore(), CategorizationArrange::bundledCatalog()),
+            $publisher,
+        );
     }
 
     public static function jobs(
@@ -264,9 +274,11 @@ final class Strategies
         return new KingdomPatternPrefill(new DescriptionNormalizer());
     }
 
-    public static function kingdomSettings(KingdomRepositoryInterface $kingdoms): KingdomSettings
-    {
-        return new KingdomSettings($kingdoms, new PublicationSettingsValidator());
+    public static function kingdomSettings(
+        KingdomRepositoryInterface $kingdoms,
+        ?MonthInvalidator $months = null,
+    ): KingdomSettings {
+        return new KingdomSettings($kingdoms, new PublicationSettingsValidator(), $months ?? self::months());
     }
 
     public static function reviewQueue(
