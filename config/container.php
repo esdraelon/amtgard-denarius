@@ -503,6 +503,12 @@ return [
         $debug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
         $handlers = [new JsonStderrHandler()];
         $root = dirname(__DIR__);
+        $spoolEnabled = (($_ENV['LOG_SPOOL_ENABLED'] ?? 'true') === 'true');
+        if ($spoolEnabled) {
+            $handlers[] = new Amtgard\Denarius\Utilities\Log\Sqlite\JsonLogSpoolHandler(
+                Amtgard\Denarius\Utilities\Log\Sqlite\LogPathResolver::fromEnv($root),
+            );
+        }
         $logFile = $_ENV['DENARIUS_METHOD_LOG'] ?? ($debug ? $root . '/logs/method-trace.jsonl' : '');
         if ($logFile !== '') {
             $dir = dirname($logFile);
