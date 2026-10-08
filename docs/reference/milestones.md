@@ -716,3 +716,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ route matrix gate (D14)
+
+- Branch: `stack/denarius-integ-d14-matrix-gate`
+- `bin/check-integ-route-coverage.php` reads [dev-integ-route-matrix.md](../planning/dev-integ-route-matrix.md) **Summary** counts and verifies they match the **Matrix** rows; fails when `y / in-scope` is below 90%. `./scripts/integ.sh` runs the checker after HTTP integ tests. Matrix summary corrected to 32/32 in-scope (**100%**); four plan exclusions unchanged.
+- Line coverage: unchanged (`composer test`; harness + docs only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).

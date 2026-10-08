@@ -34,6 +34,6 @@ Plan: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | D11 | `stack/denarius-integ-d11-simplefin-return` | [x] |
 | D12 | `stack/denarius-integ-d12-manage-connect-refresh` | [x] |
 | D13 | `stack/denarius-integ-d13-auth-negatives` | [x] |
-| D14 | `stack/denarius-integ-d14-matrix-gate` | [ ] |
+| D14 | `stack/denarius-integ-d14-matrix-gate` | [x] |
 
 **Done when:** route matrix ≥ 90% in-scope routes; `./scripts/integ.sh` green with `--order-by=random`.

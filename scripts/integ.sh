@@ -30,6 +30,12 @@ if [[ "$fail" -eq 0 ]]; then
     if ! composer integ -- --log-junit "$INTEG_JUNIT"; then
         fail=1
     fi
+    if [[ "$fail" -eq 0 ]]; then
+        echo "==> Checking integ route matrix coverage..."
+        if ! php bin/check-integ-route-coverage.php docs/planning/dev-integ-route-matrix.md 90; then
+            fail=1
+        fi
+    fi
     if [[ -f "$INTEG_JUNIT" ]]; then
         integ_summary="$(php -r '
             $path = $argv[1];
