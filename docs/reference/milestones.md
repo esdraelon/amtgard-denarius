@@ -307,6 +307,13 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Dev docker networks and env (I1)
+
+- Branch: `publication/i01-dev-docker-networks` (stacked on `publication/p09-admin-principal-suggester`).
+- Dev web and worker compose files load `.env` through `env_file`; the dev web container joins `amtgard-denarius-net` and the external `amtgard-denarius-shared`, and the worker joins both so it reaches MariaDB and Redis. `scripts/dev-up.sh` is executable. `.env.example` documents the worker network requirement and optional `IDP_SUGGEST_EMAIL_DOMAINS`. The test database, MariaDB init script, and bundled ORK kingdoms were already on the stack. C2 (removing single-row publish/withhold/update routes) skipped: the per-row category form still posts to `/transactions/update`, and single-row publish reports embargo/category errors the batch apply skips.
+- Line coverage: 95.74% (6723/7022).
+- Infection covered MSI: not re-run (no `src/` change).
+
 ## Admin principal suggester wiring (P9)
 
 - Branch: `publication/p09-admin-principal-suggester` (stacked on `publication/p08-statement-posted-sort`).
