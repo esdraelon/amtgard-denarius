@@ -12,18 +12,18 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** | In scope; not covered yet (Phase D backlog). |
 | **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
 
-## Summary (D5)
+## Summary (D6)
 
 | Metric | Count |
 |--------|------:|
 | Routes in `config/routes.php` | 36 |
 | **excluded** | 4 |
 | In scope (total − excluded) | 32 |
-| **y** (covered today) | 12 |
-| **n** (uncovered in scope) | 20 |
-| Coverage `y / in-scope` | 37.5% (target ≥ 90% at D14) |
+| **y** (covered today) | 14 |
+| **n** (uncovered in scope) | 18 |
+| Coverage `y / in-scope` | 43.75% (target ≥ 90% at D14) |
 
-**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
+**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
 
 ## Matrix
 
@@ -40,9 +40,9 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | GET | `/logout` | y | `AuthSessionTest` | Clears session; redirects home (requires `IntegAuth::loginViaIdp`) |
 | GET | `/admin` | y | `AuthSessionTest`, `AdminReadTest` | D2: unauthenticated redirect to `/login`; D5: bootstrap admin HTML |
 | GET | `/admin/kingdoms` | y | `AdminReadTest` | JSON ORK kingdom directory (bundled seed) |
-| POST | `/admin/kingdoms/sync` | n | — | D6 admin write; ORK list stubbed in integ |
+| POST | `/admin/kingdoms/sync` | y | `AdminWriteTest` | CSRF JSON body; imports ORK GetKingdoms payload |
 | GET | `/admin/principal-suggestions` | y | `AdminReadTest` | JSON typeahead; short `q` empty; seed admin email via IdP Client IAM |
-| POST | `/admin/grant` | n | — | D6 admin write; CSRF + admin role |
+| POST | `/admin/grant` | y | `AdminWriteTest` | CSRF + grant-manager for seed manager / Golden Plains |
 | GET | `/manage/{slug}` | n | — | D7 manage read |
 | POST | `/manage/{slug}/settings` | n | — | D8 manage settings / enrollment |
 | GET | `/manage/{slug}/connect` | n | — | D12 manage connect / refresh |
