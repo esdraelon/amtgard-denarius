@@ -1,0 +1,49 @@
+# Dedicated MariaDB + session Redis for DEV integration tests (project amtgard-denarius-integ).
+# Start alone: docker compose -p amtgard-denarius-integ -f docker/compose.integ-infra.yml up -d
+# Or via scripts/integ-up.sh (starts this project before the web integ overlay in C2).
+name: amtgard-denarius-integ
+
+services:
+  amtgard-denarius-db-integ:
+    image: mariadb:11
+    container_name: amtgard-denarius-db-integ
+    hostname: amtgard-denarius-db-integ
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: denarius_integ
+      MARIADB_USER: denarius
+      MARIADB_PASSWORD: secret
+      MARIADB_ROOT_PASSWORD: root
+    ports:
+      - "36317:3306"
+    expose:
+      - "3306"
+    volumes:
+      - amtgard-denarius-integ-data-db:/var/lib/mysql
+    networks:
+      - amtgard-denarius-shared
+
+  amtgard-denarius-sessions-integ:
+    image: redis:7-alpine
+    container_name: amtgard-denarius-sessions-integ
+    hostname: amtgard-denarius-sessions-integ
+    restart: unless-stopped
+    volumes:
+      - amtgard-denarius-integ-session-data:/data
+    networks:
+      - amtgard-denarius-shared
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+
+volumes:
+  amtgard-denarius-integ-data-db:
+    name: amtgard-denarius-integ-data-db
+  amtgard-denarius-integ-session-data:
+    name: amtgard-denarius-integ-session-data
+
+networks:
+  amtgard-denarius-shared:
+    name: amtgard-denarius-shared
+    external: true

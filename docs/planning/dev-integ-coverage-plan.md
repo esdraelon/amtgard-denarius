@@ -17,11 +17,11 @@ Companion to [dev-integ-coverage-checklist.md](./dev-integ-coverage-checklist.md
 | Routes | 36 in `config/routes.php` |
 | HTTP integ | **None** — no `phpunit.integ.xml`, no `composer integ` |
 | `tests/Integration/` | 3 classes, MariaDB/persistence only (included in `composer test`) |
-| Docker | `scripts/dev-up.sh`; no integ overlay |
+| Docker | `scripts/dev-up.sh`; integ DB/Redis in `docker/compose.integ-infra.yml` (C1); web overlay pending C2 |
 
 ## Architecture target
 
-- Project `amtgard-denarius-integ`: DB `amtgard-denarius-db-integ` (host port **36317**), Redis `amtgard-denarius-sessions-integ`.
+- Project `amtgard-denarius-integ`: `docker/compose.integ-infra.yml` — DB `amtgard-denarius-db-integ` (host port **36317**, schema `denarius_integ`, volumes `amtgard-denarius-integ-data-db`), Redis `amtgard-denarius-sessions-integ` (volume `amtgard-denarius-integ-session-data`). Start: `docker compose -p amtgard-denarius-integ -f docker/compose.integ-infra.yml up -d`. Integ env vars are commented in `.env.example`.
 - Web overlay: `ENVIRONMENT=DEV_INTEG`, integ hosts, migrate + seed integ DB only.
 - **IDP prerequisite:** IDP integ stack (`localhost:37080`) with Denarius OAuth client + redirect `http://localhost:37180/oauth/callback`.
 
