@@ -12,18 +12,18 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** | In scope; not covered yet (Phase D backlog). |
 | **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
 
-## Summary (D4)
+## Summary (D5)
 
 | Metric | Count |
 |--------|------:|
 | Routes in `config/routes.php` | 36 |
 | **excluded** | 4 |
 | In scope (total − excluded) | 32 |
-| **y** (covered today) | 10 |
-| **n** (uncovered in scope) | 22 |
-| Coverage `y / in-scope` | 31.3% (target ≥ 90% at D14) |
+| **y** (covered today) | 12 |
+| **n** (uncovered in scope) | 20 |
+| Coverage `y / in-scope` | 37.5% (target ≥ 90% at D14) |
 
-**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
+**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
 
 ## Matrix
 
@@ -38,10 +38,10 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | GET | `/login` | y | `AuthSessionTest` | Redirect to IDP `/oauth/authorize` |
 | GET | `/oauth/callback` | excluded | — | Plan exclusion: authorization-code exchange needs live IdP browser redirect; D2/D13 cover login, logout, and auth negatives without this row |
 | GET | `/logout` | y | `AuthSessionTest` | Clears session; redirects home (requires `IntegAuth::loginViaIdp`) |
-| GET | `/admin` | y | `AuthSessionTest` | D2: unauthenticated redirect to `/login`; D5 adds admin read |
-| GET | `/admin/kingdoms` | n | — | D5 admin read |
+| GET | `/admin` | y | `AuthSessionTest`, `AdminReadTest` | D2: unauthenticated redirect to `/login`; D5: bootstrap admin HTML |
+| GET | `/admin/kingdoms` | y | `AdminReadTest` | JSON ORK kingdom directory (bundled seed) |
 | POST | `/admin/kingdoms/sync` | n | — | D6 admin write; ORK list stubbed in integ |
-| GET | `/admin/principal-suggestions` | n | — | D5 admin read |
+| GET | `/admin/principal-suggestions` | y | `AdminReadTest` | JSON typeahead; short `q` empty; seed admin email via IdP Client IAM |
 | POST | `/admin/grant` | n | — | D6 admin write; CSRF + admin role |
 | GET | `/manage/{slug}` | n | — | D7 manage read |
 | POST | `/manage/{slug}/settings` | n | — | D8 manage settings / enrollment |

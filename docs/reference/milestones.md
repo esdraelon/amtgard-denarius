@@ -644,3 +644,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ admin read (D5)
+
+- Branch: `stack/denarius-integ-d5-admin-read`
+- `AdminReadTest`: after `IntegAuth::loginViaIdp` as bootstrap admin (`DENARIUS_BOOTSTRAP_ADMIN_IDP_USER_IDS`), live `GET /admin` (Roles UI + CSRF), `GET /admin/kingdoms` (non-empty JSON directory), and `GET /admin/principal-suggestions` (short query empty; seed admin email resolved via IdP Client IAM). Route matrix: `/admin/kingdoms` and `/admin/principal-suggestions` **y** (12/32 in-scope, 37.5%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
