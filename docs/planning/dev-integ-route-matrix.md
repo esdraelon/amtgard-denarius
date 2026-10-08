@@ -12,18 +12,18 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** | In scope; not covered yet (Phase D backlog). |
 | **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
 
-## Summary (D7)
+## Summary (D8)
 
 | Metric | Count |
 |--------|------:|
 | Routes in `config/routes.php` | 36 |
 | **excluded** | 4 |
 | In scope (total − excluded) | 32 |
-| **y** (covered today) | 19 |
-| **n** (uncovered in scope) | 13 |
-| Coverage `y / in-scope` | 59.38% (target ≥ 90% at D14) |
+| **y** (covered today) | 23 |
+| **n** (uncovered in scope) | 9 |
+| Coverage `y / in-scope` | 71.88% (target ≥ 90% at D14) |
 
-**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`); kingdom-manager **`GET /manage/golden-plains`**, **`GET …/connect`** (302 to manage index), **`GET …/patterns`**, **`GET …/patterns/new`**, and **`GET …/taxonomy/categories?q=rent`** (JSON typeahead) (`ManageReadTest`, `IntegAuth::loginKingdomManagerViaIdpOrSkip` grants seed manager then logs in as `integ-manager@example.com`). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
+**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`); kingdom-manager **`GET /manage/golden-plains`**, **`GET …/connect`** (302 to manage index), **`GET …/patterns`**, **`GET …/patterns/new`**, and **`GET …/taxonomy/categories?q=rent`** (JSON typeahead) (`ManageReadTest`, `IntegAuth::loginKingdomManagerViaIdpOrSkip` grants seed manager then logs in as `integ-manager@example.com`); kingdom-manager **`POST …/settings`**, **`POST …/enrollment`** (Teller stub via `IntegTellerApi`), **`POST …/accounts`**, and **`POST …/disconnect`** with CSRF scraped from the manage index (`ManageSettingsEnrollmentTest`). Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
 
 ## Matrix
 
@@ -44,12 +44,12 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | GET | `/admin/principal-suggestions` | y | `AdminReadTest` | JSON typeahead; short `q` empty; seed admin email via IdP Client IAM |
 | POST | `/admin/grant` | y | `AdminWriteTest` | CSRF + grant-manager for seed manager / Golden Plains |
 | GET | `/manage/{slug}` | y | `ManageReadTest` | Seed slug `golden-plains`; kingdom manager session |
-| POST | `/manage/{slug}/settings` | n | — | D8 manage settings / enrollment |
+| POST | `/manage/{slug}/settings` | y | `ManageSettingsEnrollmentTest` | CSRF form from manage index; visibility / disclosure / embargo |
 | GET | `/manage/{slug}/connect` | y | `ManageReadTest` | 302 redirect to manage index (POST connect in D12) |
 | POST | `/manage/{slug}/connect` | n | — | D12 manage connect / refresh |
-| POST | `/manage/{slug}/enrollment` | n | — | D8 manage settings / enrollment |
-| POST | `/manage/{slug}/disconnect` | n | — | D12 manage connect / refresh |
-| POST | `/manage/{slug}/accounts` | n | — | D12 manage connect / refresh |
+| POST | `/manage/{slug}/enrollment` | y | `ManageSettingsEnrollmentTest` | Teller enrollment JSON + CSRF (integ stub accounts) |
+| POST | `/manage/{slug}/disconnect` | y | `ManageSettingsEnrollmentTest` | CSRF disconnect after connected enrollment |
+| POST | `/manage/{slug}/accounts` | y | `ManageSettingsEnrollmentTest` | CSRF `published[]` for `acc_integ_1` |
 | POST | `/manage/{slug}/refresh` | n | — | D12 manage connect / refresh |
 | POST | `/manage/{slug}/transactions/publish` | excluded | — | Plan exclusion: legacy single-row publish; superseded by `POST …/transactions/review` (D9); unit tests retain behavior |
 | POST | `/manage/{slug}/transactions/withhold` | excluded | — | Plan exclusion: legacy single-row withhold; superseded by review batch (D9) |
