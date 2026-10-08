@@ -29,9 +29,11 @@
         <env name="APP_KEY" value="test-only-app-key-not-for-production"/>
         <env name="DB_HOST" value="127.0.0.1"/>
         <env name="DB_PORT" value="36316"/>
-        <env name="DB_NAME" value="denarius"/>
+        <env name="DB_NAME" value="denarius_test"/>
         <env name="DB_USER" value="denarius"/>
         <env name="DB_PASS" value="secret"/>
+        <env name="DB_ROOT_USER" value="root"/>
+        <env name="DB_ROOT_PASS" value="root"/>
         <env name="IDP_BASE_URL" value="https://idp.amtgard.com"/>
         <env name="IDP_CLIENT_ID" value="test-client"/>
         <env name="IDP_CLIENT_SECRET" value="test-secret"/>

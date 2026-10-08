@@ -48,7 +48,7 @@
         "infection:ci": [
             "@php -d display_errors=0 -d error_reporting=8191 vendor/bin/phpunit --coverage-xml build/coverage-xml --log-junit build/junit.xml",
             "cp build/junit.xml build/coverage-xml/junit.xml",
-            "@php vendor/bin/infection --skip-initial-tests --coverage=build/coverage-xml --min-msi=80 --min-covered-msi=80 --threads=4"
+            "@php -d memory_limit=1536M vendor/bin/infection --skip-initial-tests --coverage=build/coverage-xml --min-msi=80 --min-covered-msi=80 --threads=4"
         ]
     },
     "config": {

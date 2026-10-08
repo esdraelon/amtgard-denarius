@@ -9,7 +9,13 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 DG\BypassFinals::enable();
 
+use Amtgard\Denarius\Tests\Support\PersistenceStoreArrange;
 use Amtgard\Denarius\Tests\Support\RecordingMethodLog;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 DenariusLog::install(new RecordingMethodLog());
+
+if (($_ENV['APP_ENV'] ?? getenv('APP_ENV')) === 'testing') {
+    PersistenceStoreArrange::ensureTestDatabaseExists();
+    PersistenceStoreArrange::ensureTestSchemaMigrated();
+}

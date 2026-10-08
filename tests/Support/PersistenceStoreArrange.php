@@ -28,9 +28,12 @@ use PDO;
 /** Shared MariaDB arrange for repository round-trips (StoreTest and method-log tests). */
 final class PersistenceStoreArrange
 {
+    public const TEST_DATABASE = 'denarius_test';
+
     public static function tryPdo(): ?PDO
     {
         try {
+            self::ensureTestDatabaseExists();
             $config = DatabaseConfiguration::fromEnvironment();
             $pdo = MysqlPdoProvider::fromConfiguration($config)->getPdo();
             $pdo->query('SELECT 1');
@@ -43,6 +46,8 @@ final class PersistenceStoreArrange
 
     public static function migrateFresh(PDO $pdo): void
     {
+        self::assertSafeToWipe();
+
         foreach (['kingdom_category_rules', 'role_grants', 'transactions', 'enrollment_secrets', 'published_accounts_audit', 'published_accounts', 'kingdoms_audit', 'kingdoms', 'principals', 'phinxlog'] as $table) {
             $pdo->exec('DROP TABLE IF EXISTS ' . $table);
         }
@@ -60,6 +65,106 @@ final class PersistenceStoreArrange
         }
         if ($pdo->query("SHOW TABLES LIKE 'kingdoms'")->fetchColumn() !== 'kingdoms') {
             throw new \RuntimeException('Phinx migrate did not create kingdoms:' . "\n" . implode("\n", $output));
+        }
+    }
+
+    public static function ensureTestDatabaseExists(): void
+    {
+        if (self::env('APP_ENV') !== 'testing') {
+            return;
+        }
+        if (self::env('DB_NAME') !== self::TEST_DATABASE) {
+            return;
+        }
+
+        $host = self::env('DB_HOST', '127.0.0.1');
+        $port = self::env('DB_PORT', '3306');
+        $appUser = self::env('DB_USER', 'denarius');
+        $rootUser = self::env('DB_ROOT_USER', 'root');
+        $rootPass = self::env('DB_ROOT_PASS', '');
+
+        if ($rootPass === '') {
+            return;
+        }
+
+        $admin = new PDO(
+            'mysql:host=' . $host . ';port=' . $port,
+            $rootUser,
+            $rootPass,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+        );
+        $admin->exec(
+            'CREATE DATABASE IF NOT EXISTS `' . self::TEST_DATABASE . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',
+        );
+        $quotedUser = $admin->quote($appUser);
+        $admin->exec('GRANT ALL PRIVILEGES ON `' . self::TEST_DATABASE . '`.* TO ' . $quotedUser . "@'%'");
+        $admin->exec('FLUSH PRIVILEGES');
+    }
+
+    public static function ensureTestSchemaMigrated(): void
+    {
+        if (self::env('APP_ENV') !== 'testing' || self::env('DB_NAME') !== self::TEST_DATABASE) {
+            return;
+        }
+
+        $pdo = self::tryPdoWithoutSchemaEnsure();
+        if ($pdo === null) {
+            return;
+        }
+
+        if ($pdo->query("SHOW TABLES LIKE 'kingdom_category_rules'")->fetchColumn() === 'kingdom_category_rules') {
+            return;
+        }
+
+        $phinx = dirname(__DIR__, 2) . '/vendor/bin/phinx';
+        $root = dirname(__DIR__, 2);
+        $command = sprintf(
+            'cd %s && %s %s migrate -e testing',
+            escapeshellarg($root),
+            self::phinxEnvPrefix(),
+            escapeshellarg($phinx),
+        );
+        exec($command, $output, $code);
+        if ($code !== 0) {
+            throw new \RuntimeException('Phinx migrate failed for test database:' . "\n" . implode("\n", $output));
+        }
+    }
+
+    private static function tryPdoWithoutSchemaEnsure(): ?PDO
+    {
+        try {
+            $config = DatabaseConfiguration::fromEnvironment();
+            $pdo = MysqlPdoProvider::fromConfiguration($config)->getPdo();
+            $pdo->query('SELECT 1');
+
+            return $pdo;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private static function env(string $key, string $default = ''): string
+    {
+        $fromEnv = $_ENV[$key] ?? getenv($key);
+        if (is_string($fromEnv) && $fromEnv !== '') {
+            return $fromEnv;
+        }
+
+        return $default;
+    }
+
+    private static function assertSafeToWipe(): void
+    {
+        if (self::env('APP_ENV') !== 'testing') {
+            throw new \RuntimeException('Refusing migrateFresh: APP_ENV must be testing.');
+        }
+        $name = self::env('DB_NAME');
+        if ($name !== self::TEST_DATABASE) {
+            throw new \RuntimeException(
+                'Refusing migrateFresh on database "' . $name . '". '
+                . 'PHPUnit must use DB_NAME=' . self::TEST_DATABASE . ' (see phpunit.xml). '
+                . 'Never point tests at the dev database "denarius".',
+            );
         }
     }
 

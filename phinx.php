@@ -35,7 +35,7 @@ return [
         'testing' => [
             'adapter' => 'mysql',
             'host' => $_ENV['DB_HOST'] ?? '127.0.0.1',
-            'name' => $_ENV['DB_NAME'] ?? 'denarius',
+            'name' => $_ENV['DB_NAME'] ?? 'denarius_test',
             'user' => $_ENV['DB_USER'] ?? 'denarius',
             'pass' => $_ENV['DB_PASS'] ?? 'secret',
             'port' => $_ENV['DB_PORT'] ?? '36316',
