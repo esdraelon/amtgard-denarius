@@ -660,3 +660,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ manage read (D7)
+
+- Branch: `stack/denarius-integ-d7-manage-read`
+- `ManageReadTest`: after admin grant for seed manager (`IntegAuth::grantSeedKingdomManager`) and IdP login as `integ-manager@example.com`, live `GET /manage/golden-plains` (statement settings UI), `GET …/connect` (302 to manage index), `GET …/patterns` and `GET …/patterns/new`, and `GET …/taxonomy/categories?q=rent` (JSON includes `expense.site_rental`). Route matrix: five manage GET rows **y** (19/32 in-scope, 59.38%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
