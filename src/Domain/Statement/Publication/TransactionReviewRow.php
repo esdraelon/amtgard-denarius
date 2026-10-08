@@ -25,6 +25,7 @@ final class TransactionReviewRow
         private readonly int $categoryConfidence,
         private readonly string $prefillSlug,
         private readonly string $prefillDisplay,
+        private readonly PublicationSelection $selection,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -35,7 +36,7 @@ final class TransactionReviewRow
     public function view(): array
     {
         return DenariusLog::trace(__METHOD__, function (): array {
-            return [
+            return $this->selection->view() + [
                 'tellerTransactionId' => $this->tellerTransactionId,
                 'postedOn' => $this->postedOn,
                 'amount' => $this->amount,

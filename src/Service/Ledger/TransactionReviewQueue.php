@@ -7,6 +7,8 @@ namespace Amtgard\Denarius\Service\Ledger;
 use Amtgard\Denarius\Domain\Statement\Line\Money;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationCandidateLine;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionReviewRow;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
@@ -110,6 +112,13 @@ final class TransactionReviewQueue
             $prefill = $category !== 'uncategorized' ? $category : ($suggested ?? 'uncategorized');
             $flow = TransactionFlow::defaultFromSignedCents($line->getAmountCents());
             $prefillDisplay = ucfirst($flow->value) . ' · ' . $this->catalog->label($prefill);
+            $redact = PublicationFlags::parse($line->getPublicationFlags())->isManagerRedactDescription();
+            $selection = new PublicationSelection(
+                $line->getTellerTransactionId(),
+                $this->isPublished($line),
+                $redact,
+                !$this->embargoOpen($line, $this->now),
+            );
 
             return new TransactionReviewRow(
                 $line->getTellerTransactionId(),
@@ -127,6 +136,7 @@ final class TransactionReviewQueue
                 $line->getCategoryConfidence(),
                 $prefill,
                 $prefillDisplay,
+                $selection,
             );
         });
     }

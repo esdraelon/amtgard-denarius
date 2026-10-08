@@ -476,6 +476,7 @@ return [
         $c->get(MonthInvalidator::class),
         $c->get(ReviewCategoryValidator::class),
         $c->get(TaxonomyCatalog::class),
+        $c->get(PublicationEmbargoCalculator::class),
         new DateTimeImmutable('now'),
     ),
     PrincipalSync::class => fn (PrincipalRepositoryInterface $principals) => new PrincipalSync($principals),
