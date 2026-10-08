@@ -30,7 +30,7 @@ Plan: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | D7 | `stack/denarius-integ-d7-manage-read` | [x] |
 | D8 | `stack/denarius-integ-d8-manage-settings-enrollment` | [x] |
 | D9 | `stack/denarius-integ-d9-transactions` | [x] |
-| D10 | `stack/denarius-integ-d10-patterns` | [ ] |
+| D10 | `stack/denarius-integ-d10-patterns` | [x] |
 | D11 | `stack/denarius-integ-d11-simplefin-return` | [ ] |
 | D12 | `stack/denarius-integ-d12-manage-connect-refresh` | [ ] |
 | D13 | `stack/denarius-integ-d13-auth-negatives` | [ ] |
