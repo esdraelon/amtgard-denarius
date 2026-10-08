@@ -110,12 +110,12 @@ final class ControllerTest extends AmtgardTestCase
         $grantTargets = Strategies::grantTargets($principals);
         $grants = new MemoryGrants();
         $grantedRoles = Strategies::grantedRoles($grants, $principals, $kingdoms);
-        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles);
+        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles, Strategies::principalSuggester($principals));
         $anon = new SessionAuthStore('empty');
-        $guest = (new AdminController($anon, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
+        $guest = (new AdminController($anon, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
             ->index($this->request('GET', '/admin'), new Response());
         $this->assertSame(302, $guest->getStatusCode());
-        $index = $admin->index($this->request('GET', '/admin', ['email' => 'person']), new Response());
+        $index = $admin->index($this->request('GET', '/admin', ['email' => 'person@example.com']), new Response());
         $this->assertStringContainsString('admin 1', (string) $index->getBody());
         $_SESSION['_csrf'] = 'token';
         $granted = $admin->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-manager', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains']), new Response());
@@ -131,7 +131,7 @@ final class ControllerTest extends AmtgardTestCase
         $table = $admin->index($this->request('GET', '/admin', ['perm_email' => 'person', 'perm_kingdom' => 'Golden']), new Response());
         $this->assertStringContainsString('grants 1', (string) $table->getBody());
         $iamDenied = new ClientIamDeniedPolicies();
-        $adminIamDenied = new AdminController($auth, $permissions, $principals, $kingdoms, $iamDenied, $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles);
+        $adminIamDenied = new AdminController($auth, $permissions, $principals, $kingdoms, $iamDenied, $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles, Strategies::principalSuggester($principals));
         $deniedGrant = $adminIamDenied->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-manager', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains']), new Response());
         $this->assertSame(503, $deniedGrant->getStatusCode());
         $this->assertStringContainsString('IDP_CLIENT_ID', (string) $deniedGrant->getBody());

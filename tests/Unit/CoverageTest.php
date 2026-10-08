@@ -145,7 +145,7 @@ PHP);
         $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('summarized')->enrollmentStatus('connected')->build());
         $principals = new MemoryPrincipals();
         $grantTargets = Strategies::grantTargets($principals);
-        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), Strategies::orkKingdoms($kingdoms, $principals), $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms));
+        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), Strategies::orkKingdoms($kingdoms, $principals), $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals));
         $_SESSION['_csrf'] = 'token';
         $request = static fn (array $body) => (new ServerRequestFactory())->createServerRequest('POST', '/admin/grant')->withParsedBody($body);
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-admin']), new Response())->getStatusCode());
@@ -153,7 +153,7 @@ PHP);
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'revoke-manager', 'ork_kingdom_id' => '4']), new Response())->getStatusCode());
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'unknown']), new Response())->getStatusCode());
         $member = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        $forbidden = (new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), Strategies::orkKingdoms($kingdoms, $principals), $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
+        $forbidden = (new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), Strategies::orkKingdoms($kingdoms, $principals), $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
             ->index((new ServerRequestFactory())->createServerRequest('GET', '/admin'), new Response());
         $this->assertSame(403, $forbidden->getStatusCode());
 

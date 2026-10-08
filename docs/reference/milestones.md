@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Admin principal suggester wiring (P9)
+
+- Branch: `publication/p09-admin-principal-suggester` (stacked on `publication/p08-statement-posted-sort`).
+- `AdminController` takes `AdminPrincipalSuggester` (container-bound on `PrincipalRepositoryInterface`, `IdpUserDirectory`, `PrincipalSync`); `index` and `principalSuggestions` resolve through IdP email lookup and local-part domain probes instead of local `searchByEmail`. Tests pass `Strategies::principalSuggester` and search by full email. `ContainerResolutionOrderTest` asserts by reflection that the container injects the suggester into `AdminController` and `StripeTransactionRefreshWait` into `StripeLedgerProvider` (the admin case skips when IdP/DB infrastructure is unreachable, like the existing controller resolution test).
+- Line coverage: 95.74% (6723/7022).
+- Infection covered MSI: 83% on `AdminController` and `AdminPrincipalSuggester` (scoped `--filter`).
+- Log-tested branches: `admin_principal_suggest_idp` now asserted in `AdminPrincipalSuggesterTest`; no new branches.
+
 ## Statement posted sort (P8)
 
 - Branch: `publication/p08-statement-posted-sort` (stacked on `publication/p07-stripe-refresh-and-errors`).

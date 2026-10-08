@@ -71,6 +71,7 @@ final class AdminKingdomListTest extends AmtgardTestCase
             $directory,
             Strategies::grantTargets($principals),
             Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms),
+            Strategies::principalSuggester($principals),
         );
 
         $response = $admin->kingdoms(
@@ -124,6 +125,7 @@ final class AdminKingdomListTest extends AmtgardTestCase
             $directory,
             Strategies::grantTargets($principals),
             Strategies::grantedRoles(new MemoryGrants(), $principals, new MemoryKingdoms()),
+            Strategies::principalSuggester($principals),
         );
 
         $orkJson = json_encode([
@@ -178,6 +180,7 @@ final class AdminKingdomListTest extends AmtgardTestCase
             $directory,
             Strategies::grantTargets($principals),
             Strategies::grantedRoles(new MemoryGrants(), $principals, new MemoryKingdoms()),
+            Strategies::principalSuggester($principals),
         );
         $request = (new ServerRequestFactory())
             ->createServerRequest('POST', '/admin/kingdoms/sync')
