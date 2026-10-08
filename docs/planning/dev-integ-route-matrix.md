@@ -12,7 +12,7 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** | In scope; not covered yet (Phase D backlog). |
 | **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
 
-## Summary (D11)
+## Summary (D12)
 
 | Metric | Count |
 |--------|------:|
@@ -23,7 +23,7 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** (uncovered in scope) | 2 |
 | Coverage `y / in-scope` | 93.75% (target ≥ 90% at D14) |
 
-**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`); kingdom-manager **`GET /manage/golden-plains`**, **`GET …/connect`** (302 to manage index), **`GET …/patterns`**, **`GET …/patterns/new`**, and **`GET …/taxonomy/categories?q=rent`** (JSON typeahead) (`ManageReadTest`, `IntegAuth::loginKingdomManagerViaIdpOrSkip` grants seed manager then logs in as `integ-manager@example.com`); kingdom-manager **`POST …/settings`**, **`POST …/enrollment`** (Teller stub via `IntegTellerApi`), **`POST …/accounts`**, and **`POST …/disconnect`** with CSRF scraped from the manage index (`ManageSettingsEnrollmentTest`); kingdom-manager **`GET/POST /bank/simplefin/return`** (form HTML, claim via query token + kingdom, POST with CSRF after connect wizard remembers kingdom; `IntegSimpleFinApi`) (`SimpleFinReturnTest`); kingdom-manager **`POST …/transactions/review`** with CSRF from `#review-batch-form` and batch publish / redact on seed review rows (`ManageTransactionsTest`, integ seed published account + transactions). Legacy **`POST …/transactions/publish`**, **`…/withhold`**, and **`…/update`** stay **excluded**. Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
+**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`); kingdom-manager **`GET /manage/golden-plains`**, **`GET …/connect`** (302 to manage index), **`GET …/patterns`**, **`GET …/patterns/new`**, and **`GET …/taxonomy/categories?q=rent`** (JSON typeahead) (`ManageReadTest`, `IntegAuth::loginKingdomManagerViaIdpOrSkip` grants seed manager then logs in as `integ-manager@example.com`); kingdom-manager **`POST …/settings`**, **`POST …/enrollment`** (Teller stub via `IntegTellerApi`), **`POST …/accounts`**, and **`POST …/disconnect`** with CSRF scraped from the manage index (`ManageSettingsEnrollmentTest`); kingdom-manager **`GET/POST /bank/simplefin/return`** (form HTML, claim via query token + kingdom, POST with CSRF after connect wizard remembers kingdom; `IntegSimpleFinApi`) (`SimpleFinReturnTest`); kingdom-manager **`POST …/connect`** (Teller connect mount from Add bank) and **`POST …/refresh`** (ledger queue + integ `ledger-worker`, poll manage sync feedback) (`ManageConnectRefreshTest`); kingdom-manager **`POST …/transactions/review`** with CSRF from `#review-batch-form` and batch publish / redact on seed review rows (`ManageTransactionsTest`, integ seed published account + transactions). Legacy **`POST …/transactions/publish`**, **`…/withhold`**, and **`…/update`** stay **excluded**. Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
 
 ## Matrix
 
@@ -46,11 +46,11 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | GET | `/manage/{slug}` | y | `ManageReadTest` | Seed slug `golden-plains`; kingdom manager session |
 | POST | `/manage/{slug}/settings` | y | `ManageSettingsEnrollmentTest` | CSRF form from manage index; visibility / disclosure / embargo |
 | GET | `/manage/{slug}/connect` | y | `ManageReadTest` | 302 redirect to manage index (POST connect in D12) |
-| POST | `/manage/{slug}/connect` | n | — | D12 manage connect / refresh |
+| POST | `/manage/{slug}/connect` | y | `ManageConnectRefreshTest` | CSRF from manage index; mounts Teller stub (`app_test` / sandbox) |
 | POST | `/manage/{slug}/enrollment` | y | `ManageSettingsEnrollmentTest` | Teller enrollment JSON + CSRF (integ stub accounts) |
 | POST | `/manage/{slug}/disconnect` | y | `ManageSettingsEnrollmentTest` | CSRF disconnect after connected enrollment |
 | POST | `/manage/{slug}/accounts` | y | `ManageSettingsEnrollmentTest` | CSRF `published[]` for `acc_integ_1` |
-| POST | `/manage/{slug}/refresh` | n | — | D12 manage connect / refresh |
+| POST | `/manage/{slug}/refresh` | y | `ManageConnectRefreshTest` | After Teller enrollment; polls manage for ledger sync success |
 | POST | `/manage/{slug}/transactions/publish` | excluded | — | Plan exclusion: legacy single-row publish; superseded by `POST …/transactions/review` (D9); unit tests retain behavior |
 | POST | `/manage/{slug}/transactions/withhold` | excluded | — | Plan exclusion: legacy single-row withhold; superseded by review batch (D9) |
 | POST | `/manage/{slug}/transactions/update` | excluded | — | Plan exclusion: legacy per-row taxonomy POST; primary integ path is review + taxonomy search (D9); form may still post here in UI |

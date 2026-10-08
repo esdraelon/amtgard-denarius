@@ -700,3 +700,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ manage connect / refresh (D12)
+
+- Branch: `stack/denarius-integ-d12-manage-connect-refresh`
+- `ManageConnectRefreshTest`: kingdom-manager session posts `POST /manage/golden-plains/connect` with CSRF from the manage index (Teller stub mount: `app_test`, sandbox); posts `POST …/refresh` after Teller enrollment and polls the manage page until ledger sync feedback shows **Last check succeeded** (integ `ledger-worker`). Route matrix: connect + refresh POST rows **y** (30/32 in-scope, 93.75%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
