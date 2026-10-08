@@ -652,3 +652,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ admin write (D6)
+
+- Branch: `stack/denarius-integ-d6-admin-write`
+- `AdminWriteTest`: after bootstrap-admin IdP login, live `POST /admin/kingdoms/sync` with CSRF from `GET /admin` and a canned ORK GetKingdoms JSON body; `POST /admin/grant` with hidden fields parsed from `GET /admin?email=` for seed manager (`grant-manager` on Golden Plains). Route matrix: `/admin/kingdoms/sync` and `/admin/grant` **y** (14/32 in-scope, 43.75%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
