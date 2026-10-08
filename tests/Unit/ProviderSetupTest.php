@@ -105,6 +105,7 @@ final class ProviderSetupTest extends AmtgardTestCase
         $stripe = new StripeGuide($stripeClient, new RequiredSettings(), 'https://api.stripe.com/');
         $this->assertSame('stripe', $stripe->id());
         $this->assertStringContainsString('/webhooks/stripe', $stripe->instructions());
+        $this->assertStringContainsString('financial_connections.account.refreshed_balance', $stripe->instructions());
         $this->assertStringContainsString('financial_connections.account.disconnected', $stripe->instructions());
         $this->assertFalse($stripe->fields()[0]->hidden() === false);
         $this->assertFalse($stripe->fields()[1]->hidden());

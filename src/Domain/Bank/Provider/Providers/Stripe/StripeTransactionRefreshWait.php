@@ -19,12 +19,14 @@ final class StripeTransactionRefreshWait
 
     public function beforeListing(string $accountId): void
     {
-        DenariusLog::trace(__METHOD__, function () use ($accountId): void {
+        $method = __METHOD__;
+
+        DenariusLog::trace($method, function () use ($accountId, $method): void {
             $deadline = time() + $this->timeoutSeconds;
             while (time() < $deadline) {
                 $status = $this->refreshStatus($accountId);
                 if ($status === 'succeeded') {
-                    DenariusLog::debugBranch('stripe_transaction_refresh_ready', __METHOD__, [
+                    DenariusLog::debugBranch('stripe_transaction_refresh_ready', $method, [
                         'account_id' => $accountId,
                     ]);
 
@@ -35,7 +37,7 @@ final class StripeTransactionRefreshWait
 
                     continue;
                 }
-                DenariusLog::debugBranch('stripe_transaction_refresh_requested', __METHOD__, [
+                DenariusLog::debugBranch('stripe_transaction_refresh_requested', $method, [
                     'account_id' => $accountId,
                     'prior_status' => $status,
                 ]);
