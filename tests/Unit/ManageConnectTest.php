@@ -16,6 +16,8 @@ use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
+use Amtgard\Denarius\Tests\Support\MethodLogAssert;
+use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
@@ -42,6 +44,10 @@ final class ManageConnectTest extends AmtgardTestCase
 
     private MemoryTransactions $transactions;
 
+    private MemoryKingdoms $kingdoms;
+
+    private MemoryAccounts $accounts;
+
     protected function setUp(): void
     {
         $_SESSION['_csrf'] = 'token';
@@ -51,6 +57,7 @@ final class ManageConnectTest extends AmtgardTestCase
         ))->toSessionArray();
 
         $kingdoms = new MemoryKingdoms();
+        $this->kingdoms = $kingdoms;
         $kingdoms->save(KingdomRecord::builder()
             ->orkKingdomId(4)
             ->name('Golden Plains')
@@ -63,6 +70,7 @@ final class ManageConnectTest extends AmtgardTestCase
             ->enrollmentStatus('disconnected')
             ->build());
         $accounts = new MemoryAccounts();
+        $this->accounts = $accounts;
         $accounts->save(AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->type('depository')->published(true)->build());
         $permissions = new PermissionService(new FakePolicies([ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $queue = new MemoryRefresh();
@@ -88,7 +96,7 @@ final class ManageConnectTest extends AmtgardTestCase
             $kingdoms,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
-            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, $providers, new TokenCipher('k'), $queue, Strategies::months()),
+            new EnrollmentService($kingdoms, $secrets = new MemorySecrets(), $accounts, $providers, new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset($transactions, $accounts, $secrets)),
             $queue,
             new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
             new BankConnect($providers),
@@ -148,7 +156,7 @@ final class ManageConnectTest extends AmtgardTestCase
             new MemoryKingdoms(),
             $guestAccounts,
             Strategies::kingdomSettings(new MemoryKingdoms()),
-            new EnrollmentService(new MemoryKingdoms(), new MemorySecrets(), $guestAccounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months()),
+            new EnrollmentService(new MemoryKingdoms(), new MemorySecrets(), $guestAccounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months(), Strategies::bankReset()),
             new MemoryRefresh(),
             new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
             new BankConnect(Strategies::providers(Strategies::teller())),
@@ -236,6 +244,46 @@ final class ManageConnectTest extends AmtgardTestCase
         $this->assertSame(403, $this->manager->updateTransactionReview($this->request('POST', '/manage/golden-plains/transactions/review', [
             'csrf' => 'nope',
         ]), new Response(), 'golden-plains')->getStatusCode());
+    }
+
+    public function testConnectedKingdomShowsDisconnectAndResetClearsBankData(): void
+    {
+        $kingdom = $this->kingdoms->findBySlug('golden-plains');
+        $this->assertNotNull($kingdom);
+        $this->kingdoms->save(\Amtgard\Denarius\Domain\Kingdom\KingdomRecordRebuilder::from($kingdom)
+            ->enrollmentStatus('connected')
+            ->lastSyncStatus('ok')
+            ->build());
+        $this->transactions->upsert(TransactionRecord::builder()
+            ->kingdomId(1)
+            ->tellerTransactionId('old-bank-row')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-08-14')
+            ->amountCents(-100)
+            ->category('expense.feast_groceries')
+            ->build());
+
+        $shown = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
+        $this->assertStringContainsString('Connected to <span class="fw-semibold">First Credit Union</span> via teller.', $shown);
+        $this->assertStringContainsString('action="/manage/golden-plains/disconnect"', $shown);
+        $this->assertStringNotContainsString('Add bank', $shown);
+
+        $this->assertSame(403, $this->manager->disconnectBank($this->request('POST', '/manage/golden-plains/disconnect', ['csrf' => 'nope']), new Response(), 'golden-plains')->getStatusCode());
+        MethodLogAssert::reset();
+        $response = $this->manager->disconnectBank($this->request('POST', '/manage/golden-plains/disconnect', ['csrf' => 'token']), new Response(), 'golden-plains');
+
+        $this->assertSame('/manage/golden-plains', $response->getHeaderLine('Location'));
+        $reset = $this->kingdoms->findBySlug('golden-plains');
+        $this->assertSame('disconnected', $reset?->getEnrollmentStatus());
+        $this->assertNull($reset?->getEnrollmentId());
+        $this->assertNull($reset?->getProvider());
+        $this->assertNull($reset?->getLastSyncStatus());
+        $this->assertNull($this->transactions->findByTellerTransactionId('old-bank-row'));
+        $this->assertSame([], $this->accounts->forKingdom(1));
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Info, 'enrollment_bank_disconnected', EnrollmentService::class . '::disconnectBank');
+
+        $after = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
+        $this->assertStringContainsString('Add bank', $after);
     }
 
     public function testStripeAndPlaidWidgetsRenderFromConnectConfig(): void

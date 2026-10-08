@@ -78,7 +78,7 @@ final class SimpleFinOnboardingTest extends AmtgardTestCase
         $permissions = new PermissionService(new FakePolicies([ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $session = new SimpleFinConnectSession();
         $session->remember('golden-plains');
-        $enrollment = new SimpleFinReturnEnrollment($kingdoms, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, $providers, new TokenCipher('k'), $queue, Strategies::months()), $session, $permissions);
+        $enrollment = new SimpleFinReturnEnrollment($kingdoms, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, $providers, new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), $session, $permissions);
         $controller = new SimpleFinReturnController(
             new SessionAuthStore('test_session'),
             $enrollment,
@@ -107,7 +107,7 @@ final class SimpleFinOnboardingTest extends AmtgardTestCase
         $permissions = new PermissionService(new FakePolicies([ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $enrollment = new SimpleFinReturnEnrollment(
             $kingdoms,
-            new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months()),
+            new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months(), Strategies::bankReset()),
             new SimpleFinConnectSession(),
             $permissions,
         );
@@ -142,7 +142,7 @@ final class SimpleFinOnboardingTest extends AmtgardTestCase
         ]);
         $claimFail = new SimpleFinReturnEnrollment(
             $kingdoms,
-            new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), $badProviders, new TokenCipher('k'), new MemoryRefresh(), Strategies::months()),
+            new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), $badProviders, new TokenCipher('k'), new MemoryRefresh(), Strategies::months(), Strategies::bankReset()),
             new SimpleFinConnectSession(),
             $permissions,
         );
@@ -169,7 +169,7 @@ final class SimpleFinOnboardingTest extends AmtgardTestCase
         $memberOnly = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $enrollment = new SimpleFinReturnEnrollment(
             $kingdoms,
-            new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months()),
+            new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months(), Strategies::bankReset()),
             new SimpleFinConnectSession(),
             $memberOnly,
         );
@@ -210,7 +210,7 @@ final class SimpleFinOnboardingTest extends AmtgardTestCase
         ]);
         $failEnrollment = new SimpleFinReturnEnrollment(
             $kingdoms,
-            new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), $badProviders, new TokenCipher('k'), new MemoryRefresh(), Strategies::months()),
+            new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), $badProviders, new TokenCipher('k'), new MemoryRefresh(), Strategies::months(), Strategies::bankReset()),
             new SimpleFinConnectSession(),
             new PermissionService(new FakePolicies([ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null)),
         );

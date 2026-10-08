@@ -87,7 +87,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
             ->name('Wetlands')
             ->slug('wetlands')
             ->build());
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($provider), $cipher, $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($provider), $cipher, $queue, Strategies::months(), Strategies::bankReset());
         $connected = $enrollment->connect($kingdom, ['opaque' => true]);
         $this->assertSame('ext-1', $connected->getEnrollmentId());
         $this->assertSame('Other Bank', $connected->getInstitutionName());
@@ -143,7 +143,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
         $secrets = new MemorySecrets();
         $stored = new MemoryAccounts();
         $queue = new MemoryRefresh();
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $stored, Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $stored, Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(3)->name('Celestial')->slug('celestial')->build());
         $connected = $enrollment->connect($kingdom, ['accessToken' => 'token', 'id' => 'enr_sparse']);
         $handler = new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment));

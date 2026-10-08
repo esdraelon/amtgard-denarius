@@ -64,8 +64,9 @@ final class ManagerController
             }
             $params = $request->getQueryParams();
             $uncategorizedOnly = ($params['uncategorized'] ?? '') === '1';
+            $connect = $kingdom->getEnrollmentStatus() === 'connected' ? $this->connects->linked() : $this->connects->idle();
 
-            return $this->page($response, $kingdom, $this->connects->idle(), trim((string) ($params['review_month'] ?? '')), $uncategorizedOnly);
+            return $this->page($response, $kingdom, $connect, trim((string) ($params['review_month'] ?? '')), $uncategorizedOnly);
         });
     }
 
@@ -162,6 +163,24 @@ final class ManagerController
             }
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->setPublished($kingdom, $flags);
+
+            return $this->manageRedirect($response, $kingdom, '');
+        });
+    }
+
+    public function disconnectBank(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
+            if ($kingdom instanceof ResponseInterface) {
+                return $kingdom;
+            }
+            $body = (array) $request->getParsedBody();
+            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
+                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            }
+            CurrentActor::set((string) $this->auth->get()->profile->id);
+            $this->enrollments->disconnectBank($kingdom);
 
             return $this->manageRedirect($response, $kingdom, '');
         });

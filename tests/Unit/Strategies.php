@@ -202,6 +202,18 @@ final class Strategies
         );
     }
 
+    public static function bankReset(
+        ?MemoryTransactions $transactions = null,
+        ?MemoryAccounts $accounts = null,
+        ?MemorySecrets $secrets = null,
+    ): \Amtgard\Denarius\Tests\Support\MemoryKingdomBankReset {
+        return new \Amtgard\Denarius\Tests\Support\MemoryKingdomBankReset(
+            $transactions ?? new MemoryTransactions(),
+            $accounts ?? new MemoryAccounts(),
+            $secrets ?? new MemorySecrets(),
+        );
+    }
+
     public static function months(
         ?KeyValueStore $store = null,
         ?MonthCacheRefreshPublisher $publisher = null,

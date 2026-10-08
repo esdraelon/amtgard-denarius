@@ -309,7 +309,7 @@ PHP);
         $kingdoms = new MemoryKingdoms();
         $kingdoms->save(\Amtgard\Denarius\Persistence\Record\KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->enrollmentId('cus_1')->provider('stripe')->enrollmentStatus('connected')->build());
         $queue = new MemoryRefresh();
-        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $webhook = new WebhookController(new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment)));
         $this->assertSame(400, $webhook->stripe((new ServerRequestFactory())->createServerRequest('POST', '/webhooks/stripe'), new Response())->getStatusCode());
 

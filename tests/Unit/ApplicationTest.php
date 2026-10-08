@@ -235,7 +235,7 @@ final class ApplicationTest extends AmtgardTestCase
         $teller = Strategies::teller();
         $cipher = new TokenCipher('app-key');
         $cache = new ArrayStore();
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache));
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache), Strategies::bankReset());
         $connected = $enrollment->connect($updated, [
             'accessToken' => 'token-1',
             'enrollment' => ['id' => 'enr_1', 'institution' => ['name' => 'Bank']],

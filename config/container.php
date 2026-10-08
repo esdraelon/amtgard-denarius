@@ -17,6 +17,8 @@ use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\PresentCreden
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Support\PreviousMonthWindow;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ProviderAdmission;
 use Amtgard\Denarius\Domain\Bank\Notice\Impl\RefreshLedgerNotice;
+use Amtgard\ActiveRecordOrm\Configuration\Repository\DatabaseConfiguration;
+use Amtgard\ActiveRecordOrm\Configuration\Repository\MysqlPdoProvider;
 use Amtgard\Denarius\Persistence\Orm;
 use Amtgard\Denarius\Persistence\Repository\Account\Impl\AccountRepository;
 use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
@@ -94,7 +96,9 @@ use Amtgard\Denarius\Controller\SimpleFinReturnController;
 use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
+use Amtgard\Denarius\Service\Enrollment\BankConnectionReset;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Service\Enrollment\KingdomBankReset;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationPipelineFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
 use Amtgard\Denarius\Service\Kingdom\KingdomPublicationLineSource;
@@ -319,6 +323,10 @@ return [
         $c->get(TokenCipher::class),
         $c->get(KingdomRefreshQueue::class),
         $c->get(MonthInvalidator::class),
+        $c->get(KingdomBankReset::class),
+    ),
+    KingdomBankReset::class => fn () => new BankConnectionReset(
+        MysqlPdoProvider::fromConfiguration(DatabaseConfiguration::fromEnvironment())->getPdo(),
     ),
     PublicationSettingsValidator::class => fn () => new PublicationSettingsValidator(),
     PublicationEmbargoCalculator::class => fn () => new PublicationEmbargoCalculator(),
