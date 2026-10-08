@@ -244,7 +244,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             $kingdoms,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
-            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
+            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
             $queue,
             $twig,
             $connects,
@@ -256,7 +256,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
         );
-        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternPrefill(), Strategies::ledgerSyncFeedback()))
+        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternPrefill(), Strategies::ledgerSyncFeedback()))
             ->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/missing'), new Response(), 'missing');
         $manager->show($this->request('GET', '/manage/golden-plains', ['uncategorized' => '1']), new Response(), 'golden-plains');
@@ -314,6 +314,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             'review' => ['pub-me' => ['publish' => '1']],
         ]), new Response(), 'golden-plains');
         $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), 'golden-plains');
+        $manager->disconnectBank($this->request('POST', '/manage/golden-plains/disconnect', [], ['csrf' => 'token']), new Response(), 'golden-plains');
 
         $_ENV['APP_PUBLIC_URL'] = 'http://localhost:37180';
         \Amtgard\Denarius\Utilities\Http\AppPublicUrl::base();
@@ -342,7 +343,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             $auth,
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment(
                 $kingdoms,
-                new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, $simplefinProviders, new TokenCipher('k'), $queue, Strategies::months()),
+                new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, $simplefinProviders, new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
                 $simplefinSession,
                 $permissions,
             ),
@@ -352,10 +353,10 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $simplefinReturn->show($this->request('GET', '/bank/simplefin/return?setup_token=' . rawurlencode($token)), new Response());
         $simplefinReturn->show($this->request('GET', '/bank/simplefin/return'), new Response());
         $simplefinReturn->submit($this->request('POST', '/bank/simplefin/return', [], ['csrf' => 'nope']), new Response());
-        (new \Amtgard\Denarius\Controller\SimpleFinReturnController(new SessionAuthStore('empty'), new \Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment($kingdoms, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), $member), $twig))
+        (new \Amtgard\Denarius\Controller\SimpleFinReturnController(new SessionAuthStore('empty'), new \Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment($kingdoms, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), $member), $twig))
             ->show($this->request('GET', '/bank/simplefin/return'), new Response());
 
-        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $handler = new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, $enrollment));
         $webhook = new WebhookController($handler);
         $webhook->teller($this->request('POST', '/webhooks/teller'), new Response());
@@ -396,7 +397,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'https://idp.example.test/resources/client/service-format'));
 
         $scope = $this->methodsInScope();
-        $this->assertCount(83, $scope);
+        $this->assertCount(84, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

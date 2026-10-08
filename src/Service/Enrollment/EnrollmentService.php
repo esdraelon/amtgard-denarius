@@ -27,6 +27,7 @@ final class EnrollmentService
         private readonly TokenCipher $cipher,
         private readonly KingdomRefreshQueue $queue,
         private readonly MonthInvalidator $months,
+        private readonly KingdomBankReset $connectionReset,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -90,6 +91,35 @@ final class EnrollmentService
                 (string) $kingdom->getProvider(),
                 'disconnected',
             ));
+        });
+    }
+
+    /** Clears local bank data so managers can run connect onboarding again; the provider-side link is left to the bank. */
+    public function disconnectBank(KingdomRecord $kingdom): KingdomRecord
+    {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $kingdom): KingdomRecord {
+            $kingdomId = (int) $kingdom->getId();
+            $this->connectionReset->clearKingdom($kingdomId);
+            $saved = $this->kingdoms->save(KingdomRecordRebuilder::from($kingdom)
+                ->enrollmentId(null)
+                ->institutionName(null)
+                ->provider(null)
+                ->enrollmentStatus('disconnected')
+                ->lastSyncedAt(null)
+                ->lastSyncAttemptedAt(null)
+                ->lastSyncStatus(null)
+                ->lastSyncError(null)
+                ->initialBackfillCompletedAt(null)
+                ->build());
+            $this->months->forget($kingdomId);
+            DenariusLog::infoBranch('enrollment_bank_disconnected', $method, [
+                'kingdom_id' => $kingdomId,
+                'provider' => (string) $kingdom->getProvider(),
+            ]);
+
+            return $saved;
         });
     }
 

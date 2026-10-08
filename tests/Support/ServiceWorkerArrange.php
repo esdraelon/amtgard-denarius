@@ -109,13 +109,15 @@ final class ServiceWorkerArrange
         $teller = Strategies::teller();
         $cipher = new TokenCipher('app-key');
         $cache = new ArrayStore();
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache));
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache), Strategies::bankReset());
         $connected = $enrollment->connect($updated, [
             'accessToken' => 'token-1',
             'enrollment' => ['id' => 'enr_1', 'institution' => ['name' => 'Bank']],
         ]);
         $enrollment->setPublished($connected, ['acc_1' => true]);
         $enrollment->markDisconnected($connected);
+        (new EnrollmentService(new MemoryKingdoms(), new MemorySecrets(), new MemoryAccounts(), Strategies::providers($teller), $cipher, $queue, Strategies::months($cache), Strategies::bankReset()))
+            ->disconnectBank($connected);
         $kingdoms->save(KingdomRecord::builder()
             ->id($connected->getId())
             ->orkKingdomId(4)
@@ -223,6 +225,7 @@ final class ServiceWorkerArrange
         $connect->offer('golden-plains', ['institution' => '', 'skip' => '1', 'current' => 'teller']);
         $connect->offer('golden-plains', ['institution' => 'First Bank', 'skipped' => ['teller', ''], 'current' => 'teller', 'skip' => '1']);
         $connect->idle();
+        $connect->linked();
         $connect->launch('golden-plains', ['skip' => '1', 'current' => 'teller']);
 
         $_ENV['APP_PUBLIC_URL'] = 'http://localhost:37180';
@@ -272,7 +275,7 @@ final class ServiceWorkerArrange
                 new \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig('app', 'tok', 'https://bridge.simplefin.org/simplefin'),
             ),
         ]);
-        $sfEnrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $sfProviders, $cipher, $queue, Strategies::months($cache));
+        $sfEnrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $sfProviders, $cipher, $queue, Strategies::months($cache), Strategies::bankReset());
         $sfSession2 = new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession();
         $sfSession2->remember($saved->getSlug());
         $adminPermissions = new PermissionService(new FakePolicies([\Amtgard\Denarius\Utilities\Auth\ClaimOrn::admin()]), $cache, new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));

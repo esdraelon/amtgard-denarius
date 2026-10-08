@@ -146,7 +146,7 @@ final class ControllerTest extends AmtgardTestCase
             $kingdoms,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
-            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
+            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
             $queue,
             $twig,
             new \Amtgard\Denarius\Service\Enrollment\BankConnect(Strategies::providers(Strategies::teller())),
@@ -170,7 +170,7 @@ final class ControllerTest extends AmtgardTestCase
         $this->assertSame(302, $refreshed->getStatusCode());
         $this->assertSame(403, $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), 'golden-plains')->getStatusCode());
 
-        $webhook = new WebhookController(new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()))));
+        $webhook = new WebhookController(new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()))));
         $rejected = $webhook->teller($this->request('POST', '/webhooks/teller'), new Response());
         $this->assertSame(400, $rejected->getStatusCode());
 

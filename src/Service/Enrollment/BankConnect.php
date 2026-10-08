@@ -26,6 +26,18 @@ final class BankConnect
     }
 
     /**
+     * Manage page state when a bank link is already active (no connect widget).
+     *
+     * @return array<string, mixed>
+     */
+    public function linked(): array
+    {
+        return DenariusLog::trace(__METHOD__, function (): array {
+            return $this->none([], 'linked');
+        });
+    }
+
+    /**
      * @param array<string, mixed> $body
      * @return array<string, mixed>
      */

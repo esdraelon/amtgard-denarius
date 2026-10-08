@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Bank disconnect reset (P6)
+
+- Branch: `publication/p06-bank-disconnect-reset` (stacked on `publication/p05b-review-batch-form-ui`).
+- `EnrollmentService::disconnectBank` clears local transactions, published accounts, and the enrollment secret through `KingdomBankReset` (container binds `BankConnectionReset` on the ORM's `MysqlPdoProvider` PDO), resets enrollment and sync fields to `disconnected`, and invalidates the month cache. `POST /manage/{slug}/disconnect` (`ManagerController::disconnectBank`) drives it; `show` uses `BankConnect::linked()` for connected kingdoms, and the manage Bank connection card shows the institution, provider, and a Disconnect bank button with copy that the provider-side link is not revoked. `ManagerController` stays at 466 lines, so no `ManageBankController` extraction. Tests use `Strategies::bankReset()` (`MemoryKingdomBankReset`).
+- Line coverage: 95.62% (6684/6990).
+- Infection covered MSI: 100% on `EnrollmentService`, `BankConnect`, `BankConnectionReset` (scoped `--filter`).
+- Log-tested branches: `enrollment_bank_disconnected` (`ManageConnectTest`).
+
 ## Review batch form UI (P5b)
 
 - Branch: `publication/p05b-review-batch-form-ui` (stacked on `publication/p05a-apply-publication-selections`).

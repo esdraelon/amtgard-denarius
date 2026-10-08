@@ -119,7 +119,7 @@ final class BranchLoggingTest extends AmtgardTestCase
     {
         $kingdoms = new MemoryKingdoms();
         $queue = new MemoryRefresh();
-        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $handler = new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, $enrollment));
         $this->assertFalse($handler->handle('teller', '{}', null, time()));
         MethodLogAssert::assertBranchLogged(

@@ -381,7 +381,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             $kingdoms,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
-            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
+            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
             $queue,
             $twig,
             new BankConnect(Strategies::providers(Strategies::teller())),

@@ -39,6 +39,7 @@ return function (App $app): void {
         $group->get('/manage/{slug}/connect', [ManagerController::class, 'connectGet']);
         $group->post('/manage/{slug}/connect', [ManagerController::class, 'connect']);
         $group->post('/manage/{slug}/enrollment', [ManagerController::class, 'enrollment']);
+        $group->post('/manage/{slug}/disconnect', [ManagerController::class, 'disconnectBank']);
         $group->post('/manage/{slug}/accounts', [ManagerController::class, 'accounts']);
         $group->post('/manage/{slug}/refresh', [ManagerController::class, 'refresh']);
         $group->post('/manage/{slug}/transactions/publish', [ManagerController::class, 'publishTransaction']);
