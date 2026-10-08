@@ -12,7 +12,7 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** | In scope; not covered yet (Phase D backlog). |
 | **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
 
-## Summary (D12)
+## Summary (D13)
 
 | Metric | Count |
 |--------|------:|
@@ -23,7 +23,7 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | **n** (uncovered in scope) | 2 |
 | Coverage `y / in-scope` | 93.75% (target ≥ 90% at D14) |
 
-**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`); kingdom-manager **`GET /manage/golden-plains`**, **`GET …/connect`** (302 to manage index), **`GET …/patterns`**, **`GET …/patterns/new`**, and **`GET …/taxonomy/categories?q=rent`** (JSON typeahead) (`ManageReadTest`, `IntegAuth::loginKingdomManagerViaIdpOrSkip` grants seed manager then logs in as `integ-manager@example.com`); kingdom-manager **`POST …/settings`**, **`POST …/enrollment`** (Teller stub via `IntegTellerApi`), **`POST …/accounts`**, and **`POST …/disconnect`** with CSRF scraped from the manage index (`ManageSettingsEnrollmentTest`); kingdom-manager **`GET/POST /bank/simplefin/return`** (form HTML, claim via query token + kingdom, POST with CSRF after connect wizard remembers kingdom; `IntegSimpleFinApi`) (`SimpleFinReturnTest`); kingdom-manager **`POST …/connect`** (Teller connect mount from Add bank) and **`POST …/refresh`** (ledger queue + integ `ledger-worker`, poll manage sync feedback) (`ManageConnectRefreshTest`); kingdom-manager **`POST …/transactions/review`** with CSRF from `#review-batch-form` and batch publish / redact on seed review rows (`ManageTransactionsTest`, integ seed published account + transactions). Legacy **`POST …/transactions/publish`**, **`…/withhold`**, and **`…/update`** stay **excluded**. Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
+**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); auth negatives (`AuthNegativesTest`: admin POST without CSRF → 403, guest `POST …/connect` redirect/403, cross-kingdom manager 403); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`); kingdom-manager **`GET /manage/golden-plains`**, **`GET …/connect`** (302 to manage index), **`GET …/patterns`**, **`GET …/patterns/new`**, and **`GET …/taxonomy/categories?q=rent`** (JSON typeahead) (`ManageReadTest`, `IntegAuth::loginKingdomManagerViaIdpOrSkip` grants seed manager then logs in as `integ-manager@example.com`); kingdom-manager **`POST …/settings`**, **`POST …/enrollment`** (Teller stub via `IntegTellerApi`), **`POST …/accounts`**, and **`POST …/disconnect`** with CSRF scraped from the manage index (`ManageSettingsEnrollmentTest`); kingdom-manager **`GET/POST /bank/simplefin/return`** (form HTML, claim via query token + kingdom, POST with CSRF after connect wizard remembers kingdom; `IntegSimpleFinApi`) (`SimpleFinReturnTest`); kingdom-manager **`POST …/connect`** (Teller connect mount from Add bank) and **`POST …/refresh`** (ledger queue + integ `ledger-worker`, poll manage sync feedback) (`ManageConnectRefreshTest`); kingdom-manager **`POST …/transactions/review`** with CSRF from `#review-batch-form` and batch publish / redact on seed review rows (`ManageTransactionsTest`, integ seed published account + transactions). Legacy **`POST …/transactions/publish`**, **`…/withhold`**, and **`…/update`** stay **excluded**. Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
 
 ## Matrix
 
@@ -40,13 +40,13 @@ Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | GET | `/logout` | y | `AuthSessionTest` | Clears session; redirects home (requires `IntegAuth::loginViaIdp`) |
 | GET | `/admin` | y | `AuthSessionTest`, `AdminReadTest` | D2: unauthenticated redirect to `/login`; D5: bootstrap admin HTML |
 | GET | `/admin/kingdoms` | y | `AdminReadTest` | JSON ORK kingdom directory (bundled seed) |
-| POST | `/admin/kingdoms/sync` | y | `AdminWriteTest` | CSRF JSON body; imports ORK GetKingdoms payload |
+| POST | `/admin/kingdoms/sync` | y | `AdminWriteTest`, `AuthNegativesTest` | CSRF JSON body; imports ORK GetKingdoms payload; missing CSRF → 403 |
 | GET | `/admin/principal-suggestions` | y | `AdminReadTest` | JSON typeahead; short `q` empty; seed admin email via IdP Client IAM |
-| POST | `/admin/grant` | y | `AdminWriteTest` | CSRF + grant-manager for seed manager / Golden Plains |
-| GET | `/manage/{slug}` | y | `ManageReadTest` | Seed slug `golden-plains`; kingdom manager session |
+| POST | `/admin/grant` | y | `AdminWriteTest`, `AuthNegativesTest` | CSRF + grant-manager for seed manager / Golden Plains; missing CSRF → 403 |
+| GET | `/manage/{slug}` | y | `ManageReadTest`, `AuthNegativesTest` | Seed slug `golden-plains`; kingdom manager session; cross-kingdom manager → 403 |
 | POST | `/manage/{slug}/settings` | y | `ManageSettingsEnrollmentTest` | CSRF form from manage index; visibility / disclosure / embargo |
 | GET | `/manage/{slug}/connect` | y | `ManageReadTest` | 302 redirect to manage index (POST connect in D12) |
-| POST | `/manage/{slug}/connect` | y | `ManageConnectRefreshTest` | CSRF from manage index; mounts Teller stub (`app_test` / sandbox) |
+| POST | `/manage/{slug}/connect` | y | `ManageConnectRefreshTest`, `AuthNegativesTest` | CSRF from manage index; mounts Teller stub; guest POST redirect/403 |
 | POST | `/manage/{slug}/enrollment` | y | `ManageSettingsEnrollmentTest` | Teller enrollment JSON + CSRF (integ stub accounts) |
 | POST | `/manage/{slug}/disconnect` | y | `ManageSettingsEnrollmentTest` | CSRF disconnect after connected enrollment |
 | POST | `/manage/{slug}/accounts` | y | `ManageSettingsEnrollmentTest` | CSRF `published[]` for `acc_integ_1` |
