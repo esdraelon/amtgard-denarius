@@ -202,6 +202,42 @@ final class ManageConnectTest extends AmtgardTestCase
         $this->assertSame('/manage/golden-plains', $refreshed->getHeaderLine('Location'));
     }
 
+    public function testBatchReviewFormIsNotNestedAndAppliesSelections(): void
+    {
+        $this->transactions->upsert(TransactionRecord::builder()
+            ->kingdomId(1)
+            ->tellerTransactionId('batch-row')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-08-14')
+            ->amountCents(-100)
+            ->description('Batch supplies')
+            ->category('expense.feast_groceries')
+            ->publishableAfter('2026-08-01T00:00:00+00:00')
+            ->build());
+
+        $page = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
+        $this->assertStringContainsString('name="review[batch-row][publish]" value="1" form="review-batch-form"', $page);
+        $this->assertStringContainsString('name="review_id[]" value="batch-row" form="review-batch-form"', $page);
+        $batchStart = strpos($page, '<form id="review-batch-form"');
+        $this->assertNotFalse($batchStart);
+        $this->assertGreaterThan(strrpos($page, '</table>'), $batchStart);
+        $batchForm = substr($page, $batchStart, strpos($page, '</form>', $batchStart) - $batchStart);
+        $this->assertSame(1, substr_count($batchForm, '<form'));
+        $this->assertStringContainsString('name="review_month" value="2026-08"', $batchForm);
+
+        $response = $this->manager->updateTransactionReview($this->request('POST', '/manage/golden-plains/transactions/review', [
+            'csrf' => 'token',
+            'review_month' => '2026-08',
+            'review_id' => ['batch-row'],
+            'review' => ['batch-row' => ['redact' => '1']],
+        ]), new Response(), 'golden-plains');
+        $this->assertSame('/manage/golden-plains?review_month=2026-08', $response->getHeaderLine('Location'));
+        $this->assertNotNull($this->transactions->findByTellerTransactionId('batch-row')?->getPublishedAt());
+        $this->assertSame(403, $this->manager->updateTransactionReview($this->request('POST', '/manage/golden-plains/transactions/review', [
+            'csrf' => 'nope',
+        ]), new Response(), 'golden-plains')->getStatusCode());
+    }
+
     public function testStripeAndPlaidWidgetsRenderFromConnectConfig(): void
     {
         $twig = new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'));

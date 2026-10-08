@@ -307,6 +307,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Tailwind layout, fonts, and colors aligned with Amtgard IDP; IDP logo assets copied to `public/images/` as placeholders; Twig `base.twig`, macros, and styled admin/manage/kingdom/home templates; `appVersion` Twig global from `BuildInfo`.
 - Includes FPM-safe `JsonStderrHandler` (`php://stderr` when `STDERR` is undefined) and bootstrap wiring assertions for HTML home.
 
+## Review batch form UI (P5b)
+
+- Branch: `publication/p05b-review-batch-form-ui` (stacked on `publication/p05a-apply-publication-selections`).
+- `POST /manage/{slug}/transactions/review` (`ManagerController::updateTransactionReview`) parses `review_id[]` and `review[id][publish|redact|embargo]` with `ReviewSelectionParser` and calls `applyPublicationSelections`, then redirects to the posted `review_month`. `manage.twig` adds Publish / Redact / Embargo columns whose inputs bind to `#review-batch-form` through the `form=` attribute; that form sits after the table, so it never nests the per-row taxonomy forms. Legacy publish / withhold / update routes stay for now.
+- Line coverage: 95.61% (6648/6953).
+- Infection covered MSI: 100% on `ReviewSelectionParser` (scoped `--filter`).
+- Log-tested branches: `review_selection_ids_invalid` (`ReviewSelectionParserTest`); controller trace site in `TracedHttpMethodsTest`.
+
 ## Apply publication selections (P5a)
 
 - Branch: `publication/p05a-apply-publication-selections` (stacked on `publication/p04-review-month-pagination`).
