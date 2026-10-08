@@ -8,7 +8,20 @@ Companion to [dev-integ-coverage-checklist.md](./dev-integ-coverage-checklist.md
 2. **IDP-style harness** — separate PHPUnit config; `composer test` stays unit-only (95% line + Infection).
 3. **Dev safety** — integ MariaDB + session Redis; `integ-down` restores DEV without wiping dev volumes.
 
-**Primary metric:** `docs/planning/dev-integ-route-matrix.md` — covered / (total − excluded) ≥ 0.90.
+**Primary metric:** [dev-integ-route-matrix.md](./dev-integ-route-matrix.md) — covered / (total − excluded) ≥ 0.90.
+
+## Exclusions (proposed)
+
+These four routes stay registered but are **excluded** from the integ coverage denominator (~32 in-scope of 36). Rationale matches Phase D scope (batch review UI, IdP prerequisite).
+
+| Method | Path | Reason |
+|--------|------|--------|
+| GET | `/oauth/callback` | Authorization-code exchange requires a live IdP browser redirect; integ covers login, logout, and auth negatives (D2, D13) without treating this callback as a gate row until a scripted exchange exists. |
+| POST | `/manage/{slug}/transactions/publish` | Legacy single-row publish; superseded by `POST …/transactions/review` (D9). |
+| POST | `/manage/{slug}/transactions/withhold` | Legacy single-row withhold; superseded by review batch (D9). |
+| POST | `/manage/{slug}/transactions/update` | Legacy per-row taxonomy POST; primary integ path is review batch + taxonomy search (D9). |
+
+Outbound calls to real Stripe, Plaid, Teller, SimpleFIN, ORK, or production IdP stay on integ stubs (`ENVIRONMENT=DEV_INTEG`, C5 outbound includes).
 
 ## Current state
 

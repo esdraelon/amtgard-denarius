@@ -604,3 +604,11 @@ Suggested stack (one branch each):
 - Line coverage: 95.55% (7027/7354).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ route matrix doc (C7)
+
+- Branch: `stack/denarius-integ-c7-route-matrix-doc`
+- [dev-integ-route-matrix.md](../planning/dev-integ-route-matrix.md): all 36 routes from `config/routes.php` with Method, Path, Covered (`y` / `n` / `excluded`), Test class, and Notes; baseline coverage is **`GET /version` only** (`VersionEndpointTest`). Proposed exclusions (4) documented in [dev-integ-coverage-plan.md](../planning/dev-integ-coverage-plan.md) **Exclusions**.
+- Line coverage: unchanged (`composer test`; docs only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).

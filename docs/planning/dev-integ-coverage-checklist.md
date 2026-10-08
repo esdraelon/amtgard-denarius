@@ -15,7 +15,7 @@ Plan: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | C4 | `stack/denarius-integ-c4-http-support` | [x] |
 | C5 | `stack/denarius-integ-c5-outbound-stubs` | [x] |
 | C6 | `stack/denarius-integ-c6-worker-integ` | [x] |
-| C7 | `stack/denarius-integ-c7-route-matrix-doc` | [ ] |
+| C7 | `stack/denarius-integ-c7-route-matrix-doc` | [x] |
 
 ## Phase D — Route coverage (~90% matrix)
 
