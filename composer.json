@@ -44,6 +44,7 @@
     "scripts": {
         "test": "phpunit --coverage-clover build/coverage.xml && php bin/check-coverage.php build/coverage.xml 95",
         "test:unit": "phpunit --testsuite Unit",
+        "integ": "phpunit -c phpunit.integ.xml --testdox --order-by=random",
         "infection": "infection --min-msi=80 --min-covered-msi=80 --threads=max",
         "infection:ci": [
             "@php -d display_errors=0 -d error_reporting=8191 vendor/bin/phpunit --coverage-xml build/coverage-xml --log-junit build/junit.xml",
