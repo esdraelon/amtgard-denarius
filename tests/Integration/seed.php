@@ -136,4 +136,54 @@ function seedBaselineFixtures(PDO $pdo): void
         IntegFixtures::KINGDOM_NAME,
         $now,
     ]);
+
+    $kingdomId = (int) $pdo->query(
+        'SELECT id FROM kingdoms WHERE slug = ' . $pdo->quote(IntegFixtures::KINGDOM_SLUG),
+    )->fetchColumn();
+    seedReviewTransactions($pdo, $kingdomId);
+}
+
+function seedReviewTransactions(PDO $pdo, int $kingdomId): void
+{
+    $account = $pdo->prepare(
+        'INSERT INTO published_accounts (kingdom_id, teller_account_id, name, account_type, last_four, published)
+         VALUES (?, ?, ?, ?, ?, 1)',
+    );
+    $account->execute([
+        $kingdomId,
+        IntegFixtures::REVIEW_ACCOUNT_ID,
+        'Integ Checking',
+        'depository',
+        '4242',
+    ]);
+
+    $transaction = $pdo->prepare(
+        'INSERT INTO transactions (
+            kingdom_id, teller_transaction_id, teller_account_id, posted_on, amount_cents,
+            category, description, status, publishable_after
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    );
+    $publishableAfter = '2020-01-01T00:00:00+00:00';
+    $transaction->execute([
+        $kingdomId,
+        IntegFixtures::TXN_REVIEW_PUBLISH,
+        IntegFixtures::REVIEW_ACCOUNT_ID,
+        IntegFixtures::REVIEW_MONTH . '-02',
+        -1250,
+        'expense.site_rental',
+        'D9 publish row',
+        'posted',
+        $publishableAfter,
+    ]);
+    $transaction->execute([
+        $kingdomId,
+        IntegFixtures::TXN_REVIEW_REDACT,
+        IntegFixtures::REVIEW_ACCOUNT_ID,
+        IntegFixtures::REVIEW_MONTH . '-03',
+        -2500,
+        'expense.feast_groceries',
+        'D9 redact row',
+        'posted',
+        $publishableAfter,
+    ]);
 }
