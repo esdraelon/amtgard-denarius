@@ -668,3 +668,11 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; integ tests only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ manage settings / enrollment (D8)
+
+- Branch: `stack/denarius-integ-d8-manage-settings-enrollment`
+- `ManageSettingsEnrollmentTest`: kingdom manager session (`IntegAuth::loginKingdomManagerViaIdpOrSkip`); live `POST /manage/golden-plains/settings`, `POST …/enrollment` (Teller payload + `IntegTellerApi` accounts), `POST …/accounts`, and `POST …/disconnect`, each with CSRF from the manage index. Route matrix: four manage POST rows **y** (23/32 in-scope, 71.88%).
+- Line coverage: unchanged (`composer test`; integ tests only).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
