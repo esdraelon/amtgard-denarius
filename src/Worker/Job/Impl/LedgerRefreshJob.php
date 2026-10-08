@@ -24,8 +24,17 @@ final class LedgerRefreshJob implements RefreshJob
 
     public function handle(array $payload): void
     {
-        DenariusLog::trace(__METHOD__, function () use ($payload): mixed {
-            $this->synchronizer->sync($this->kingdomId($payload));
+        $orkKingdomId = $this->kingdomId($payload);
+        DenariusLog::trace(__METHOD__, function () use ($orkKingdomId): mixed {
+            try {
+                $this->synchronizer->sync($orkKingdomId);
+            } catch (\Throwable $e) {
+                DenariusLog::warnBranch('ledger_sync_failed', __METHOD__, [
+                    'ork_kingdom_id' => $orkKingdomId,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
 
             return null;
         });

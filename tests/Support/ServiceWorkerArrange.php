@@ -28,6 +28,7 @@ use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthCacheWriter;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;
+use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
@@ -135,6 +136,22 @@ final class ServiceWorkerArrange
         $sync = Strategies::synchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
         $sync->sync(4);
         $sync->sync(99);
+        $brokenSecrets = new MemorySecrets();
+        $brokenSecrets->saveCiphertext((int) $connected->getId(), 'bad');
+        $brokenSync = Strategies::synchronizer(
+            $kingdoms,
+            $accounts,
+            $brokenSecrets,
+            $transactions,
+            Strategies::providers($teller),
+            $cipher,
+            new \DateTimeImmutable('2026-09-01'),
+            Strategies::months($cache),
+        );
+        try {
+            (new LedgerRefreshJob($brokenSync))->handle(['orkKingdomId' => 4]);
+        } catch (\Throwable) {
+        }
 
         $handler = new ProviderWebhookHandler(
             Strategies::providers(Strategies::teller(verifier: new TellerWebhookVerifier('whsec', 300))),

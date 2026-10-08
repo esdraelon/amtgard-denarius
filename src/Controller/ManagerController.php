@@ -21,6 +21,7 @@ use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Service\Ledger\KingdomPatternService;
+use Amtgard\Denarius\Service\Ledger\ManagerLedgerSyncFeedback;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill;
@@ -48,6 +49,7 @@ final class ManagerController
         private readonly TaxonomyCategorySearch $categorySearch,
         private readonly KingdomPatternService $patterns,
         private readonly KingdomPatternPrefill $patternPrefill,
+        private readonly ManagerLedgerSyncFeedback $ledgerSyncFeedback,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -372,13 +374,16 @@ final class ManagerController
         bool $uncategorizedOnly = false,
     ): ResponseInterface {
         return DenariusLog::trace(__METHOD__, function () use ($response, $kingdom, $connect, $uncategorizedOnly): ResponseInterface {
+            $reviewQueue = $this->reviewQueue->rowsForManage($kingdom, $uncategorizedOnly);
+
             return $this->html->html($response, 'manage.twig', [
                 'csrf' => CsrfToken::issue(),
                 'kingdom' => $kingdom->view(),
                 'accounts' => $this->accountViews((int) $kingdom->getId()),
                 'connect' => $connect,
-                'reviewQueue' => $this->reviewQueue->rowsForManage($kingdom, $uncategorizedOnly),
+                'reviewQueue' => $reviewQueue,
                 'uncategorizedOnly' => $uncategorizedOnly,
+                'ledgerSync' => $this->ledgerSyncFeedback->forManage($kingdom, $reviewQueue !== []),
             ]);
         });
     }

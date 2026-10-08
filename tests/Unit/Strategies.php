@@ -77,6 +77,11 @@ final class Strategies
         );
     }
 
+    public static function ledgerSyncFeedback(): \Amtgard\Denarius\Service\Ledger\ManagerLedgerSyncFeedback
+    {
+        return new \Amtgard\Denarius\Service\Ledger\ManagerLedgerSyncFeedback();
+    }
+
     public static function managedKingdomResolver(
         KingdomRepositoryInterface $kingdoms,
         PrincipalRepositoryInterface $principals,

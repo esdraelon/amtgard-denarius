@@ -112,6 +112,25 @@
                 <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}?uncategorized=1">Uncategorized only (least confident first)</a>
             {% endif %}
         </p>
+        {% if ledgerSync.showImportNotice %}
+            {% include 'components/alert.twig' with {
+                variant: 'info',
+                message: ledgerSync.importNotice
+            } %}
+            <p class="small mb-3">
+                <span class="text-body-secondary">Last checked:</span>
+                {% if ledgerSync.lastCheckedAt %}
+                    <span class="fw-semibold">{{ ledgerSync.lastCheckedAt }}</span>
+                {% else %}
+                    <span class="fw-semibold">Not yet</span>
+                {% endif %}
+                <span class="text-body-secondary"> — </span>
+                <span class="fw-semibold">{{ ledgerSync.statusLabel }}</span>
+                {% if ledgerSync.statusDetail %}
+                    <span class="d-block text-body-secondary mt-1">{{ ledgerSync.statusDetail }}</span>
+                {% endif %}
+            </p>
+        {% endif %}
         {% if reviewQueue is empty %}
             {% include 'components/alert.twig' with {
                 variant: 'info',
