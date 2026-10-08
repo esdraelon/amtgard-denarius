@@ -39,6 +39,8 @@ use Amtgard\Denarius\Tests\Unit\Strategies;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Http\Integ\IntegIdpHttpGuard;
+use Amtgard\Denarius\Utilities\Http\Integ\IntegOrkGetKingdomsGateway;
 use Amtgard\Denarius\Utilities\Http\LoggingIdpHttpClient;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
 use Amtgard\Denarius\Utilities\Http\PostCsrfMiddleware;
@@ -396,8 +398,16 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             }
         }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'https://idp.example.test/resources/client/service-format'));
 
+        (new IntegOrkGetKingdomsGateway(dirname(__DIR__, 3)))->getKingdomsJson();
+        (new IntegIdpHttpGuard(new class implements \Psr\Http\Client\ClientInterface {
+            public function sendRequest(\Psr\Http\Message\RequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                return new \Nyholm\Psr7\Response(204);
+            }
+        }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'http://localhost:37080/version'));
+
         $scope = $this->methodsInScope();
-        $this->assertCount(84, $scope);
+        $this->assertCount(86, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

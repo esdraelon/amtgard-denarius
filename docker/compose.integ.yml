@@ -10,3 +10,20 @@ services:
       DB_NAME: denarius_integ
       SESSION_REDIS_HOST: amtgard-denarius-sessions-integ
       REDIS_HOST: amtgard-denarius-sessions-integ
+      # Optional real IDP integ stack on the host (OAuth); never production idp.amtgard.com.
+      IDP_BASE_URL: http://host.docker.internal:37080
+      IDP_CLIENT_ID: integ_denarius
+      IDP_CLIENT_SECRET: integ_denarius_secret
+      IDP_REDIRECT_URI: http://localhost:37180/oauth/callback
+      ORK_API_BASE_URL: https://integ-ork.invalid
+      TELLER_API_BASE: https://integ-teller.invalid
+      STRIPE_API_BASE: https://integ-stripe.invalid
+      PLAID_API_BASE: https://integ-plaid.invalid
+      SIMPLEFIN_BRIDGE_ROOT: https://integ-simplefin.invalid/simplefin
+      TELLER_APPLICATION_ID: integ_teller_app
+      STRIPE_SECRET_KEY: sk_integ_test
+      STRIPE_PUBLISHABLE_KEY: pk_integ_test
+      PLAID_CLIENT_ID: integ_plaid_client
+      PLAID_SECRET: integ_plaid_secret
+      SIMPLEFIN_APP_ID: integ_simplefin_app
+      SIMPLEFIN_APP_TOKEN: integ_simplefin_token
