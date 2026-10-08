@@ -60,16 +60,15 @@ final class TransactionRecategorizer
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom): int {
             $kingdomId = (int) $kingdom->getId();
-            $providerId = $this->providerIds->forKingdom($kingdom);
             $catalogVersion = $this->catalog->taxonomyVersion();
             $updated = 0;
             foreach ($this->transactions->forKingdom($kingdomId) as $row) {
                 if (! $this->needsRecategorize($row, $catalogVersion)) {
                     continue;
                 }
-                $decision = $this->categorizer->decide($providerId, $row, $row);
-                $this->transactions->upsert($this->mergeDecision($row, $decision));
-                ++$updated;
+                if ($this->applyRecategorizeRow($kingdom, $row)) {
+                    ++$updated;
+                }
             }
             if ($updated > 0) {
                 $this->months->forget($kingdomId);
@@ -80,6 +79,49 @@ final class TransactionRecategorizer
             ]);
 
             return $updated;
+        });
+    }
+
+    public function recategorizeKingdomAfterPatternChange(KingdomRecord $kingdom): int
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom): int {
+            $kingdomId = (int) $kingdom->getId();
+            $updated = 0;
+            foreach ($this->transactions->forKingdom($kingdomId) as $row) {
+                if (CategorySource::fromStored($row->getCategorySource()) === CategorySource::Manager) {
+                    continue;
+                }
+                if ($this->applyRecategorizeRow($kingdom, $row)) {
+                    ++$updated;
+                }
+            }
+            if ($updated > 0) {
+                $this->months->forget($kingdomId);
+            }
+            DenariusLog::infoBranch('transaction_recategorize_completed', self::class . '::recategorizeKingdomAfterPatternChange', [
+                'kingdom_id' => $kingdomId,
+                'updated_rows' => $updated,
+            ]);
+
+            return $updated;
+        });
+    }
+
+    private function applyRecategorizeRow(KingdomRecord $kingdom, TransactionRecord $row): bool
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $row): bool {
+            $kingdomId = (int) $kingdom->getId();
+            $providerId = $this->providerIds->forKingdom($kingdom);
+            $before = $row->getCategory() . '|' . $row->getCategorySource() . '|' . ($row->getCategoryRuleId() ?? '');
+            $decision = $this->categorizer->decide($providerId, $row, $row, $kingdomId);
+            $merged = $this->mergeDecision($row, $decision);
+            $after = $merged->getCategory() . '|' . $merged->getCategorySource() . '|' . ($merged->getCategoryRuleId() ?? '');
+            if ($before === $after) {
+                return false;
+            }
+            $this->transactions->upsert($merged);
+
+            return true;
         });
     }
 

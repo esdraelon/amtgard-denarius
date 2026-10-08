@@ -28,8 +28,14 @@ final class CategorizationInput
         private ?string $existingRuleId = null,
         private ?string $existingSuggested = null,
         private ?string $existingTaxonomyVersion = null,
+        private ?int $kingdomId = null,
     ) {
         DenariusLog::enter(__METHOD__);
+    }
+
+    public function kingdomId(): ?int
+    {
+        return DenariusLog::trace(__METHOD__, fn (): ?int => $this->kingdomId);
     }
 
     public function normalizedDescription(): string

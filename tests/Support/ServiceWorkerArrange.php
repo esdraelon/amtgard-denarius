@@ -303,7 +303,37 @@ final class ServiceWorkerArrange
 
         $recategorizer = Strategies::recategorizer($kingdoms, $transactions, Strategies::providers($teller));
         $recategorizer->recategorizeKingdom($saved);
+        $recategorizer->recategorizeKingdomAfterPatternChange($saved);
         $recategorizer->recategorizeAll();
+        $patternRules = new \Amtgard\Denarius\Tests\Support\MemoryKingdomCategoryRules();
+        $patterns = \Amtgard\Denarius\Tests\Unit\Strategies::kingdomPatternService($kingdoms, $transactions, $patternRules);
+        $patterns->listViews($saved);
+        $patterns->saveNew($saved, [
+            'category' => 'expense.storage',
+            'match_type' => 'token',
+            'token' => 'PATTERN TOKEN',
+            'fields' => ['description'],
+            'flows' => ['expense'],
+        ]);
+        $stored = $patternRules->forKingdom((int) $saved->getId());
+        if ($stored !== []) {
+            $ruleId = (int) $stored[0]->getId();
+            $patterns->update($saved, $ruleId, [
+                'category' => 'expense.storage',
+                'match_type' => 'token',
+                'token' => 'PATTERN TOKEN TWO',
+                'fields' => ['description'],
+                'flows' => ['expense'],
+            ]);
+            $patterns->bulkSave($saved, [
+                $ruleId => [
+                    'category' => 'expense.storage',
+                    'match_type' => 'token',
+                    'token' => 'PATTERN TOKEN THREE',
+                ],
+            ]);
+            $patterns->delete($saved, $ruleId);
+        }
         (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle(['orkKingdomId' => 4]);
         (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle([]);
         (new \Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver(Strategies::providers($teller)))->forKingdom($saved);

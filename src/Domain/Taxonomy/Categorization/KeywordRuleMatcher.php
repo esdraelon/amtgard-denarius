@@ -21,11 +21,21 @@ final class KeywordRuleMatcher implements CategoryMatcher
     public function match(CategorizationInput $input): ?CategoryMatch
     {
         return DenariusLog::trace(__METHOD__, function () use ($input): ?CategoryMatch {
+            return $this->matchRules($this->catalog->keywordRules(), $input, CategorySource::SharedRule);
+        });
+    }
+
+    /**
+     * @param list<TaxonomyKeywordRule> $rules
+     */
+    public function matchRules(array $rules, CategorizationInput $input, CategorySource $source): ?CategoryMatch
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($rules, $input, $source): ?CategoryMatch {
             $best = null;
             $bestPatternLength = -1;
             $bestOrder = PHP_INT_MAX;
             $order = 0;
-            foreach ($this->catalog->keywordRules() as $rule) {
+            foreach ($rules as $rule) {
                 ++$order;
                 if (! $this->flowAllows($rule, $input->defaultFlow())) {
                     continue;
@@ -62,7 +72,7 @@ final class KeywordRuleMatcher implements CategoryMatcher
 
             return new CategoryMatch(
                 $best->category,
-                CategorySource::SharedRule,
+                $source,
                 $best->id,
                 $best->confidence,
             );

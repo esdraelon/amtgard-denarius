@@ -45,7 +45,13 @@ use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerWebhookVerifier;
+use Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternValidator;
+use Amtgard\Denarius\Domain\Taxonomy\RegexPatternGuard;
+use Amtgard\Denarius\Service\Ledger\KingdomPatternService;
 use Amtgard\Denarius\Service\Ledger\TransactionRecategorizer;
+use Amtgard\Denarius\Tests\Support\MemoryKingdomCategoryRules;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
 use Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
@@ -151,15 +157,37 @@ final class Strategies
         KingdomRepositoryInterface $kingdoms,
         TransactionRepositoryInterface $transactions,
         LedgerProviderRegistry $providers,
+        ?MemoryKingdomCategoryRules $kingdomRules = null,
     ): TransactionRecategorizer {
         return new TransactionRecategorizer(
             $kingdoms,
             $transactions,
-            CategorizationArrange::categorizer(),
+            CategorizationArrange::categorizer(null, $kingdomRules),
             new LedgerProviderIdResolver($providers),
             CategorizationArrange::bundledCatalog(),
             self::months(),
         );
+    }
+
+    public static function kingdomPatternService(
+        KingdomRepositoryInterface $kingdoms,
+        TransactionRepositoryInterface $transactions,
+        ?MemoryKingdomCategoryRules $rules = null,
+    ): KingdomPatternService {
+        $rules ??= new MemoryKingdomCategoryRules();
+        $catalog = CategorizationArrange::bundledCatalog();
+
+        return new KingdomPatternService(
+            $rules,
+            new KingdomPatternValidator($catalog, new RegexPatternGuard()),
+            $catalog,
+            self::recategorizer($kingdoms, $transactions, self::providers(self::teller()), $rules),
+        );
+    }
+
+    public static function patternPrefill(): KingdomPatternPrefill
+    {
+        return new KingdomPatternPrefill(new DescriptionNormalizer());
     }
 
     public static function kingdomSettings(KingdomRepositoryInterface $kingdoms): KingdomSettings

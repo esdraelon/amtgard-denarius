@@ -4,6 +4,8 @@ Source: [amtgard-transaction-taxonomy.md](amtgard-transaction-taxonomy.md), [pub
 
 Stack base for **M-TAX-03+:** `transaction-category-schema` (M-TAX-02). **M-TAX-02** stacks on `taxonomy-catalog` @ `85e8ab5`. Pre-taxonomy WIP remains in git stash `wip-pre-taxonomy` if you need month-cache / site-nav work back.
 
+**Taxonomy stack (M-TAX-01–06):** complete at `kingdom-category-patterns` (stacked on `public-category-presentation` @ `c736f57`).
+
 **Gates for every milestone** (from the development rules):
 
 - `composer test` green. Line coverage of `src/` ≥ **95%**. Infection MSI and covered MSI ≥ **80%**.
@@ -43,7 +45,7 @@ Stack base for **M-TAX-03+:** `transaction-category-schema` (M-TAX-02). **M-TAX-
   - **Tests:** a pipeline stage test with a legacy `general` row and a raw `FOOD_AND_DRINK` row reaching public output as “Uncategorized”; HARD label override; envelope review totals unchanged by the stage; small-bucket rollup at `k-1`, `k`, and `k+1`; transfer exclusion; disclosure tier matrix (summarized / redacted / less_redacted × soft category); log line `publication_category_unknown_slug`.
   - **Gates:** standard.
 
-- [ ] **M-TAX-06** `kingdom-category-patterns` — stacked on `public-category-presentation`
+- [x] **M-TAX-06** `kingdom-category-patterns` — stacked on `public-category-presentation`
   - **Scope:** `kingdom_category_rules` table + repository; `KingdomRuleMatcher` in the chain (above shared keywords). Manage **Patterns** tab: list, create, edit, delete kingdom rules; create from review pre-fill. Saving triggers kingdom-scoped recategorize (non-manager rows). **Create pattern…** from M-TAX-04 posts here. Bulk edit patterns without re-walking transactions. Patterns never logged with description text (rule id only).
   - **Tests:** matcher priority over shared rules; recategorize after pattern save; CRUD authorization; delete pattern stops matching on next recategorize; log lines (`kingdom_pattern_saved`, `kingdom_pattern_deleted`).
   - **Gates:** standard.

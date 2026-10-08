@@ -32,7 +32,13 @@ final class TransactionCategoryApplier
             }
 
             $providerId = $this->providerIds->forKingdom($kingdom);
-            $decision = $this->categorizer->decide($providerId, $incoming, $existing);
+            $kingdomId = $kingdom->getId();
+            $decision = $this->categorizer->decide(
+                $providerId,
+                $incoming,
+                $existing,
+                $kingdomId !== null ? (int) $kingdomId : null,
+            );
 
             return $this->mergeDecision($incoming, $decision);
         });

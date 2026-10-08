@@ -314,6 +314,14 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 - Line coverage: 95.26% (4558/4785).
 - Infection covered MSI: not re-run (Twig-only diff; parent stack at 95% covered MSI).
 
+## Kingdom category patterns (M-TAX-06)
+
+- Branch: `kingdom-category-patterns` (stacked on `public-category-presentation` @ `c736f57`). **Taxonomy stack M-TAX-01–06 complete.**
+- `kingdom_category_rules` table and repository; `KingdomRuleMatcher` in the categorizer chain (before shared keywords). Manage **Patterns** tab with list, create, edit, bulk edit, and delete; review **Create pattern…** pre-fills the editor. Saving triggers kingdom-scoped recategorize for non-manager rows. Pattern logs use rule id only (`kingdom_pattern_saved`, `kingdom_pattern_deleted`).
+- Line coverage: 95.01% (5983/6297).
+- Infection covered MSI: 94% (skip-initial-tests, `build/coverage-xml`, `--threads=4`, ~16m).
+- Log-tested branches: `kingdom_pattern_saved`, `kingdom_pattern_deleted` (`KingdomCategoryPatternsTest`); pattern logs exclude description/counterparty/token context.
+
 ## Public category presentation (M-TAX-05)
 
 - Branch: `public-category-presentation` (stacked on `review-category-override` @ `d4b0a2a`).
