@@ -9,9 +9,9 @@ final class IntegFixtures
 {
     public const KINGDOM_ORK_ID = 91001;
 
-    public const KINGDOM_SLUG = 'integ-kingdom';
+    public const KINGDOM_SLUG = 'golden-plains';
 
-    public const KINGDOM_NAME = 'Integration Kingdom';
+    public const KINGDOM_NAME = 'Golden Plains';
 
     /** Matches `DENARIUS_BOOTSTRAP_ADMIN_IDP_USER_IDS` in phpunit.integ.xml. */
     public const ADMIN_IDP_USER_ID = '7';
