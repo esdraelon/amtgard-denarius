@@ -28,7 +28,7 @@ final class TracedBankMethodsTest extends AmtgardTestCase
         BankDomainArrange::exerciseAll();
 
         $scope = $this->methodsInScope();
-        $this->assertCount(184, $scope);
+        $this->assertCount(187, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

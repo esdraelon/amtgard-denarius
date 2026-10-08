@@ -37,6 +37,28 @@
                 {% endblock %}
             {% endembed %}
 
+            {% embed "components/section-card.twig" with { title: 'Kingdom statements' } %}
+                {% import "macros.twig" as ui %}
+                {% block section_body %}
+                    {% if kingdomLinks is empty %}
+                        <p class="mb-0 text-body-secondary">No ORK kingdom directory is loaded yet. Denarius reads the bundled snapshot and refreshes from ORK automatically.</p>
+                    {% else %}
+                        <ul class="list-unstyled mb-0 vstack gap-2">
+                            {% for kingdom in kingdomLinks %}
+                                <li>
+                                    {% if kingdom.href %}
+                                        <a href="{{ kingdom.href }}">{{ kingdom.name }}</a>
+                                    {% else %}
+                                        {{ kingdom.name }}
+                                        <span class="text-body-secondary small">(statement not published on Denarius yet)</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endblock %}
+            {% endembed %}
+
             {% embed "components/section-card.twig" with { title: 'About' } %}
                 {% block section_body %}
                     <p class="mb-0 text-body-secondary">Denarius connects kingdom bank accounts through approved providers and publishes monthly statements according to each kingdom&apos;s visibility settings.</p>

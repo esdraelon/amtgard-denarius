@@ -31,6 +31,7 @@ return function (App $app): void {
     $app->group('', function (RouteCollectorProxy $group): void {
         $group->get('/admin', [AdminController::class, 'index']);
         $group->get('/admin/kingdoms', [AdminController::class, 'kingdoms']);
+        $group->post('/admin/kingdoms/sync', [AdminController::class, 'syncKingdoms']);
         $group->get('/admin/principal-suggestions', [AdminController::class, 'principalSuggestions']);
         $group->post('/admin/grant', [AdminController::class, 'grant']);
         $group->get('/manage/{slug}', [ManagerController::class, 'show']);

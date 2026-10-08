@@ -58,7 +58,16 @@ final class ControllerTest extends AmtgardTestCase
         file_put_contents($root . '/VERSION', "1\n");
         $permissions = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $homeKingdoms = new MemoryKingdoms();
-        $home = new HomeController($twig, $auth, new AccountNavBuilder($permissions, $homeKingdoms), $root);
+        $homePrincipals = new MemoryPrincipals();
+        $home = new HomeController(
+            $twig,
+            $auth,
+            new AccountNavBuilder($permissions, Strategies::managedKingdomResolver($homeKingdoms, $homePrincipals)),
+            $homeKingdoms,
+            KingdomAccess::standard(),
+            Strategies::orkKingdoms($homeKingdoms, $homePrincipals),
+            $root,
+        );
         $response = $home->home($this->request('GET', '/'), new Response());
         $this->assertStringContainsString('home 1 no', (string) $response->getBody());
         $version = $home->version($this->request('GET', '/version'), new Response());

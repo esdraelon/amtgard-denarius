@@ -66,7 +66,11 @@ use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
 use Amtgard\Denarius\Utilities\Http\BuildInfo;
 use Amtgard\Denarius\Utilities\Http\IdpUserDirectory;
 use Amtgard\Denarius\Utilities\Http\LoggingIdpHttpClient;
+use Amtgard\Denarius\Utilities\Http\Impl\CurlOrkGetKingdomsGateway;
+use Amtgard\Denarius\Utilities\Http\OrkGetKingdomsGateway;
+use Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
+use Amtgard\Denarius\Service\Kingdom\ManagedKingdomResolver;
 use Amtgard\Denarius\Utilities\Http\PostCsrfMiddleware;
 use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
@@ -100,6 +104,8 @@ use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Service\Access\AccountNavBuilder;
+use Amtgard\Denarius\Service\Access\SiteNavBuilder;
+use Amtgard\Denarius\Utilities\Http\Twig\SiteNavTwigExtension;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
@@ -209,8 +215,22 @@ return [
     ),
     AccountNavBuilder::class => fn (ContainerInterface $c) => new AccountNavBuilder(
         $c->get(PermissionService::class),
-        $c->get(KingdomRepositoryInterface::class),
+        $c->get(ManagedKingdomResolver::class),
     ),
+    SiteNavBuilder::class => fn (ContainerInterface $c) => new SiteNavBuilder(
+        $c->get(SessionAuthStore::class),
+        $c->get(AccountNavBuilder::class),
+    ),
+    ManagedKingdomResolver::class => fn (ContainerInterface $c) => new ManagedKingdomResolver(
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(OrkKingdomDirectory::class),
+    ),
+    OrkGetKingdomsGateway::class => fn () => new CurlOrkGetKingdomsGateway(
+        $_ENV['ORK_API_BASE_URL'] ?? 'https://ork.amtgard.com',
+        $_ENV['ORK_API_USER_AGENT'] ?? 'Amtgard-Denarius',
+        $_ENV['ORK_API_REFERER'] ?? 'https://denarius.amtgard.com',
+    ),
+    OrkKingdomCacheWriter::class => fn () => new OrkKingdomCacheWriter(),
     TokenCipher::class => fn () => new TokenCipher($_ENV['APP_KEY'] ?? ''),
     TellerApi::class => fn () => new CurlTellerApi(
         $_ENV['TELLER_API_BASE'] ?? 'https://api.teller.io',
@@ -466,7 +486,7 @@ return [
     },
     StderrMethodLog::class => fn (ContainerInterface $c) => $c->get(MethodLog::class),
     CorrelationMiddleware::class => fn () => new CorrelationMiddleware(),
-    TwigEnvironment::class => function () {
+    TwigEnvironment::class => function (ContainerInterface $c) {
         $root = dirname(__DIR__);
         $twig = new TwigEnvironment(new FilesystemLoader($root . '/templates'), [
             'cache' => __DIR__ . '/cache/twig',
@@ -474,6 +494,8 @@ return [
         ]);
         $twig->addGlobal('appVersion', BuildInfo::version($root));
         $twig->addFunction(new Twig\TwigFunction('csrf_token', static fn (): string => Amtgard\Denarius\Utilities\Http\CsrfToken::issue()));
+        $twig->addExtension(new SiteNavTwigExtension($c->get(SiteNavBuilder::class)));
+
         return $twig;
     },
     TwigHtmlRenderer::class => fn (TwigEnvironment $twig) => new TwigHtmlRenderer($twig),
@@ -481,6 +503,9 @@ return [
         $c->get(TwigHtmlRenderer::class),
         $c->get(SessionAuthStore::class),
         $c->get(AccountNavBuilder::class),
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(KingdomAccess::class),
+        $c->get(OrkKingdomDirectory::class),
         dirname(__DIR__),
     ),
     KingdomPageController::class => fn (ContainerInterface $c) => new KingdomPageController(
@@ -514,6 +539,8 @@ return [
         $_ENV['ORK_KINGDOMS_CACHE'] ?? null,
         $c->get(KingdomRepositoryInterface::class),
         $c->get(PrincipalRepositoryInterface::class),
+        $c->get(OrkGetKingdomsGateway::class),
+        $c->get(OrkKingdomCacheWriter::class),
     ),
     AdminController::class => fn (ContainerInterface $c) => new AdminController(
         $c->get(SessionAuthStore::class),

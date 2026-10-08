@@ -190,7 +190,14 @@ final class ApplicationTest extends AmtgardTestCase
         $principals->save(PrincipalRecord::builder()->idpUserId('1')->email('a@b.c')->orkKingdomId(2)->orkKingdomName('Beta')->build());
         $kingdoms = new MemoryKingdoms();
         $kingdoms->save(KingdomRecord::builder()->orkKingdomId(3)->name('Gamma')->slug('gamma')->visibility('public')->displayMode('all')->enrollmentStatus('none')->build());
-        $directory = new OrkKingdomDirectory($root, 'data/ork-kingdoms.json', $kingdoms, $principals);
+        $directory = new OrkKingdomDirectory(
+            $root,
+            'data/ork-kingdoms.json',
+            $kingdoms,
+            $principals,
+            new \Amtgard\Denarius\Tests\Support\StubOrkGetKingdomsGateway(),
+            new \Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter(),
+        );
         $this->assertSame([
             ['id' => 1, 'name' => 'Alpha'],
             ['id' => 2, 'name' => 'Beta'],
@@ -365,6 +372,11 @@ final class ApplicationTest extends AmtgardTestCase
                 $this->data[$key] = $value;
                 return $ttl > 0;
             }
+            public function set(string $key, string $value): bool
+            {
+                $this->data[$key] = $value;
+                return true;
+            }
             public function del(string $key): int
             {
                 unset($this->data[$key]);
@@ -373,7 +385,9 @@ final class ApplicationTest extends AmtgardTestCase
         };
         $store = new RedisKeyValueStore($redis);
         $store->set('a', 'b', 5);
+        $store->setPersistent('p', 'v');
         $this->assertSame('b', $store->get('a'));
+        $this->assertSame('v', $store->get('p'));
         $store->delete('a');
         $this->assertNull($store->get('missing'));
 
@@ -490,6 +504,12 @@ final class ArrayStore implements KeyValueStore
     {
         $this->data[$key] = $value;
     }
+
+    public function setPersistent(string $key, string $value): void
+    {
+        $this->data[$key] = $value;
+    }
+
     public function delete(string $key): void
     {
         unset($this->data[$key]);
@@ -554,6 +574,12 @@ final class MemoryKingdoms implements KingdomRepositoryInterface
         }
         return null;
     }
+
+    public function findById(int $kingdomId): ?KingdomRecord
+    {
+        return $this->rows[$kingdomId] ?? null;
+    }
+
     public function findByOrkId(int $orkKingdomId): ?KingdomRecord
     {
         foreach ($this->rows as $row) {
@@ -596,6 +622,9 @@ final class MemoryKingdoms implements KingdomRepositoryInterface
             ->provider($kingdom->getProvider())
             ->enrollmentStatus($kingdom->getEnrollmentStatus())
             ->lastSyncedAt($kingdom->getLastSyncedAt())
+            ->lastSyncAttemptedAt($kingdom->getLastSyncAttemptedAt())
+            ->lastSyncStatus($kingdom->getLastSyncStatus())
+            ->lastSyncError($kingdom->getLastSyncError())
             ->embargoDays($kingdom->getEmbargoDays())
             ->initialBackfillCompletedAt($kingdom->getInitialBackfillCompletedAt())
             ->build();

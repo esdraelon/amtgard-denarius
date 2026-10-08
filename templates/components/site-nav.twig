@@ -1,0 +1,17 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom rounded-top px-0 px-md-2 mb-4" aria-label="Site">
+    <div class="container-fluid px-0">
+        <a class="navbar-brand font-serif text-denarius-secondary" href="/">Denarius</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#denariusSiteNav" aria-controls="denariusSiteNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="denariusSiteNav">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 gap-lg-1">
+                {% for item in siteNav|default([]) %}
+                    <li class="nav-item">
+                        <a class="nav-link{% if item.primary|default(false) %} fw-semibold{% endif %}" href="{{ item.href }}">{{ item.label }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</nav>

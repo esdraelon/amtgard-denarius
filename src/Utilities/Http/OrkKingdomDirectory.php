@@ -9,20 +9,25 @@ use Amtgard\Denarius\Persistence\Repository\Principal\PrincipalRepositoryInterfa
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 /**
- * ORK kingdom id + name pairs for admin pickers.
+ * ORK kingdom id + name pairs for admin pickers and kingdom provisioning.
  *
- * Cloudflare blocks browser and server calls to ork.amtgard.com from most dev hosts.
- * Import a {@see Kingdom/GetKingdoms} JSON snapshot into {@see OrkKingdomDirectory::DEFAULT_CACHE_FILE}.
+ * When the local cache file is missing or empty, Denarius fetches
+ * {@see Kingdom/GetKingdoms} from ORK, seeds from {@see BUNDLED_CACHE_FILE}
+ * when server-side fetch fails (e.g. Cloudflare), and accepts browser-posted ORK JSON.
  */
 final class OrkKingdomDirectory
 {
     public const DEFAULT_CACHE_FILE = 'data/ork-kingdoms.json';
+
+    public const BUNDLED_CACHE_FILE = 'data/ork-kingdoms.bundled.json';
 
     public function __construct(
         private readonly string $projectRoot,
         private readonly ?string $cachePath,
         private readonly KingdomRepositoryInterface $kingdoms,
         private readonly PrincipalRepositoryInterface $principals,
+        private readonly OrkGetKingdomsGateway $orkApi,
+        private readonly OrkKingdomCacheWriter $cacheWriter,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -33,8 +38,13 @@ final class OrkKingdomDirectory
     public function list(): array
     {
         return DenariusLog::trace(__METHOD__, function (): array {
+            $this->ensureLocalRepository();
+
             /** @var array<int, array{id: int, name: string}> $byId */
             $byId = [];
+            foreach ($this->fromBundledFile() as $kingdom) {
+                $byId[$kingdom['id']] = $kingdom;
+            }
             foreach ($this->fromCacheFile() as $kingdom) {
                 $byId[$kingdom['id']] = $kingdom;
             }
@@ -51,6 +61,19 @@ final class OrkKingdomDirectory
             usort($list, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));
 
             return $list;
+        });
+    }
+
+    public function nameForOrkId(int $orkKingdomId): ?string
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($orkKingdomId): ?string {
+            foreach ($this->list() as $kingdom) {
+                if ($kingdom['id'] === $orkKingdomId) {
+                    return $kingdom['name'];
+                }
+            }
+
+            return null;
         });
     }
 
@@ -128,24 +151,93 @@ final class OrkKingdomDirectory
         });
     }
 
+    private function ensureLocalRepository(): void
+    {
+        DenariusLog::trace(__METHOD__, function (): mixed {
+            $path = $this->resolveCachePath();
+            if ($path === null) {
+                return null;
+            }
+
+            $cached = $this->readKingdomsJsonFile($path);
+            $bundled = $this->readKingdomsJsonFile($this->bundledAbsolutePath());
+            if ($cached !== [] && ($bundled === [] || count($cached) >= count($bundled))) {
+                return null;
+            }
+
+            $raw = $this->orkApi->getKingdomsJson();
+            if ($raw !== null) {
+                $kingdoms = self::parse($raw);
+                if ($kingdoms !== []) {
+                    $this->cacheWriter->write($path, $kingdoms);
+
+                    return null;
+                }
+
+                DenariusLog::infoBranch('ork_kingdoms_fetch_failed', __METHOD__, ['reason' => 'parse']);
+            }
+
+            $this->seedFromBundled($path);
+
+            return null;
+        });
+    }
+
+    /** Parses ORK or normalized JSON and writes the writable cache when kingdoms are present. */
+    public function importOrkResponse(string $raw): bool
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($raw): bool {
+            $kingdoms = self::parse($raw);
+            if ($kingdoms === []) {
+                return false;
+            }
+
+            $path = $this->resolveCachePath();
+            if ($path === null) {
+                return false;
+            }
+
+            $this->cacheWriter->write($path, $kingdoms);
+
+            return true;
+        });
+    }
+
     /**
      * @return list<array{id: int, name: string}>
      */
     private function fromCacheFile(): array
     {
         return DenariusLog::trace(__METHOD__, function (): array {
-            $path = $this->resolveCachePath();
-            if ($path === null || ! is_readable($path)) {
-                return [];
-            }
-
-            $json = file_get_contents($path);
-            if ($json === false || trim($json) === '') {
-                return [];
-            }
-
-            return self::parse($json);
+            return $this->readKingdomsJsonFile($this->resolveCachePath());
         });
+    }
+
+    /**
+     * @return list<array{id: int, name: string}>
+     */
+    private function fromBundledFile(): array
+    {
+        return DenariusLog::trace(__METHOD__, function (): array {
+            return $this->readKingdomsJsonFile($this->bundledAbsolutePath());
+        });
+    }
+
+    /**
+     * @return list<array{id: int, name: string}>
+     */
+    private function readKingdomsJsonFile(?string $path): array
+    {
+        if ($path === null || ! is_readable($path)) {
+            return [];
+        }
+
+        $json = file_get_contents($path);
+        if ($json === false || trim($json) === '') {
+            return [];
+        }
+
+        return self::parse($json);
     }
 
     /**
@@ -196,6 +288,33 @@ final class OrkKingdomDirectory
             }
 
             return rtrim($this->projectRoot, '/') . '/' . $relative;
+        });
+    }
+
+    private function bundledAbsolutePath(): string
+    {
+        return rtrim($this->projectRoot, '/') . '/' . self::BUNDLED_CACHE_FILE;
+    }
+
+    private function seedFromBundled(string $targetPath): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($targetPath): mixed {
+            $bundledPath = $this->bundledAbsolutePath();
+            $kingdoms = $this->readKingdomsJsonFile($bundledPath);
+            if ($kingdoms === []) {
+                DenariusLog::infoBranch('ork_kingdoms_bundled_missing', __METHOD__, [
+                    'path' => $bundledPath,
+                ]);
+
+                return null;
+            }
+
+            $this->cacheWriter->write($targetPath, $kingdoms);
+            DenariusLog::infoBranch('ork_kingdoms_seeded_from_bundled', __METHOD__, [
+                'count' => count($kingdoms),
+            ]);
+
+            return null;
         });
     }
 }

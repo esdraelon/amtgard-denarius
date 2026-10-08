@@ -26,6 +26,7 @@ final class TracedMethodCatalogTest extends AmtgardTestCase
                 'Amtgard\\Denarius\\Controller\\HomeController::home',
                 'Amtgard\\Denarius\\Controller\\HomeController::privacyPolicy',
                 'Amtgard\\Denarius\\Controller\\HomeController::version',
+                'Amtgard\\Denarius\\Controller\\HomeController::viewer',
             ],
             $methods,
         );

@@ -31,7 +31,13 @@ final class KingdomPageQuery implements MonthReader
     public function statement(KingdomRecord $kingdom, MonthWindow $month): MonthStatement
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $month): MonthStatement {
-            $mode = DisplayMode::fromStored($kingdom->getDisplayMode());
+            return $this->statementForMode($kingdom, $month, DisplayMode::fromStored($kingdom->getDisplayMode()));
+        });
+    }
+
+    public function statementForMode(KingdomRecord $kingdom, MonthWindow $month, DisplayMode $mode): MonthStatement
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $month, $mode): MonthStatement {
             $candidates = $this->lines->candidates($kingdom);
             $envelope = new PublicationEnvelope(
                 $kingdom,

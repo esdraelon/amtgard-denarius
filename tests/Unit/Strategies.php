@@ -22,6 +22,9 @@ use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
 use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Utilities\Http\IdpUserDirectory;
+use Amtgard\Denarius\Tests\Support\StubOrkGetKingdomsGateway;
+use Amtgard\Denarius\Utilities\Http\OrkGetKingdomsGateway;
+use Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
 use Amtgard\Denarius\Service\Admin\Impl\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\GrantManagerCommand;
@@ -53,6 +56,7 @@ use Amtgard\Denarius\Service\Ledger\KingdomPatternService;
 use Amtgard\Denarius\Service\Ledger\TransactionRecategorizer;
 use Amtgard\Denarius\Tests\Support\MemoryKingdomCategoryRules;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
+use Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob;
 use Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 
@@ -61,8 +65,27 @@ final class Strategies
     public static function orkKingdoms(
         KingdomRepositoryInterface $kingdoms,
         PrincipalRepositoryInterface $principals,
+        ?OrkGetKingdomsGateway $orkApi = null,
     ): OrkKingdomDirectory {
-        return new OrkKingdomDirectory(dirname(__DIR__, 2), null, $kingdoms, $principals);
+        return new OrkKingdomDirectory(
+            dirname(__DIR__, 2),
+            null,
+            $kingdoms,
+            $principals,
+            $orkApi ?? new StubOrkGetKingdomsGateway(),
+            new OrkKingdomCacheWriter(),
+        );
+    }
+
+    public static function managedKingdomResolver(
+        KingdomRepositoryInterface $kingdoms,
+        PrincipalRepositoryInterface $principals,
+        ?OrkGetKingdomsGateway $orkApi = null,
+    ): \Amtgard\Denarius\Service\Kingdom\ManagedKingdomResolver {
+        return new \Amtgard\Denarius\Service\Kingdom\ManagedKingdomResolver(
+            $kingdoms,
+            self::orkKingdoms($kingdoms, $principals, $orkApi),
+        );
     }
 
     public static function grantedRoles(
@@ -79,20 +102,60 @@ final class Strategies
 
     public static function grantTargets(PrincipalRepositoryInterface $principals): AdminGrantTargetResolver
     {
-        $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();
-
         return new AdminGrantTargetResolver(
-            new IdpUserDirectory(
-                \Amtgard\IdpClient\Config\IdpClientEnvironmentFactory::fromEnvVars([
-                    'IDP_BASE_URL' => 'https://idp.example.test',
-                    'IDP_CLIENT_ID' => 'denarius_test',
-                    'IDP_CLIENT_SECRET' => 'secret',
-                    'IDP_REDIRECT_URI' => 'https://denarius.example.test/oauth/callback',
-                ]),
-                new \GuzzleHttp\Client(),
-                $psr17,
-            ),
+            self::idpUserDirectory(),
             $principals,
+            new PrincipalSync($principals),
+        );
+    }
+
+    public static function idpUserDirectory(): IdpUserDirectory
+    {
+        $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();
+        $client = new class implements \Psr\Http\Client\ClientInterface {
+            public function sendRequest(\Psr\Http\Message\RequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                $query = (string) $request->getUri()->getQuery();
+                /** @var array<string, string> $known */
+                $known = [
+                    'person@example.com' => '9',
+                    'legacy@example.com' => '31786326',
+                    'megiddo@esdraelon.com' => 'idp-uuid-megiddo',
+                    'no-one@example.com' => '404-user',
+                ];
+                foreach ($known as $email => $idpUserId) {
+                    if (! str_contains($query, 'email=')) {
+                        continue;
+                    }
+                    if (str_contains($query, rawurlencode($email)) || str_contains($query, 'email=' . $email)) {
+                        return new \Nyholm\Psr7\Response(200, [], json_encode([
+                            'idp_user_id' => $idpUserId,
+                            'email' => $email,
+                        ], JSON_THROW_ON_ERROR));
+                    }
+                }
+
+                return new \Nyholm\Psr7\Response(404, [], '{"error":"unknown email"}');
+            }
+        };
+
+        return new IdpUserDirectory(
+            \Amtgard\IdpClient\Config\IdpClientEnvironmentFactory::fromEnvVars([
+                'IDP_BASE_URL' => 'https://idp.example.test',
+                'IDP_CLIENT_ID' => 'denarius_test',
+                'IDP_CLIENT_SECRET' => 'secret',
+                'IDP_REDIRECT_URI' => 'https://denarius.example.test/oauth/callback',
+            ]),
+            $client,
+            $psr17,
+        );
+    }
+
+    public static function principalSuggester(PrincipalRepositoryInterface $principals): \Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester
+    {
+        return new \Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester(
+            $principals,
+            self::idpUserDirectory(),
             new PrincipalSync($principals),
         );
     }
@@ -140,6 +203,7 @@ final class Strategies
     public static function jobs(
         TransactionSynchronizer $synchronizer,
         ?TransactionRecategorizer $recategorizer = null,
+        ?MonthCacheRefreshJob $monthCache = null,
     ): RefreshJobRegistry {
         $recategorizer ??= self::recategorizer(
             new MemoryKingdoms(),
@@ -147,10 +211,15 @@ final class Strategies
             self::providers(self::teller()),
         );
 
-        return new RefreshJobRegistry([
+        $jobs = [
             new LedgerRefreshJob($synchronizer),
             new TransactionRecategorizeJob($recategorizer),
-        ]);
+        ];
+        if ($monthCache !== null) {
+            $jobs[] = $monthCache;
+        }
+
+        return new RefreshJobRegistry($jobs);
     }
 
     public static function recategorizer(

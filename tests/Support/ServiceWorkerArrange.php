@@ -25,8 +25,10 @@ use Amtgard\Denarius\Service\Ledger\DailySweep;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
+use Amtgard\Denarius\Service\Month\MonthCacheWriter;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
 use Amtgard\Denarius\Service\Month\MonthReader;
+use Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
@@ -76,9 +78,18 @@ final class ServiceWorkerArrange
         }
         AdminGrantTargetResolver::isLegacyPublicId('31786326');
 
+        $principalSuggester = Strategies::principalSuggester($principals);
+        $principalSuggester->match('person@example.com');
+        $principalSuggester->match('megiddo');
+        $principalSuggester->match('');
+
         $grantedIndex = new AdminGrantedRoleIndex($grants, $principals, Strategies::orkKingdoms($kingdoms, $principals));
         $grantedIndex->search(null, null);
         $grantedIndex->search('legacy', 'Golden');
+
+        $managed = Strategies::managedKingdomResolver($kingdoms, $principals);
+        $managed->resolve(4);
+        $managed->resolve(404);
 
         $registry = Strategies::admin();
         $body = ['idp_user_id' => '9', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains'];
@@ -340,17 +351,112 @@ final class ServiceWorkerArrange
         (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->statement(4, 0, 'all', '2026-09', 'taxonomy/v1');
         (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->taxonomyNamespace();
 
+        $monthWriter = new MonthCacheWriter($cache, $catalog);
+        $monthJob = new MonthCacheRefreshJob(
+            $kingdoms,
+            KingdomPageQueryFactory::publicRead($transactions, $accounts),
+            $monthWriter,
+        );
+        $managedKingdomId = (int) $saved->getId();
+        $monthJob->type();
+        $monthJob->handle(['kingdom_id' => 0, 'month' => 'bad']);
+        $monthJob->handle(['kingdom_id' => $managedKingdomId, 'month' => '2026-09']);
+        $monthWriter->deleteMonth($managedKingdomId, $month);
+
+        $codec = new \Amtgard\Denarius\Service\Month\MonthStatementCacheCodec();
+        $sampleStatement = KingdomPageQueryFactory::publicRead($transactions, $accounts)->statement($saved, $month);
+        $encoded = $codec->encode($sampleStatement);
+        $codec->decode($encoded, DisplayMode::LessRedacted, $month);
+        $codec->decode(null, DisplayMode::LessRedacted, $month);
+        $codec->decode('{"month":"2020-01","rows":[]}', DisplayMode::LessRedacted, $month);
+        $codec->decode(json_encode([
+            'mode' => DisplayMode::LessRedacted->value,
+            'month' => $month->key(),
+            'rows' => [
+                [
+                    'kind' => 'line',
+                    'postedOn' => '2026-09-02',
+                    'amountCents' => 1,
+                    'category' => 'office',
+                    'description' => 'supplies',
+                    'counterparty' => 'Shop',
+                    'status' => 'posted',
+                    'accountName' => 'Checking',
+                ],
+                [
+                    'kind' => 'total',
+                    'category' => 'office',
+                    'count' => 2,
+                    'amountCents' => 100,
+                ],
+            ],
+            'absence' => ['code' => 'no_transactions', 'detail' => 'none'],
+        ], JSON_THROW_ON_ERROR), DisplayMode::LessRedacted, $month);
+
+        $monthPublisher = new \Amtgard\Denarius\Service\Month\MonthCacheRefreshPublisher(new MemoryMessages(), $transactions);
+        $monthPublisher->schedule((int) $saved->getId());
+        $monthPublisher->schedule((int) $saved->getId(), $month);
+        $monthPublisher->targetMonths((int) $saved->getId());
+
+        $syncFeedback = new \Amtgard\Denarius\Service\Ledger\ManagerLedgerSyncFeedback();
+        $syncFeedback->forManage(
+            KingdomRecord::builder()->enrollmentStatus('disconnected')->build(),
+            false,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()->enrollmentStatus('connected')->build(),
+            false,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()
+                ->enrollmentStatus('connected')
+                ->lastSyncAttemptedAt('2026-10-07T16:45:25+00:00')
+                ->lastSyncStatus('failed')
+                ->lastSyncError('timeout')
+                ->build(),
+            false,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()
+                ->enrollmentStatus('connected')
+                ->lastSyncAttemptedAt('2026-10-07T16:45:25+00:00')
+                ->lastSyncStatus('succeeded')
+                ->build(),
+            false,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()
+                ->enrollmentStatus('connected')
+                ->lastSyncAttemptedAt('2026-10-07T16:45:25+00:00')
+                ->lastSyncStatus('succeeded')
+                ->build(),
+            true,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()
+                ->enrollmentStatus('connected')
+                ->lastSyncAttemptedAt('not-a-date')
+                ->lastSyncStatus('pending')
+                ->build(),
+            true,
+        );
+
         $messages = new MemoryMessages();
-        $worker = new LedgerWorker($messages, Strategies::jobs($sync, $recategorizer), 1);
+        $worker = new LedgerWorker($messages, Strategies::jobs($sync, $recategorizer, $monthJob), 1);
         $worker->handle('not-json');
         $worker->handle(json_encode(['type' => 'ledger', 'orkKingdomId' => 4]));
+        $worker->handle(json_encode(['type' => 'month_cache', 'kingdom_id' => $managedKingdomId, 'month' => '2026-09']));
         $worker->handle(json_encode(['type' => 'other']));
         $worker->run(1);
 
-        $jobs = Strategies::jobs($sync);
+        $jobs = Strategies::jobs($sync, $recategorizer, $monthJob);
         $jobs->find('ledger')->handle(['orkKingdomId' => 4]);
         $ignoredJob = $jobs->find('other');
         $ignoredJob->type();
         $ignoredJob->handle(['orkKingdomId' => 4]);
+
+        $pdo = new \PDO('sqlite::memory:');
+        $pdo->exec('CREATE TABLE transactions (kingdom_id INTEGER); CREATE TABLE published_accounts (kingdom_id INTEGER); CREATE TABLE enrollment_secrets (kingdom_id INTEGER);');
+        (new \Amtgard\Denarius\Service\Enrollment\BankConnectionReset($pdo))->clearKingdom(4);
     }
 }

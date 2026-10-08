@@ -84,9 +84,24 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         file_put_contents($root . '/VERSION', "1\n");
 
         $kingdoms = new MemoryKingdoms();
+        $principals = new MemoryPrincipals();
         $permissions = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        $home = new HomeController($twig, $auth, new AccountNavBuilder($permissions, $kingdoms), $root);
+        $home = new HomeController(
+            $twig,
+            $auth,
+            new AccountNavBuilder($permissions, Strategies::managedKingdomResolver($kingdoms, $principals)),
+            $kingdoms,
+            KingdomAccess::standard(),
+            Strategies::orkKingdoms($kingdoms, $principals),
+            $root,
+        );
         $home->home($this->request('GET', '/'), new Response());
+        (new \Amtgard\Denarius\Utilities\Http\Twig\SiteNavTwigExtension(
+            new \Amtgard\Denarius\Service\Access\SiteNavBuilder(
+                $auth,
+                new AccountNavBuilder($permissions, Strategies::managedKingdomResolver($kingdoms, $principals)),
+            ),
+        ))->getGlobals();
         $home->version($this->request('GET', '/version'), new Response());
         $home->privacyPolicy($this->request('GET', '/privacy-policy'), new Response());
         $kingdom = $kingdoms->save(KingdomRecord::builder()
@@ -116,8 +131,15 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             new DenariusAuthorizer(),
             BootstrapAdmins::fromEnv(null),
         );
-        (new HomeController($twig, $auth, new AccountNavBuilder($managerPermissions, $kingdoms), $root))
-            ->home($this->request('GET', '/'), new Response());
+        (new HomeController(
+            $twig,
+            $auth,
+            new AccountNavBuilder($managerPermissions, Strategies::managedKingdomResolver($kingdoms, $principals)),
+            $kingdoms,
+            KingdomAccess::standard(),
+            Strategies::orkKingdoms($kingdoms, $principals),
+            $root,
+        ))->home($this->request('GET', '/'), new Response());
         $page->show($this->request('GET', '/golden-plains', ['month' => '2026-09']), new Response(), 'golden-plains');
         $kingdoms->save(KingdomRecord::builder()->id($kingdom->getId())->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('all')->enrollmentStatus('connected')->build());
         $page->show($this->request('GET', '/golden-plains', ['month' => '2026-09']), new Response(), 'golden-plains');
@@ -146,9 +168,65 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
             ->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person']), new Response());
         $orkKingdoms->list();
+        $orkKingdoms->nameForOrkId(4);
         OrkKingdomDirectory::parse('{}');
         OrkKingdomDirectory::normalizeSimpleList([['id' => 1, 'name' => 'Alpha']]);
+        $orkFetchRoot = sys_get_temp_dir() . '/traced-ork-' . uniqid();
+        mkdir($orkFetchRoot . '/data', 0775, true);
+        $fetchDirectory = new OrkKingdomDirectory(
+            $orkFetchRoot,
+            'data/ork-kingdoms.json',
+            $kingdoms,
+            $principals,
+            new \Amtgard\Denarius\Tests\Support\StubOrkGetKingdomsGateway(json_encode([
+                'kingdoms' => [['id' => 99, 'name' => 'Fetched Kingdom']],
+            ], JSON_THROW_ON_ERROR)),
+            new \Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter(),
+        );
+        $fetchDirectory->list();
+        $fetchDirectory->importOrkResponse(json_encode(['kingdoms' => [['id' => 2, 'name' => 'Beta']]], JSON_THROW_ON_ERROR));
+        copy(
+            dirname(__DIR__, 3) . '/data/ork-kingdoms.bundled.json',
+            $orkFetchRoot . '/data/ork-kingdoms.bundled.json',
+        );
+        (new OrkKingdomDirectory(
+            $orkFetchRoot,
+            'data/ork-kingdoms-seed.json',
+            $kingdoms,
+            $principals,
+            new \Amtgard\Denarius\Tests\Support\StubOrkGetKingdomsGateway(null),
+            new \Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter(),
+        ))->list();
+        (new \Amtgard\Denarius\Utilities\Http\Impl\CurlOrkGetKingdomsGateway(
+            'https://ork.example.test',
+            'denarius-test',
+            'https://denarius.amtgard.com',
+            1,
+            static fn (string $url, string $body): string => '{"Status":{"Status":0},"Kingdoms":[]}',
+        ))->getKingdomsJson();
+        (new \Amtgard\Denarius\Utilities\Http\Impl\CurlOrkGetKingdomsGateway(
+            'https://ork.example.test',
+            'denarius-test',
+            'https://denarius.amtgard.com',
+            1,
+            static fn (string $url, string $body): string => '<!DOCTYPE html>',
+        ))->getKingdomsJson();
+        (new \Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter())->write(
+            $orkFetchRoot . '/data/manual.json',
+            [['id' => 1, 'name' => 'Manual']],
+        );
         $_SESSION['_csrf'] = 'token';
+        $syncPayload = json_encode([
+            'csrf' => 'token',
+            'ork_json' => json_encode(['kingdoms' => [['id' => 5, 'name' => 'Sync Kingdom']]], JSON_THROW_ON_ERROR),
+        ], JSON_THROW_ON_ERROR);
+        $syncStream = fopen('php://temp', 'r+');
+        fwrite($syncStream, $syncPayload);
+        rewind($syncStream);
+        $admin->syncKingdoms(
+            $this->request('POST', '/admin/kingdoms/sync')->withBody(new \Slim\Psr7\Stream($syncStream)),
+            new Response(),
+        );
         $admin->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-manager', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains']), new Response());
         $admin->grant($this->request('POST', '/admin/grant', [], [
             'csrf' => 'token',
@@ -311,7 +389,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'https://idp.example.test/resources/client/service-format'));
 
         $scope = $this->methodsInScope();
-        $this->assertCount(69, $scope);
+        $this->assertCount(81, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);
