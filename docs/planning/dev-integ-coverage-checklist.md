@@ -12,7 +12,7 @@ Plan: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md).
 | C2 | `stack/denarius-integ-c2-integ-wire-hosts` | [x] |
 | C2b | integ harness polish (bootstrap, smoke `/version`, JUnit, php-di 7) | [x] |
 | C3 | `stack/denarius-integ-c3-per-test-reseed` | [x] |
-| C4 | `stack/denarius-integ-c4-http-support` | [ ] |
+| C4 | `stack/denarius-integ-c4-http-support` | [x] |
 | C5 | `stack/denarius-integ-c5-outbound-stubs` | [ ] |
 | C6 | `stack/denarius-integ-c6-worker-integ` | [ ] |
 | C7 | `stack/denarius-integ-c7-route-matrix-doc` | [ ] |

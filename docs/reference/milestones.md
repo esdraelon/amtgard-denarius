@@ -579,3 +579,11 @@ Suggested stack (one branch each):
 - Line coverage: 95.64% (6859/7172; no `src/` change).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ HTTP support (C4)
+
+- Branch: `stack/denarius-integ-c4-http-support`
+- IDP-style `IntegHttp` (cookie jar, `postForm`, `postJson`, Denarius `csrf` hidden field parsing, redirect helpers) and `IntegAuth` stub plus `skipIfIdpUnavailable` for OAuth prerequisite tests. `IntegTestCase::integHttp()`; `IdpPrerequisiteTest` skips when IDP integ is down.
+- Line coverage: 95.64% (6859/7172; no `src/` change).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
