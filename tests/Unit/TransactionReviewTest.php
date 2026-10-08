@@ -312,13 +312,26 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->build());
 
         MethodLogAssert::reset();
-        $rows = Strategies::reviewQueue($transactions, $accounts, $now)->rowsForManage($kingdom);
-        $this->assertCount(3, $rows);
-        $statuses = array_column($rows, 'status');
-        $this->assertContains('pending', $statuses);
-        $this->assertContains('embargoed', $statuses);
-        $this->assertContains('published', $statuses);
+        $queue = Strategies::reviewQueue($transactions, $accounts, $now);
+        $september = $queue->rowsForManage($kingdom, new MonthWindow(2026, 9));
+        $this->assertSame(['embargo', 'pending'], array_column($september, 'tellerTransactionId'));
+        $this->assertSame(['embargoed', 'pending'], array_column($september, 'status'));
+        $august = $queue->rowsForManage($kingdom, new MonthWindow(2026, 8));
+        $this->assertSame(['published'], array_column($august, 'status'));
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_queue_loaded', TransactionReviewQueue::class . '::rowsForManage');
+        $this->assertSame('2026-09', $queue->latestReviewMonth($kingdom)->key());
+        $this->assertSame('2026-09', $queue->reviewMonth($kingdom, '')->key());
+        $this->assertSame('2026-08', $queue->reviewMonth($kingdom, '2026-08')->key());
+        $this->assertSame('2026-09', $queue->reviewMonth($kingdom, 'garbage')->key());
+    }
+
+    public function testLatestReviewMonthFallsBackToCurrentWhenQueueEmpty(): void
+    {
+        $kingdom = $this->kingdomWithAccount();
+        $queue = Strategies::reviewQueue($kingdom['transactions'], $kingdom['accounts'], new \DateTimeImmutable('2026-11-15'));
+        MethodLogAssert::reset();
+        $this->assertSame('2026-11', $queue->latestReviewMonth($kingdom['record'])->key());
+        MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_month_current', TransactionReviewQueue::class . '::latestReviewMonth');
     }
 
     public function testUncategorizedFilterSortsLeastConfidentFirst(): void
@@ -352,7 +365,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->category('expense.feast_groceries')
             ->build());
 
-        $rows = Strategies::reviewQueue($transactions, $kingdom['accounts'])->rowsForManage($kingdom['record'], true);
+        $rows = Strategies::reviewQueue($transactions, $kingdom['accounts'])->rowsForManage($kingdom['record'], new MonthWindow(2026, 9), true);
         $this->assertCount(2, $rows);
         $this->assertSame('low', $rows[0]['tellerTransactionId']);
     }
