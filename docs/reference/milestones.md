@@ -540,3 +540,10 @@ Suggested stack (one branch each):
 8. `publication-envelope-review` — holistic leak tests (balance vs line sum, partial redaction windows)
 9. `publication-pattern-registry` — versioned SOFT patterns, ruleset reprocess, treasurer alerts
 10. `publication-docs-privacy` — manage and privacy copy
+
+## SQLite method log bundles
+
+- Branch: `stack/denarius-log-l1-spool-sqlite-writer`
+- IDP-aligned local logging: `JsonLogSpoolHandler`, hourly SQLite WAL under `LOG_ROOT`, `bin/log-sqlite-writer.php`, `bin/denarius-logs.php` (query/bundle by `request_id`), container spool wired in `MethodLog` factory, optional `docker/compose.log-writer.yml` profile.
+- Line coverage: 95.64% (6859/7172).
+- Checklist: [sqlite-logging-checklist.md](../planning/sqlite-logging-checklist.md).
