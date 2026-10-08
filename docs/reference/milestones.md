@@ -571,3 +571,11 @@ Suggested stack (one branch each):
 - Line coverage: 95.64% (6859/7172; no `src/` change).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## HTTP integ per-test reseed (C3)
+
+- Branch: `stack/denarius-integ-c3-per-test-reseed`
+- IDP-style `IntegTestCase`, `IntegFixtureReseeder`, and `tests/Integration/seed.php` (purge integ schema, baseline kingdom + principals; flush session Redis DB 1 and month-cache Redis DB 0 between methods). `VersionEndpointTest` extends `IntegTestCase`.
+- Line coverage: 95.64% (6859/7172; no `src/` change).
+- Infection: not run (no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).

@@ -15,6 +15,7 @@
     <php>
         <ini name="display_errors" value="0"/>
         <ini name="error_reporting" value="24575"/>
+        <env name="ENVIRONMENT" value="DEV_INTEG"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_DEBUG" value="true"/>
         <env name="APP_KEY" value="test-only-app-key-not-for-production"/>
