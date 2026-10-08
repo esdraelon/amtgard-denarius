@@ -1,6 +1,6 @@
 # Stash reconcile plan (publication first)
 
-Base: `fix-kingdom` @ `e6192c9`. Source: `backup/wip-pre-taxonomy` @ `4795d02` (same commit as `stash@{0}` "wip-pre-taxonomy"; former `stash@{1}`). Stripe-only extras came from the unreachable `stripe-wip` stash commit `c03e843`.
+Base: `fix-kingdom` @ `ff61ef2` (fast-forward of publication stack). Source: `backup/wip-pre-taxonomy` @ `4795d02` (stash dropped after reconcile). Stripe extras from former `stripe-wip` landed in P7.
 
 Publication slices (stacked, ~≤300 LOC/commit): P1 ledger-sync-status → P2a month-cache read → P2b invalidate/queue → P3 manager-redact flags → P4 review-month → P5a selections service → P5b batch UI → P6 bank-disconnect → P7 stripe refresh → P8 statement sort → P9 admin suggester → I1 dev infra → C1/C2 categorization batch (after publication green).
 
@@ -34,4 +34,4 @@ Every slice passed `composer test` (≥95% line coverage); see [milestones.md](.
 - **Admin "no ORK kingdom directory" warning**: superseded; the tip falls back to `data/ork-kingdoms.bundled.json` and refreshes from ORK.
 - Test-side differences track the source refactors above and the taxonomy stack.
 
-`stash@{0}` kept because of the unported inline initial sync. Its content is also on `backup/wip-pre-taxonomy`, so `git stash drop stash@{0}` loses nothing once that decision is made.
+**Stash stack:** empty (`git stash list`). **`backup/wip-pre-taxonomy`** retained as read-only reference until inline connect-sync is decided.
