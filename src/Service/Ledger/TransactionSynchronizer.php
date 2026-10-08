@@ -61,29 +61,45 @@ final class TransactionSynchronizer
                 ]);
             }
 
-            $token = $this->cipher->decrypt($ciphertext);
-            $provider = $this->providers->find($this->providerId($kingdom));
-            foreach ($this->accounts->forKingdom($kingdom->getId()) as $account) {
-                if (!$account->getPublished()) {
-                    continue;
+            $stamp = $this->now->format('c');
+            $this->kingdoms->save(KingdomRecordRebuilder::from($kingdom)
+                ->lastSyncAttemptedAt($stamp)
+                ->build());
+            try {
+                $token = $this->cipher->decrypt($ciphertext);
+                $provider = $this->providers->find($this->providerId($kingdom));
+                foreach ($this->accounts->forKingdom($kingdom->getId()) as $account) {
+                    if (!$account->getPublished()) {
+                        continue;
+                    }
+                    $accountId = $account->getTellerAccountId();
+                    $this->pullAccount($provider, $kingdom, $token, $accountId, $backfillAmnesty);
+                    $this->microPairs->reconcileAccount($kingdom, $accountId);
                 }
-                $accountId = $account->getTellerAccountId();
-                $this->pullAccount($provider, $kingdom, $token, $accountId, $backfillAmnesty);
-                $this->microPairs->reconcileAccount($kingdom, $accountId);
-            }
 
-            $saved = KingdomRecordRebuilder::from($kingdom)
-                ->lastSyncedAt($this->now->format('c'));
-            if ($backfillAmnesty) {
-                $saved = $saved->initialBackfillCompletedAt($this->now->format('c'));
-                DenariusLog::infoBranch('ledger_backfill_completed', $method, [
-                    'kingdom_id' => $kingdom->getId(),
-                ]);
-            }
-            $this->kingdoms->save($saved->build());
-            $this->months->forget((int) $kingdom->getId());
+                $saved = KingdomRecordRebuilder::from($kingdom)
+                    ->lastSyncAttemptedAt($stamp)
+                    ->lastSyncStatus('succeeded')
+                    ->lastSyncError(null)
+                    ->lastSyncedAt($stamp);
+                if ($backfillAmnesty) {
+                    $saved = $saved->initialBackfillCompletedAt($stamp);
+                    DenariusLog::infoBranch('ledger_backfill_completed', $method, [
+                        'kingdom_id' => $kingdom->getId(),
+                    ]);
+                }
+                $this->kingdoms->save($saved->build());
+                $this->months->forget((int) $kingdom->getId());
 
-            return true;
+                return true;
+            } catch (\Throwable $e) {
+                $this->kingdoms->save(KingdomRecordRebuilder::from($kingdom)
+                    ->lastSyncAttemptedAt($stamp)
+                    ->lastSyncStatus('failed')
+                    ->lastSyncError($e->getMessage())
+                    ->build());
+                throw $e;
+            }
         });
     }
 

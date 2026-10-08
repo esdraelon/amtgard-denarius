@@ -134,6 +134,7 @@ use Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver;
 use Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionRecategorizer;
+use Amtgard\Denarius\Service\Ledger\ManagerLedgerSyncFeedback;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
@@ -560,6 +561,7 @@ return [
         $c->get(AdminGrantTargetResolver::class),
         $c->get(AdminGrantedRoleIndex::class),
     ),
+    ManagerLedgerSyncFeedback::class => fn () => new ManagerLedgerSyncFeedback(),
     ManagerController::class => fn (ContainerInterface $c) => new ManagerController(
         $c->get(SessionAuthStore::class),
         $c->get(PermissionService::class),
@@ -576,6 +578,7 @@ return [
         $c->get(TaxonomyCategorySearch::class),
         $c->get(KingdomPatternService::class),
         $c->get(KingdomPatternPrefill::class),
+        $c->get(ManagerLedgerSyncFeedback::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(

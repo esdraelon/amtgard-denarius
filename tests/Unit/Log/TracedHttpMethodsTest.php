@@ -254,8 +254,9 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             Strategies::categorySearch(),
             Strategies::kingdomPatternService($kingdoms, $transactions),
             Strategies::patternPrefill(),
+            Strategies::ledgerSyncFeedback(),
         );
-        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternPrefill()))
+        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternPrefill(), Strategies::ledgerSyncFeedback()))
             ->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/missing'), new Response(), 'missing');
         $manager->show($this->request('GET', '/manage/golden-plains', ['uncategorized' => '1']), new Response(), 'golden-plains');

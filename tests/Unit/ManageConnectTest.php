@@ -94,6 +94,7 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::categorySearch(),
             Strategies::kingdomPatternService($kingdoms, $transactions),
             Strategies::patternPrefill(),
+            Strategies::ledgerSyncFeedback(),
         );
     }
 
@@ -153,6 +154,7 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::categorySearch(),
             Strategies::kingdomPatternService(new MemoryKingdoms(), $guestTransactions),
             Strategies::patternPrefill(),
+            Strategies::ledgerSyncFeedback(),
         );
         $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), 'golden-plains')->getStatusCode());
     }
