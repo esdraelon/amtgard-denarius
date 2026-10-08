@@ -8,40 +8,32 @@
          failOnDeprecation="false"
          failOnPhpunitDeprecation="false">
     <testsuites>
-        <testsuite name="Unit">
-            <directory>tests/Unit</directory>
-        </testsuite>
-        <testsuite name="Persistence">
-            <directory suffix="Test.php">tests/Integration</directory>
-            <exclude>tests/Integration/Http</exclude>
+        <testsuite name="Integration">
+            <directory suffix="Test.php">tests/Integration/Http</directory>
         </testsuite>
     </testsuites>
     <extensions>
         <bootstrap class="Amtgard\Denarius\Tests\Support\MethodLogBalanceExtension"/>
     </extensions>
-    <source>
-        <include>
-            <directory>src</directory>
-        </include>
-    </source>
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_DEBUG" value="true"/>
         <env name="APP_KEY" value="test-only-app-key-not-for-production"/>
         <env name="DB_HOST" value="127.0.0.1"/>
-        <env name="DB_PORT" value="36316"/>
-        <env name="DB_NAME" value="denarius_test"/>
+        <env name="DB_PORT" value="36317"/>
+        <env name="DB_NAME" value="denarius_integ"/>
         <env name="DB_USER" value="denarius"/>
         <env name="DB_PASS" value="secret"/>
         <env name="DB_ROOT_USER" value="root"/>
         <env name="DB_ROOT_PASS" value="root"/>
-        <env name="IDP_BASE_URL" value="https://idp.amtgard.com"/>
+        <env name="IDP_BASE_URL" value="http://localhost:37080"/>
         <env name="IDP_CLIENT_ID" value="test-client"/>
         <env name="IDP_CLIENT_SECRET" value="test-secret"/>
         <env name="IDP_REDIRECT_URI" value="http://localhost:37180/oauth/callback"/>
         <env name="IDP_IAM_SERVICE" value="Denarius"/>
         <env name="IDP_IAM_SERVICE_FORMAT" value='["Configuration","Kingdom"]'/>
         <env name="DENARIUS_BOOTSTRAP_ADMIN_IDP_USER_IDS" value="7"/>
+        <env name="DENARIUS_BASE_URL" value="http://localhost:37180"/>
         <env name="ORK_API_USER_AGENT" value="denarius-test"/>
         <env name="ORK_API_REFERER" value="https://denarius.amtgard.com"/>
         <env name="TELLER_APPLICATION_ID" value="app_test"/>

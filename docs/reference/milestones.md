@@ -547,3 +547,11 @@ Suggested stack (one branch each):
 - IDP-aligned local logging: `JsonLogSpoolHandler`, hourly SQLite WAL under `LOG_ROOT`, `bin/log-sqlite-writer.php`, `bin/denarius-logs.php` (query/bundle by `request_id`), container spool wired in `MethodLog` factory, optional `docker/compose.log-writer.yml` profile.
 - Line coverage: 95.64% (6859/7172).
 - Checklist: [sqlite-logging-checklist.md](../planning/sqlite-logging-checklist.md).
+
+## HTTP integ harness (C0)
+
+- Branch: `stack/denarius-integ-c0-phpunit-split`
+- IDP-style split: default `phpunit.xml` runs Unit + MariaDB Persistence (`tests/Integration`, excluding `Http`); HTTP integ uses `phpunit.integ.xml` (`tests/Integration/Http`, `DENARIUS_BASE_URL=http://localhost:37180`). `composer integ` runs the HTTP suite; `scripts/integ.sh` / `integ-up.sh` / `integ-down.sh` stub until C1.
+- Line coverage: 95.64% (6859/7172).
+- Infection covered MSI: 93% (`composer infection:ci`, `--threads=4`, ~22m; no `src/` change).
+- Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
