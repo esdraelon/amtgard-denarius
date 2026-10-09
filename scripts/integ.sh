@@ -36,7 +36,7 @@ if [[ "$fail" -eq 0 ]]; then
             fail=1
         fi
     fi
-    if [[ -f "$INTEG_JUNIT" ]]; then
+    if [[ -s "$INTEG_JUNIT" ]]; then
         integ_summary="$(php -r '
             $path = $argv[1];
             $xml = @simplexml_load_file($path);
