@@ -7,12 +7,16 @@ namespace Amtgard\Denarius\Domain\Statement;
 use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class MonthStatementBuilder
 {
-    public function __construct(private readonly StatementPresenterRegistry $presenters)
-    {
+    public function __construct(
+        private readonly StatementPresenterRegistry $presenters,
+        private readonly PublicationSettingsValidator $settings = new PublicationSettingsValidator(),
+    ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
 
@@ -26,10 +30,16 @@ final class MonthStatementBuilder
     /**
      * @param list<LedgerLine> $lines
      */
-    public function build(array $lines, DisplayMode $mode, MonthWindow $month): MonthStatement
+    public function build(array $lines, DisplayMode $mode, MonthWindow $month, ?KingdomRecord $kingdom = null): MonthStatement
     {
-        return DenariusLog::trace(__METHOD__, function () use ($lines, $mode, $month): MonthStatement {
-            return new MonthStatement($mode, $month, $this->presenters->for($mode)->present($this->inMonth($lines, $month)));
+        return DenariusLog::trace(__METHOD__, function () use ($lines, $mode, $month, $kingdom): MonthStatement {
+            $inMonth = $this->newestFirst($this->inMonth($lines, $month));
+            $minLines = $this->settings->clampSummarizedCategoryMinLines(
+                $kingdom?->getSummarizedCategoryMinLines()
+                    ?? \Amtgard\Denarius\Domain\Statement\Publication\PublicationPlatformLimits::DEFAULT_SUMMARIZED_CATEGORY_MIN_LINES,
+            );
+
+            return new MonthStatement($mode, $month, $this->presenters->for($mode)->present($inMonth, $minLines));
         });
     }
 
@@ -48,6 +58,19 @@ final class MonthStatementBuilder
             }
 
             return $inMonth;
+        });
+    }
+
+    /**
+     * @param list<LedgerLine> $lines
+     * @return list<LedgerLine>
+     */
+    private function newestFirst(array $lines): array
+    {
+        return DenariusLog::trace(__METHOD__, static function () use ($lines): array {
+            usort($lines, static fn (LedgerLine $a, LedgerLine $b): int => strcmp($b->getPostedOn(), $a->getPostedOn()));
+
+            return $lines;
         });
     }
 }

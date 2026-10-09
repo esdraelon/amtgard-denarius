@@ -1,0 +1,7 @@
+{# title: optional string; body via embed block section_body #}
+<section class="mb-4 pb-4 border-bottom">
+    {% if title is defined and title %}
+        <h2 class="font-serif h4 text-denarius-tertiary mb-3">{{ title }}</h2>
+    {% endif %}
+    {% block section_body %}{% endblock %}
+</section>

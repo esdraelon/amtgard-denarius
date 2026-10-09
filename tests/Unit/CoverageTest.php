@@ -22,7 +22,7 @@ use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Ledger\DailySweep;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
@@ -145,7 +145,7 @@ PHP);
         $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('summarized')->enrollmentStatus('connected')->build());
         $principals = new MemoryPrincipals();
         $grantTargets = Strategies::grantTargets($principals);
-        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), Strategies::orkKingdoms($kingdoms, $principals), $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms));
+        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), Strategies::orkKingdoms($kingdoms, $principals), $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals));
         $_SESSION['_csrf'] = 'token';
         $request = static fn (array $body) => (new ServerRequestFactory())->createServerRequest('POST', '/admin/grant')->withParsedBody($body);
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-admin']), new Response())->getStatusCode());
@@ -153,7 +153,7 @@ PHP);
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'revoke-manager', 'ork_kingdom_id' => '4']), new Response())->getStatusCode());
         $this->assertSame(302, $admin->grant($request(['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'unknown']), new Response())->getStatusCode());
         $member = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        $forbidden = (new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), Strategies::orkKingdoms($kingdoms, $principals), $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
+        $forbidden = (new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), Strategies::orkKingdoms($kingdoms, $principals), $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
             ->index((new ServerRequestFactory())->createServerRequest('GET', '/admin'), new Response());
         $this->assertSame(403, $forbidden->getStatusCode());
 
@@ -161,18 +161,18 @@ PHP);
         $accounts->save(AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->published(true)->build());
         $accounts->save(AccountRecord::builder()->kingdomId(1)->tellerAccountId('hidden')->name('Savings')->published(false)->build());
         $transactions = new MemoryTransactions();
-        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->build());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->publishedAt('2026-09-03T00:00:00+00:00')->build());
         $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('h')->tellerAccountId('hidden')->postedOn('2026-09-02')->amountCents(10)->category('fuel')->build());
-        $page = new KingdomPageController($kingdoms, new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard()), KingdomAccess::standard(), $auth, $twig);
+        $page = new KingdomPageController($kingdoms, KingdomPageQueryFactory::publicRead($transactions, $accounts), KingdomAccess::standard(), $auth, $twig);
         $shown = $page->show((new ServerRequestFactory())->createServerRequest('GET', '/golden-plains')->withQueryParams(['month' => '2026-09']), new Response(), 'golden-plains');
         $this->assertStringContainsString('summarized', (string) $shown->getBody());
         $this->assertStringContainsString('total', (string) $shown->getBody());
 
         $queue = new MemoryRefresh();
         $connects = new BankConnect(Strategies::providers(Strategies::teller()));
-        $manager = new ManagerController($auth, $permissions, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession());
+        $manager = new ManagerController($auth, $permissions, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternPrefill(), Strategies::ledgerSyncFeedback());
         $this->assertSame(404, $manager->show((new ServerRequestFactory())->createServerRequest('GET', '/manage/missing'), new Response(), 'missing')->getStatusCode());
-        $guest = new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession());
+        $guest = new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternPrefill(), Strategies::ledgerSyncFeedback());
         $this->assertSame(302, $guest->show((new ServerRequestFactory())->createServerRequest('GET', '/manage/golden-plains'), new Response(), 'golden-plains')->getStatusCode());
         $this->assertSame(400, $manager->enrollment((new ServerRequestFactory())->createServerRequest('POST', '/e')->withParsedBody(['csrf' => 'token', 'enrollment' => '{']), new Response(), 'golden-plains')->getStatusCode());
 
@@ -201,14 +201,14 @@ PHP);
                 return 0;
             }
         };
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, new MemorySecrets(), $transactions, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new \DateTimeImmutable('2026-09-01'), Strategies::months());
+        $sync = Strategies::synchronizer($kingdoms, $accounts, new MemorySecrets(), $transactions, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new \DateTimeImmutable('2026-09-01'), Strategies::months());
         $worker = new LedgerWorker($messages, Strategies::jobs($sync), 1);
         $this->assertSame(0, $worker->run(1));
         $this->assertCount(1, $messages->published);
         $worker->handle('{"type":"other"}');
         $worker->handle('not-json');
 
-        $handler = new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months())));
+        $handler = new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset())));
         $body = json_encode(['type' => 'enrollment.updated', 'enrollment_id' => 'enr_1']);
         $now = 1_700_000_000;
         $signature = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $body, 'whsec');

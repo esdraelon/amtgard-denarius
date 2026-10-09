@@ -1,0 +1,67 @@
+# Denarius HTTP integ — route matrix
+
+Maps every route in `config/routes.php` to live HTTP integration coverage. Update this file when Phase D milestones add cases.
+
+Plan and exclusions: [dev-integ-coverage-plan.md](./dev-integ-coverage-plan.md). Orchestrator checklist: [dev-integ-coverage-checklist.md](./dev-integ-coverage-checklist.md).
+
+## Covered values
+
+| Value | Meaning |
+|-------|---------|
+| **y** | At least one HTTP integ test hits this route with a meaningful assertion. |
+| **n** | In scope; not covered yet (Phase D backlog). |
+| **excluded** | Documented out of the 90% gate denominator (see plan **Exclusions**). |
+
+## Summary (D14)
+
+| Metric | Count |
+|--------|------:|
+| Routes in `config/routes.php` | 36 |
+| **excluded** | 4 |
+| In scope (total − excluded) | 32 |
+| **y** (covered today) | 32 |
+| **n** (uncovered in scope) | 0 |
+| Coverage `y / in-scope` | 100.00% (gate ≥ 90% via `bin/check-integ-route-coverage.php`) |
+
+**`GET /`**, **`GET /version`**, and **`GET /privacy-policy`** (`PublicStaticTest`, `VersionEndpointTest`); **`GET /login`**, **`GET /logout`**, and logged-out **`GET /admin`** gate (`AuthSessionTest`); auth negatives (`AuthNegativesTest`: admin POST without CSRF → 403, guest `POST …/connect` redirect/403, cross-kingdom manager 403); **`POST /webhooks/teller`**, **`POST /webhooks/stripe`**, and **`POST /webhooks/plaid`** with verifier-aligned signatures (`WebhooksTest`, no session cookies); **`GET /{slug}`** for seed kingdom **`golden-plains`** and unknown slug 404 (`KingdomPageTest`); bootstrap-admin **`GET /admin`**, **`GET /admin/kingdoms`**, and **`GET /admin/principal-suggestions`** (`AdminReadTest`, `IntegAuth::loginViaIdp`); **`POST /admin/kingdoms/sync`** (CSRF + browser-style ORK JSON) and **`POST /admin/grant`** (CSRF + form fields from principal section, grant kingdom manager) (`AdminWriteTest`); kingdom-manager **`GET /manage/golden-plains`**, **`GET …/connect`** (302 to manage index), **`GET …/patterns`**, **`GET …/patterns/new`**, and **`GET …/taxonomy/categories?q=rent`** (JSON typeahead) (`ManageReadTest`, `IntegAuth::loginKingdomManagerViaIdpOrSkip` grants seed manager then logs in as `integ-manager@example.com`); kingdom-manager **`POST …/settings`**, **`POST …/enrollment`** (Teller stub via `IntegTellerApi`), **`POST …/accounts`**, and **`POST …/disconnect`** with CSRF scraped from the manage index (`ManageSettingsEnrollmentTest`); kingdom-manager **`GET/POST /bank/simplefin/return`** (form HTML, claim via query token + kingdom, POST with CSRF after connect wizard remembers kingdom; `IntegSimpleFinApi`) (`SimpleFinReturnTest`); kingdom-manager **`POST …/connect`** (Teller connect mount from Add bank) and **`POST …/refresh`** (ledger queue + integ `ledger-worker`, poll manage sync feedback) (`ManageConnectRefreshTest`); kingdom-manager **`POST …/transactions/review`** with CSRF from `#review-batch-form` and batch publish / redact on seed review rows (`ManageTransactionsTest`, integ seed published account + transactions). Legacy **`POST …/transactions/publish`**, **`…/withhold`**, and **`…/update`** stay **excluded**. Phase D fills the matrix; D14 adds `bin/check-integ-route-coverage.php`.
+
+## Matrix
+
+| Method | Path | Covered | Test class | Notes |
+|--------|------|---------|------------|-------|
+| GET | `/` | y | `PublicStaticTest` | Home landing; Denarius + sign-in markers |
+| GET | `/version` | y | `VersionEndpointTest` | JSON `version` key; harness smoke |
+| GET | `/privacy-policy` | y | `PublicStaticTest` | Privacy policy body + contact email |
+| POST | `/webhooks/teller` | y | `WebhooksTest` | Signed JSON; `Teller-Signature` via `WebhookSignatureFixtures` |
+| POST | `/webhooks/stripe` | y | `WebhooksTest` | Signed JSON; `Stripe-Signature` via `WebhookSignatureFixtures` |
+| POST | `/webhooks/plaid` | y | `WebhooksTest` | Signed JSON; `Plaid-Verification` JWT (integ Plaid JWK) |
+| GET | `/login` | y | `AuthSessionTest` | Redirect to IDP `/oauth/authorize` |
+| GET | `/oauth/callback` | excluded | — | Plan exclusion: authorization-code exchange needs live IdP browser redirect; D2/D13 cover login, logout, and auth negatives without this row |
+| GET | `/logout` | y | `AuthSessionTest` | Clears session; redirects home (requires `IntegAuth::loginViaIdp`) |
+| GET | `/admin` | y | `AuthSessionTest`, `AdminReadTest` | D2: unauthenticated redirect to `/login`; D5: bootstrap admin HTML |
+| GET | `/admin/kingdoms` | y | `AdminReadTest` | JSON ORK kingdom directory (bundled seed) |
+| POST | `/admin/kingdoms/sync` | y | `AdminWriteTest`, `AuthNegativesTest` | CSRF JSON body; imports ORK GetKingdoms payload; missing CSRF → 403 |
+| GET | `/admin/principal-suggestions` | y | `AdminReadTest` | JSON typeahead; short `q` empty; seed admin email via IdP Client IAM |
+| POST | `/admin/grant` | y | `AdminWriteTest`, `AuthNegativesTest` | CSRF + grant-manager for seed manager / Golden Plains; missing CSRF → 403 |
+| GET | `/manage/{slug}` | y | `ManageReadTest`, `AuthNegativesTest` | Seed slug `golden-plains`; kingdom manager session; cross-kingdom manager → 403 |
+| POST | `/manage/{slug}/settings` | y | `ManageSettingsEnrollmentTest` | CSRF form from manage index; visibility / disclosure / embargo |
+| GET | `/manage/{slug}/connect` | y | `ManageReadTest` | 302 redirect to manage index (POST connect in D12) |
+| POST | `/manage/{slug}/connect` | y | `ManageConnectRefreshTest`, `AuthNegativesTest` | CSRF from manage index; mounts Teller stub; guest POST redirect/403 |
+| POST | `/manage/{slug}/enrollment` | y | `ManageSettingsEnrollmentTest` | Teller enrollment JSON + CSRF (integ stub accounts) |
+| POST | `/manage/{slug}/disconnect` | y | `ManageSettingsEnrollmentTest` | CSRF disconnect after connected enrollment |
+| POST | `/manage/{slug}/accounts` | y | `ManageSettingsEnrollmentTest` | CSRF `published[]` for `acc_integ_1` |
+| POST | `/manage/{slug}/refresh` | y | `ManageConnectRefreshTest` | After Teller enrollment; polls manage for ledger sync success |
+| POST | `/manage/{slug}/transactions/publish` | excluded | — | Plan exclusion: legacy single-row publish; superseded by `POST …/transactions/review` (D9); unit tests retain behavior |
+| POST | `/manage/{slug}/transactions/withhold` | excluded | — | Plan exclusion: legacy single-row withhold; superseded by review batch (D9) |
+| POST | `/manage/{slug}/transactions/update` | excluded | — | Plan exclusion: legacy per-row taxonomy POST; primary integ path is review + taxonomy search (D9); form may still post here in UI |
+| POST | `/manage/{slug}/transactions/review` | y | `ManageTransactionsTest` | CSRF from `#review-batch-form`; batch publish + redact on seed rows |
+| GET | `/manage/{slug}/taxonomy/categories` | y | `ManageReadTest` | JSON typeahead; `q=rent` matches `expense.site_rental` |
+| GET | `/manage/{slug}/patterns` | y | `ManageReadTest` | Patterns list HTML (writes in D10) |
+| GET | `/manage/{slug}/patterns/new` | y | `ManageReadTest` | New pattern form (create POST in D10) |
+| POST | `/manage/{slug}/patterns/bulk` | y | `ManagePatternsTest` | CSRF from patterns list bulk form |
+| POST | `/manage/{slug}/patterns` | y | `ManagePatternsTest` | CSRF from new-pattern form; token create |
+| POST | `/manage/{slug}/patterns/{ruleId}` | y | `ManagePatternsTest` | CSRF from list; update token match |
+| POST | `/manage/{slug}/patterns/{ruleId}/delete` | y | `ManagePatternsTest` | CSRF from list; formaction delete |
+| GET | `/bank/simplefin/return` | y | `SimpleFinReturnTest` | Form HTML; GET with `setup_token` + `kingdom` claims via integ stub |
+| POST | `/bank/simplefin/return` | y | `SimpleFinReturnTest` | CSRF from return form after connect wizard remembers kingdom |
+| GET | `/{slug}` | y | `KingdomPageTest` | Public statement page; seed slug `golden-plains` (public visibility); unknown slug 404 |

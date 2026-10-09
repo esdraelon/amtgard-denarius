@@ -22,13 +22,13 @@ final class TracedServicesMethodsTest extends AmtgardTestCase
 
     public function testEveryServiceAndWorkerTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         ServiceWorkerArrange::exerciseAll();
 
         $scope = $this->methodsInScope();
-        $this->assertCount(101, $scope);
+        $this->assertCount(177, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

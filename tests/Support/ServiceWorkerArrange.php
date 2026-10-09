@@ -13,19 +13,22 @@ use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
+use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
 use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Ledger\DailySweep;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
-use Amtgard\Denarius\Service\Month\MonthInvalidator;
+use Amtgard\Denarius\Service\Month\MonthCacheWriter;
 use Amtgard\Denarius\Service\Month\MonthReader;
+use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
+use Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
@@ -75,9 +78,18 @@ final class ServiceWorkerArrange
         }
         AdminGrantTargetResolver::isLegacyPublicId('31786326');
 
+        $principalSuggester = Strategies::principalSuggester($principals);
+        $principalSuggester->match('person@example.com');
+        $principalSuggester->match('megiddo');
+        $principalSuggester->match('');
+
         $grantedIndex = new AdminGrantedRoleIndex($grants, $principals, Strategies::orkKingdoms($kingdoms, $principals));
         $grantedIndex->search(null, null);
         $grantedIndex->search('legacy', 'Golden');
+
+        $managed = Strategies::managedKingdomResolver($kingdoms, $principals);
+        $managed->resolve(4);
+        $managed->resolve(404);
 
         $registry = Strategies::admin();
         $body = ['idp_user_id' => '9', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains'];
@@ -88,8 +100,8 @@ final class ServiceWorkerArrange
         $ignoredCommand->name();
         $ignoredCommand->execute($roleAdmin, $body);
 
-        $settings = new KingdomSettings($kingdoms);
-        $updated = $settings->update($saved, \Amtgard\Denarius\Domain\Access\Visibility::Public, DisplayMode::All);
+        $settings = Strategies::kingdomSettings($kingdoms);
+        $updated = $settings->update($saved, \Amtgard\Denarius\Domain\Access\Visibility::Public, DisplayMode::LessRedacted, 3);
 
         $secrets = new MemorySecrets();
         $accounts = new MemoryAccounts();
@@ -97,13 +109,15 @@ final class ServiceWorkerArrange
         $teller = Strategies::teller();
         $cipher = new TokenCipher('app-key');
         $cache = new ArrayStore();
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache));
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache), Strategies::bankReset());
         $connected = $enrollment->connect($updated, [
             'accessToken' => 'token-1',
             'enrollment' => ['id' => 'enr_1', 'institution' => ['name' => 'Bank']],
         ]);
         $enrollment->setPublished($connected, ['acc_1' => true]);
         $enrollment->markDisconnected($connected);
+        (new EnrollmentService(new MemoryKingdoms(), new MemorySecrets(), new MemoryAccounts(), Strategies::providers($teller), $cipher, $queue, Strategies::months($cache), Strategies::bankReset()))
+            ->disconnectBank($connected);
         $kingdoms->save(KingdomRecord::builder()
             ->id($connected->getId())
             ->orkKingdomId(4)
@@ -120,9 +134,25 @@ final class ServiceWorkerArrange
         $accounts->save(AccountRecord::builder()->kingdomId((int) $connected->getId())->tellerAccountId('acc_1')->name('Checking')->published(true)->build());
 
         $transactions = new MemoryTransactions();
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
+        $sync = Strategies::synchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
         $sync->sync(4);
         $sync->sync(99);
+        $brokenSecrets = new MemorySecrets();
+        $brokenSecrets->saveCiphertext((int) $connected->getId(), 'bad');
+        $brokenSync = Strategies::synchronizer(
+            $kingdoms,
+            $accounts,
+            $brokenSecrets,
+            $transactions,
+            Strategies::providers($teller),
+            $cipher,
+            new \DateTimeImmutable('2026-09-01'),
+            Strategies::months($cache),
+        );
+        try {
+            (new LedgerRefreshJob($brokenSync))->handle(['orkKingdomId' => 4]);
+        } catch (\Throwable) {
+        }
 
         $handler = new ProviderWebhookHandler(
             Strategies::providers(Strategies::teller(verifier: new TellerWebhookVerifier('whsec', 300))),
@@ -145,8 +175,49 @@ final class ServiceWorkerArrange
         $unknownSig = 't=' . $now . ',v1=' . hash_hmac('sha256', $now . '.' . $unknown, 'whsec');
         $handler->handle('teller', (string) $unknown, $unknownSig, $now);
 
-        $page = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $page = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $page->statement($kingdoms->findByOrkId(4), new MonthWindow(2026, 9));
+        KingdomPageQueryFactory::managerReview($transactions, $accounts)
+            ->statement($kingdoms->findByOrkId(4), new MonthWindow(2026, 9));
+
+        $reviewKingdom = $kingdoms->findByOrkId(4);
+        if ($reviewKingdom !== null) {
+            $accounts->save(AccountRecord::builder()->kingdomId((int) $reviewKingdom->getId())->tellerAccountId('acc_review')->name('Review')->published(true)->build());
+            $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()
+                ->kingdomId((int) $reviewKingdom->getId())
+                ->tellerTransactionId('review-tx')
+                ->tellerAccountId('acc_review')
+                ->postedOn('2026-09-02')
+                ->amountCents(-100)
+                ->category('expense.feast_groceries')
+                ->categorySource('shared_rule')
+                ->categoryConfidence(85)
+                ->publishableAfter('2026-09-01T00:00:00+00:00')
+                ->build());
+            $reviews = Strategies::reviewService($transactions, $accounts, Strategies::months($cache), new \DateTimeImmutable('2026-10-01'));
+            $reviews->publish($reviewKingdom, 'review-tx');
+            $reviews->withhold($reviewKingdom, 'review-tx');
+            $reviews->update($reviewKingdom, 'review-tx', 'expense.site_rental', false, false);
+            $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()
+                ->kingdomId((int) $reviewKingdom->getId())
+                ->tellerTransactionId('hard-review')
+                ->tellerAccountId('acc_review')
+                ->postedOn('2026-09-03')
+                ->amountCents(25)
+                ->category('uncategorized')
+                ->publicationFlags('{"hard":true,"pattern_ids":["ingest.test_hard"]}')
+                ->publishableAfter('2026-09-01T00:00:00+00:00')
+                ->build());
+            $reviews->publish($reviewKingdom, 'hard-review');
+            $reviews->applyPublicationSelections(
+                $reviewKingdom,
+                new \Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection('review-tx', true, false, false),
+                new \Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection('hard-review', false, false, true),
+            );
+            $reviewQueue = Strategies::reviewQueue($transactions, $accounts, new \DateTimeImmutable('2026-10-01'));
+            $reviewQueue->rowsForManage($reviewKingdom, $reviewQueue->reviewMonth($reviewKingdom, ''), true);
+            Strategies::categorySearch()->search('site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
+        }
 
         $connect = new BankConnect(Strategies::providers($teller));
         $connect->blank('  ');
@@ -154,6 +225,7 @@ final class ServiceWorkerArrange
         $connect->offer('golden-plains', ['institution' => '', 'skip' => '1', 'current' => 'teller']);
         $connect->offer('golden-plains', ['institution' => 'First Bank', 'skipped' => ['teller', ''], 'current' => 'teller', 'skip' => '1']);
         $connect->idle();
+        $connect->linked();
         $connect->launch('golden-plains', ['skip' => '1', 'current' => 'teller']);
 
         $_ENV['APP_PUBLIC_URL'] = 'http://localhost:37180';
@@ -203,7 +275,7 @@ final class ServiceWorkerArrange
                 new \Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig('app', 'tok', 'https://bridge.simplefin.org/simplefin'),
             ),
         ]);
-        $sfEnrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $sfProviders, $cipher, $queue, Strategies::months($cache));
+        $sfEnrollment = new EnrollmentService($kingdoms, $secrets, $accounts, $sfProviders, $cipher, $queue, Strategies::months($cache), Strategies::bankReset());
         $sfSession2 = new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession();
         $sfSession2->remember($saved->getSlug());
         $adminPermissions = new PermissionService(new FakePolicies([\Amtgard\Denarius\Utilities\Auth\ClaimOrn::admin()]), $cache, new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
@@ -216,16 +288,17 @@ final class ServiceWorkerArrange
             public function statement(KingdomRecord $kingdom, MonthWindow $month): MonthStatement
             {
                 return new MonthStatement(
-                    DisplayMode::All,
+                    DisplayMode::LessRedacted,
                     $month,
                     [LedgerLine::builder()->postedOn('2026-09-02')->amountCents(250)->category('office')->description('paper')->counterparty('Shop')->build()],
                 );
             }
         };
-        $reader = new CachingMonthReader($origin, $cache);
+        $catalog = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog();
+        $reader = new CachingMonthReader($origin, $cache, new MonthCacheWriter($cache, $catalog));
         $reader->statement($kingdomRow, $month);
         $reader->statement($kingdomRow, $month);
-        $cache->set('denarius:month:4:0:all:2026-09', 'not-json', 10);
+        $cache->set('denarius:month:4:all:2026-09:taxonomy/v1', 'not-json', 10);
         $reader->statement($kingdomRow, $month);
 
         $summaryKingdom = KingdomRecord::builder()->id(5)->orkKingdomId(8)->name('Golden Plains')->slug('golden-plains')->displayMode('summarized')->build();
@@ -239,26 +312,176 @@ final class ServiceWorkerArrange
                 );
             }
         };
-        $cachedSummary = new CachingMonthReader($summaryOrigin, $cache);
+        $cachedSummary = new CachingMonthReader($summaryOrigin, $cache, new MonthCacheWriter($cache, $catalog));
         $cachedSummary->statement($summaryKingdom, $month);
         $cachedSummary->statement($summaryKingdom, $month);
 
-        (new MonthInvalidator($cache))->forget(4);
+        Strategies::months($cache, null, $transactions)->forget(4);
 
         $sweep = new DailySweep($kingdoms, $queue);
         $sweep->enqueueConnected();
 
+        $categoryApplier = Strategies::categoryApplier(Strategies::providers($teller));
+        $existingTxn = $transactions->findByTellerTransactionId('txn_1');
+        if ($existingTxn !== null) {
+            $resync = TransactionRecord::builder()
+                ->kingdomId((int) $saved->getId())
+                ->tellerTransactionId('txn_1')
+                ->tellerAccountId('acc')
+                ->postedOn('2026-09-02')
+                ->amountCents(-325)
+                ->description($existingTxn->getDescription())
+                ->status('posted')
+                ->providerCategory('food')
+                ->build();
+            $categoryApplier->apply($saved, $resync, $existingTxn);
+        }
+
+        $recategorizer = Strategies::recategorizer($kingdoms, $transactions, Strategies::providers($teller));
+        $recategorizer->recategorizeKingdom($saved);
+        $recategorizer->recategorizeKingdomAfterPatternChange($saved);
+        $recategorizer->recategorizeAll();
+        $patternRules = new \Amtgard\Denarius\Tests\Support\MemoryKingdomCategoryRules();
+        $patterns = \Amtgard\Denarius\Tests\Unit\Strategies::kingdomPatternService($kingdoms, $transactions, $patternRules);
+        $patterns->listViews($saved);
+        $patterns->saveNew($saved, [
+            'category' => 'expense.storage',
+            'match_type' => 'token',
+            'token' => 'PATTERN TOKEN',
+            'fields' => ['description'],
+            'flows' => ['expense'],
+        ]);
+        $stored = $patternRules->forKingdom((int) $saved->getId());
+        if ($stored !== []) {
+            $ruleId = (int) $stored[0]->getId();
+            $patterns->update($saved, $ruleId, [
+                'category' => 'expense.storage',
+                'match_type' => 'token',
+                'token' => 'PATTERN TOKEN TWO',
+                'fields' => ['description'],
+                'flows' => ['expense'],
+            ]);
+            $patterns->bulkSave($saved, [
+                $ruleId => [
+                    'category' => 'expense.storage',
+                    'match_type' => 'token',
+                    'token' => 'PATTERN TOKEN THREE',
+                ],
+            ]);
+            $patterns->delete($saved, $ruleId);
+        }
+        (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle(['orkKingdomId' => 4]);
+        (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle([]);
+        (new \Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver(Strategies::providers($teller)))->forKingdom($saved);
+        (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->statement(4, 'all', '2026-09', 'taxonomy/v1');
+        (new \Amtgard\Denarius\Service\Month\MonthCacheKeys())->taxonomyNamespace();
+
+        $monthWriter = new MonthCacheWriter($cache, $catalog);
+        $monthJob = new MonthCacheRefreshJob(
+            $kingdoms,
+            KingdomPageQueryFactory::publicRead($transactions, $accounts),
+            $monthWriter,
+        );
+        $managedKingdomId = (int) $saved->getId();
+        $monthJob->type();
+        $monthJob->handle(['kingdom_id' => 0, 'month' => 'bad']);
+        $monthJob->handle(['kingdom_id' => $managedKingdomId, 'month' => '2026-09']);
+        $monthWriter->deleteMonth($managedKingdomId, $month);
+
+        $codec = new \Amtgard\Denarius\Service\Month\MonthStatementCacheCodec();
+        $sampleStatement = KingdomPageQueryFactory::publicRead($transactions, $accounts)->statement($saved, $month);
+        $encoded = $codec->encode($sampleStatement);
+        $codec->decode($encoded, DisplayMode::LessRedacted, $month);
+        $codec->decode(null, DisplayMode::LessRedacted, $month);
+        $codec->decode('{"month":"2020-01","rows":[]}', DisplayMode::LessRedacted, $month);
+        $codec->decode(json_encode([
+            'mode' => DisplayMode::LessRedacted->value,
+            'month' => $month->key(),
+            'rows' => [
+                [
+                    'kind' => 'line',
+                    'postedOn' => '2026-09-02',
+                    'amountCents' => 1,
+                    'category' => 'office',
+                    'description' => 'supplies',
+                    'counterparty' => 'Shop',
+                    'status' => 'posted',
+                    'accountName' => 'Checking',
+                ],
+                [
+                    'kind' => 'total',
+                    'category' => 'office',
+                    'count' => 2,
+                    'amountCents' => 100,
+                ],
+            ],
+            'absence' => ['code' => 'no_transactions', 'detail' => 'none'],
+        ], JSON_THROW_ON_ERROR), DisplayMode::LessRedacted, $month);
+
+        $monthPublisher = new \Amtgard\Denarius\Service\Month\MonthCacheRefreshPublisher(new MemoryMessages(), $transactions);
+        $monthPublisher->schedule((int) $saved->getId());
+        $monthPublisher->schedule((int) $saved->getId(), $month);
+        $monthPublisher->targetMonths((int) $saved->getId());
+
+        $syncFeedback = new \Amtgard\Denarius\Service\Ledger\ManagerLedgerSyncFeedback();
+        $syncFeedback->forManage(
+            KingdomRecord::builder()->enrollmentStatus('disconnected')->build(),
+            false,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()->enrollmentStatus('connected')->build(),
+            false,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()
+                ->enrollmentStatus('connected')
+                ->lastSyncAttemptedAt('2026-10-07T16:45:25+00:00')
+                ->lastSyncStatus('failed')
+                ->lastSyncError('timeout')
+                ->build(),
+            false,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()
+                ->enrollmentStatus('connected')
+                ->lastSyncAttemptedAt('2026-10-07T16:45:25+00:00')
+                ->lastSyncStatus('succeeded')
+                ->build(),
+            false,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()
+                ->enrollmentStatus('connected')
+                ->lastSyncAttemptedAt('2026-10-07T16:45:25+00:00')
+                ->lastSyncStatus('succeeded')
+                ->build(),
+            true,
+        );
+        $syncFeedback->forManage(
+            KingdomRecord::builder()
+                ->enrollmentStatus('connected')
+                ->lastSyncAttemptedAt('not-a-date')
+                ->lastSyncStatus('pending')
+                ->build(),
+            true,
+        );
+
         $messages = new MemoryMessages();
-        $worker = new LedgerWorker($messages, Strategies::jobs($sync), 1);
+        $worker = new LedgerWorker($messages, Strategies::jobs($sync, $recategorizer, $monthJob), 1);
         $worker->handle('not-json');
         $worker->handle(json_encode(['type' => 'ledger', 'orkKingdomId' => 4]));
+        $worker->handle(json_encode(['type' => 'month_cache', 'kingdom_id' => $managedKingdomId, 'month' => '2026-09']));
         $worker->handle(json_encode(['type' => 'other']));
         $worker->run(1);
 
-        $jobs = Strategies::jobs($sync);
+        $jobs = Strategies::jobs($sync, $recategorizer, $monthJob);
         $jobs->find('ledger')->handle(['orkKingdomId' => 4]);
         $ignoredJob = $jobs->find('other');
         $ignoredJob->type();
         $ignoredJob->handle(['orkKingdomId' => 4]);
+
+        $pdo = new \PDO('sqlite::memory:');
+        $pdo->exec('CREATE TABLE transactions (kingdom_id INTEGER); CREATE TABLE published_accounts (kingdom_id INTEGER); CREATE TABLE enrollment_secrets (kingdom_id INTEGER);');
+        (new \Amtgard\Denarius\Service\Enrollment\BankConnectionReset($pdo))->clearKingdom(4);
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Statement\Presentation;
 
-use Amtgard\Denarius\Domain\Statement\Presentation\Impl\AllFieldsPresenter;
+use Amtgard\Denarius\Domain\Statement\Presentation\Impl\LessRedactedPresenter;
 use Amtgard\Denarius\Domain\Statement\Presentation\Impl\RedactedPresenter;
 use Amtgard\Denarius\Domain\Statement\Presentation\Impl\SummarizedPresenter;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
@@ -32,7 +32,7 @@ final class StatementPresenterRegistry
     {
         return DenariusLog::trace(__METHOD__, static function (): self {
             return new self([
-                new AllFieldsPresenter(),
+                new LessRedactedPresenter(),
                 new RedactedPresenter(),
                 new SummarizedPresenter(),
             ]);

@@ -1,0 +1,20 @@
+{# CategoryTypeahead: closed slug picker with flow + label (M-TAX-04). #}
+<div class="category-typeahead position-relative" data-category-typeahead data-slug="{{ selectedSlug }}" data-flow="{{ flow }}" data-search-url="{{ searchUrl }}">
+    <label class="form-label visually-hidden" for="{{ inputId }}">Category</label>
+    <input type="text"
+           class="form-control form-control-sm"
+           id="{{ inputId }}"
+           name="{{ inputName }}"
+           value="{{ displayValue }}"
+           autocomplete="off"
+           data-typeahead-input
+           aria-expanded="false"
+           aria-controls="{{ listId }}"
+           role="combobox">
+    <input type="hidden" name="{{ hiddenName }}" value="{{ selectedSlug }}" data-typeahead-slug>
+    <ul class="list-group position-absolute w-100 shadow-sm d-none z-3"
+        id="{{ listId }}"
+        data-typeahead-list
+        role="listbox"
+        style="max-height: 12rem; overflow-y: auto;"></ul>
+</div>

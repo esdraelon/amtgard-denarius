@@ -1,0 +1,21 @@
+# Optional profile: drain method-log spool into hourly SQLite WAL files.
+# Usage: docker compose -f docker/compose.prod.yml -f docker/compose.blue.yml -f docker/compose.dev.yml -f docker/compose.log-writer.yml --profile log-writer up -d
+services:
+  log-sqlite-writer:
+    profiles: ["log-writer"]
+    image: amtgard-denarius-dev
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    working_dir: /var/www/denarius.amtgard.com
+    volumes:
+      - .:/var/www/denarius.amtgard.com
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=DEV
+      - LOG_SPOOL_ENABLED=true
+    command: ["php", "bin/log-sqlite-writer.php"]
+    networks:
+      - amtgard-denarius-net
+    container_name: amtgard-denarius-log-writer

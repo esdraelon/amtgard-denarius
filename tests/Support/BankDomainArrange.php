@@ -11,7 +11,11 @@ use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\Impl\CurlPlaidApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\Impl\CurlSimpleFinApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinHost;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\Impl\IntegPlaidApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\Impl\IntegSimpleFinApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\IntegStripeApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\Impl\CurlTellerApi;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\Impl\IntegTellerApi;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Tests\Unit\LedgerFacadeTest;
 use Amtgard\Denarius\Tests\Unit\PlaidAdapterTest;
@@ -50,9 +54,38 @@ final class BankDomainArrange
         self::run(StripeAdapterTest::class, 'testStripeSignatureRejectsStaleAndBlankSecrets');
         self::run(StripeAdapterTest::class, 'testConfiguredProvidersKeepReadyOnesInOrder');
         StripeAdapterTest::exerciseCurlForMethodLog();
+        self::run(\Amtgard\Denarius\Tests\Unit\StripeTransactionRefreshWaitTest::class, 'testWaitsUntilRefreshSucceeds');
 
         self::exerciseTellerHttpClients();
         self::exerciseCurlFetchPaths();
+        self::exerciseIntegProviderStubs();
+    }
+
+    private static function exerciseIntegProviderStubs(): void
+    {
+        $teller = new IntegTellerApi();
+        $teller->accounts('tok');
+        $teller->transactions('tok', 'acc', null);
+
+        $stripe = new IntegStripeApi();
+        $stripe->createCustomer('slug');
+        $stripe->createSession('cus');
+        $stripe->accounts('cus');
+        $stripe->subscribe('fca');
+        $stripe->refreshTransactions('fca');
+        $stripe->transactions('fca', 1, 2);
+
+        $plaid = new IntegPlaidApi();
+        $plaid->institutions('bank');
+        $plaid->linkToken('slug');
+        $plaid->exchange('public');
+        $plaid->accounts('access');
+        $plaid->transactions('access');
+        $plaid->verificationKey('kid');
+
+        $simpleFin = new IntegSimpleFinApi();
+        $simpleFin->claim('https://claim.test/x');
+        $simpleFin->accounts('https://access.test', 1, 2);
     }
 
     private static function exerciseIgnoredNotice(): void

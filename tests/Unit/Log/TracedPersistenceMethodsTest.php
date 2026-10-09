@@ -39,7 +39,7 @@ final class TracedPersistenceMethodsTest extends AmtgardTestCase
 
     public function testEveryPersistenceTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         $kingdoms = new MemoryKingdoms();
@@ -97,7 +97,7 @@ final class TracedPersistenceMethodsTest extends AmtgardTestCase
         PersistenceStoreArrange::exerciseRepositories();
 
         $scope = $this->methodsInScope();
-        $this->assertCount(58, $scope);
+        $this->assertCount(88, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

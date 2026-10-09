@@ -294,7 +294,7 @@ PHP);
         $kingdoms = new MemoryKingdoms();
         $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->enrollmentId('item_1')->provider('plaid')->enrollmentStatus('connected')->build());
         $queue = new MemoryRefresh();
-        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $webhook = new WebhookController(new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment)));
         $this->assertSame(400, $webhook->plaid((new ServerRequestFactory())->createServerRequest('POST', '/webhooks/plaid'), new Response())->getStatusCode());
         $body = '{"webhook_code":"DEFAULT_UPDATE","item_id":"item_1"}';

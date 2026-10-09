@@ -31,6 +31,7 @@ return function (App $app): void {
     $app->group('', function (RouteCollectorProxy $group): void {
         $group->get('/admin', [AdminController::class, 'index']);
         $group->get('/admin/kingdoms', [AdminController::class, 'kingdoms']);
+        $group->post('/admin/kingdoms/sync', [AdminController::class, 'syncKingdoms']);
         $group->get('/admin/principal-suggestions', [AdminController::class, 'principalSuggestions']);
         $group->post('/admin/grant', [AdminController::class, 'grant']);
         $group->get('/manage/{slug}', [ManagerController::class, 'show']);
@@ -38,8 +39,20 @@ return function (App $app): void {
         $group->get('/manage/{slug}/connect', [ManagerController::class, 'connectGet']);
         $group->post('/manage/{slug}/connect', [ManagerController::class, 'connect']);
         $group->post('/manage/{slug}/enrollment', [ManagerController::class, 'enrollment']);
+        $group->post('/manage/{slug}/disconnect', [ManagerController::class, 'disconnectBank']);
         $group->post('/manage/{slug}/accounts', [ManagerController::class, 'accounts']);
         $group->post('/manage/{slug}/refresh', [ManagerController::class, 'refresh']);
+        $group->post('/manage/{slug}/transactions/publish', [ManagerController::class, 'publishTransaction']);
+        $group->post('/manage/{slug}/transactions/withhold', [ManagerController::class, 'withholdTransaction']);
+        $group->post('/manage/{slug}/transactions/update', [ManagerController::class, 'updateTransaction']);
+        $group->post('/manage/{slug}/transactions/review', [ManagerController::class, 'updateTransactionReview']);
+        $group->get('/manage/{slug}/taxonomy/categories', [ManagerController::class, 'categorySearch']);
+        $group->get('/manage/{slug}/patterns', [ManagerController::class, 'patterns']);
+        $group->get('/manage/{slug}/patterns/new', [ManagerController::class, 'patternNew']);
+        $group->post('/manage/{slug}/patterns/bulk', [ManagerController::class, 'patternBulk']);
+        $group->post('/manage/{slug}/patterns', [ManagerController::class, 'patternCreate']);
+        $group->post('/manage/{slug}/patterns/{ruleId}', [ManagerController::class, 'patternUpdate']);
+        $group->post('/manage/{slug}/patterns/{ruleId}/delete', [ManagerController::class, 'patternDelete']);
         $group->get('/bank/simplefin/return', [SimpleFinReturnController::class, 'show']);
         $group->post('/bank/simplefin/return', [SimpleFinReturnController::class, 'submit']);
     })->add(SessionMiddleware::class)->add(SyncPrincipalMiddleware::class);

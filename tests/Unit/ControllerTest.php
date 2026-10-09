@@ -19,7 +19,7 @@ use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Access\AccountNavBuilder;
 use Amtgard\Denarius\Service\Access\PermissionService;
@@ -58,7 +58,16 @@ final class ControllerTest extends AmtgardTestCase
         file_put_contents($root . '/VERSION', "1\n");
         $permissions = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $homeKingdoms = new MemoryKingdoms();
-        $home = new HomeController($twig, $auth, new AccountNavBuilder($permissions, $homeKingdoms), $root);
+        $homePrincipals = new MemoryPrincipals();
+        $home = new HomeController(
+            $twig,
+            $auth,
+            new AccountNavBuilder($permissions, Strategies::managedKingdomResolver($homeKingdoms, $homePrincipals)),
+            $homeKingdoms,
+            KingdomAccess::standard(),
+            Strategies::orkKingdoms($homeKingdoms, $homePrincipals),
+            $root,
+        );
         $response = $home->home($this->request('GET', '/'), new Response());
         $this->assertStringContainsString('home 1 no', (string) $response->getBody());
         $version = $home->version($this->request('GET', '/version'), new Response());
@@ -74,7 +83,7 @@ final class ControllerTest extends AmtgardTestCase
         $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->type('depository')->published(true)->build());
         $transactions = new MemoryTransactions();
         $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('office')->description('paper')->counterparty('Shop')->status('posted')->build());
-        $pages = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $pages = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $page = new KingdomPageController($kingdoms, $pages, KingdomAccess::standard(), $auth, $twig);
         $missing = $page->show($this->request('GET', '/missing'), new Response(), 'missing');
         $this->assertSame(404, $missing->getStatusCode());
@@ -101,12 +110,12 @@ final class ControllerTest extends AmtgardTestCase
         $grantTargets = Strategies::grantTargets($principals);
         $grants = new MemoryGrants();
         $grantedRoles = Strategies::grantedRoles($grants, $principals, $kingdoms);
-        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles);
+        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles, Strategies::principalSuggester($principals));
         $anon = new SessionAuthStore('empty');
-        $guest = (new AdminController($anon, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
+        $guest = (new AdminController($anon, $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
             ->index($this->request('GET', '/admin'), new Response());
         $this->assertSame(302, $guest->getStatusCode());
-        $index = $admin->index($this->request('GET', '/admin', ['email' => 'person']), new Response());
+        $index = $admin->index($this->request('GET', '/admin', ['email' => 'person@example.com']), new Response());
         $this->assertStringContainsString('admin 1', (string) $index->getBody());
         $_SESSION['_csrf'] = 'token';
         $granted = $admin->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-manager', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains']), new Response());
@@ -122,7 +131,7 @@ final class ControllerTest extends AmtgardTestCase
         $table = $admin->index($this->request('GET', '/admin', ['perm_email' => 'person', 'perm_kingdom' => 'Golden']), new Response());
         $this->assertStringContainsString('grants 1', (string) $table->getBody());
         $iamDenied = new ClientIamDeniedPolicies();
-        $adminIamDenied = new AdminController($auth, $permissions, $principals, $kingdoms, $iamDenied, $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles);
+        $adminIamDenied = new AdminController($auth, $permissions, $principals, $kingdoms, $iamDenied, $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles, Strategies::principalSuggester($principals));
         $deniedGrant = $adminIamDenied->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-manager', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains']), new Response());
         $this->assertSame(503, $deniedGrant->getStatusCode());
         $this->assertStringContainsString('IDP_CLIENT_ID', (string) $deniedGrant->getBody());
@@ -130,17 +139,24 @@ final class ControllerTest extends AmtgardTestCase
         $this->assertSame(403, $bad->getStatusCode());
 
         $queue = new MemoryRefresh();
+        $transactions = new MemoryTransactions();
         $manager = new ManagerController(
             $auth,
             $permissions,
             $kingdoms,
             $accounts,
-            new KingdomSettings($kingdoms),
-            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
+            Strategies::kingdomSettings($kingdoms),
+            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
             $queue,
             $twig,
             new \Amtgard\Denarius\Service\Enrollment\BankConnect(Strategies::providers(Strategies::teller())),
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(),
+            Strategies::reviewQueue($transactions, $accounts),
+            Strategies::reviewService($transactions, $accounts),
+            Strategies::categorySearch(),
+            Strategies::kingdomPatternService($kingdoms, $transactions),
+            Strategies::patternPrefill(),
+            Strategies::ledgerSyncFeedback(),
         );
         $manage = $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $this->assertStringContainsString('manage golden-plains', (string) $manage->getBody());
@@ -154,7 +170,7 @@ final class ControllerTest extends AmtgardTestCase
         $this->assertSame(302, $refreshed->getStatusCode());
         $this->assertSame(403, $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), 'golden-plains')->getStatusCode());
 
-        $webhook = new WebhookController(new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()))));
+        $webhook = new WebhookController(new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()))));
         $rejected = $webhook->teller($this->request('POST', '/webhooks/teller'), new Response());
         $this->assertSame(400, $rejected->getStatusCode());
 

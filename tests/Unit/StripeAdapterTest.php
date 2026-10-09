@@ -16,6 +16,7 @@ use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeTransactionRefreshWait;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier;
 use Amtgard\PHPUnit\AmtgardTestCase;
 use Slim\Psr7\Factory\ServerRequestFactory;
@@ -45,6 +46,19 @@ if (str_contains((string) $path, '/fail')) {
     echo 'no';
     return;
 }
+$errors = [
+    '/error-full' => [400, '{"error":{"code":"resource_missing","message":"No such account"}}'],
+    '/error-code' => [402, '{"error":{"code":" card_declined "}}'],
+    '/error-detail' => [400, '{"error":{"message":"Bad request"}}'],
+    '/error-blank' => [400, '{"error":{"code":" "}}'],
+];
+foreach ($errors as $prefix => [$status, $error]) {
+    if (str_starts_with((string) $path, $prefix)) {
+        http_response_code($status);
+        echo $error;
+        return;
+    }
+}
 if ($path === '/text') {
     echo 'hello';
     return;
@@ -63,6 +77,14 @@ if ($path === '/v1/financial_connections/accounts') {
 }
 if (str_contains((string) $path, '/subscribe')) {
     echo '{"id":"fca_1"}';
+    return;
+}
+if (preg_match('#/v1/financial_connections/accounts/[^/]+$#', (string) $path)) {
+    echo '{"id":"fca_1","transaction_refresh":{"status":"succeeded"}}';
+    return;
+}
+if (str_contains((string) $path, '/refresh')) {
+    echo '{"id":"fca_1","transaction_refresh":{"status":"pending"}}';
     return;
 }
 if ($path === '/v1/financial_connections/transactions') {
@@ -132,10 +154,16 @@ PHP);
         $api->createSession('cus_1');
         $api->accounts('cus_1');
         $api->subscribe('fca 1');
+        $api->account('fca_1');
+        $api->refreshTransactions('fca_1');
         $api->transactions('fca_1', 1, 2);
 
         if ($localBase !== null) {
             (new CurlStripeApi($localBase, 'sk_test'))->createCustomer('golden');
+            try {
+                (new CurlStripeApi($localBase . '/error-full', 'sk_test'))->account('fca_1');
+            } catch (\RuntimeException) {
+            }
         }
     }
 
@@ -193,7 +221,7 @@ PHP);
         $this->assertSame('-1.50', $rows[1]->amount);
         $this->assertSame('Rocket', $rows[0]->description);
         $this->assertSame('posted', $rows[0]->status);
-        $this->assertSame('general', $rows[0]->category);
+        $this->assertSame('', $rows[0]->category);
         $this->assertSame([], $provider->transactions('cus_1', 'fca_1', 'fctxn_1'));
         $this->assertSame($api->window[0], (new PreviousMonthWindow(new \DateTimeImmutable('@' . self::NOW)))->startsAt());
 
@@ -202,6 +230,8 @@ PHP);
         $this->assertTrue($notice->accepted);
         $this->assertSame('refresh', $notice->action);
         $this->assertSame('cus_1', $notice->enrollmentId);
+        $balance = $this->event('financial_connections.account.refreshed_balance', 'cus_1');
+        $this->assertSame('refresh', $provider->notice($balance, $this->sign($balance), self::NOW)->action);
         $disconnect = $this->event('financial_connections.account.disconnected', 'cus_1');
         $this->assertSame('disconnect', $provider->notice($disconnect, $this->sign($disconnect), self::NOW)->action);
         $other = $this->event('financial_connections.account.created', 'cus_1');
@@ -297,10 +327,35 @@ PHP);
         $this->assertSame('cs_live', $live->createSession('cus_live')['client_secret']);
         $this->assertSame('fca_1', $live->accounts('cus_live')[0]['id']);
         $live->subscribe('fca_1');
+        $this->assertSame('succeeded', $live->account('fca_1')['transaction_refresh']['status']);
+        $this->assertSame('pending', $live->refreshTransactions('fca_1')['transaction_refresh']['status']);
         $this->assertSame('fctxn_1', $live->transactions('fca_1', 1, 2)[0]['id']);
         $this->assertSame([], (new CurlStripeApi(self::$base . '/text', 'sk_test'))->createCustomer('golden'));
         $this->assertThrows(\RuntimeException::class, fn () => (new CurlStripeApi(self::$base . '/fail', 'sk_test'))->accounts('cus'));
         $this->assertThrows(\RuntimeException::class, fn () => (new CurlStripeApi('http://127.0.0.1:1', 'sk_test'))->createCustomer('golden'));
+    }
+
+    public function testStripeFailuresCarryTheStatusAndStripeError(): void
+    {
+        if (self::$base === null) {
+            $this->fail('Local HTTP server did not start.');
+        }
+        $this->assertSame('Stripe request failed (HTTP 500).', $this->failure('/fail'));
+        $this->assertSame('Stripe request failed (HTTP 400) [resource_missing]: No such account.', $this->failure('/error-full'));
+        $this->assertSame('Stripe request failed (HTTP 402) [card_declined].', $this->failure('/error-code'));
+        $this->assertSame('Stripe request failed (HTTP 400): Bad request.', $this->failure('/error-detail'));
+        $this->assertSame('Stripe request failed (HTTP 400).', $this->failure('/error-blank'));
+    }
+
+    private function failure(string $prefix): string
+    {
+        try {
+            (new CurlStripeApi(self::$base . $prefix, 'sk_test'))->account('fca_1');
+        } catch (\RuntimeException $exception) {
+            return $exception->getMessage();
+        }
+
+        return '';
     }
 
     public function testStripeWebhookRouteAcknowledgesASignedRefresh(): void
@@ -309,7 +364,7 @@ PHP);
         $kingdoms = new MemoryKingdoms();
         $kingdoms->save(\Amtgard\Denarius\Persistence\Record\KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->enrollmentId('cus_1')->provider('stripe')->enrollmentStatus('connected')->build());
         $queue = new MemoryRefresh();
-        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $webhook = new WebhookController(new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment)));
         $this->assertSame(400, $webhook->stripe((new ServerRequestFactory())->createServerRequest('POST', '/webhooks/stripe'), new Response())->getStatusCode());
 
@@ -329,6 +384,7 @@ PHP);
             StripeLedgerProvider::actions(),
             $ready ?? new AlwaysReady(),
             new PreviousMonthWindow(new \DateTimeImmutable('@' . self::NOW)),
+            new StripeTransactionRefreshWait($api, pollMicros: 0, timeoutSeconds: 1),
             $publishableKey,
         );
     }
@@ -398,6 +454,19 @@ final class ScriptedStripe implements StripeApi
     public function subscribe(string $accountId): void
     {
         $this->subscribed[] = $accountId;
+    }
+
+    public function account(string $accountId): array
+    {
+        return [
+            'id' => $accountId,
+            'transaction_refresh' => ['status' => 'succeeded'],
+        ];
+    }
+
+    public function refreshTransactions(string $accountId): array
+    {
+        return $this->account($accountId);
     }
 
     public function transactions(string $accountId, int $startsAt, int $endsAt): array

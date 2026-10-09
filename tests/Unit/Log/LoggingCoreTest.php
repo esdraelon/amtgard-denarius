@@ -33,6 +33,7 @@ final class LoggingCoreTest extends AmtgardTestCase
         $this->assertInstanceOf(RecordingMethodLog::class, $active);
         $this->recorder = $active;
         RequestLogContext::reset();
+        \Amtgard\Denarius\Tests\Support\MethodLogAssert::resetTraces();
     }
 
     protected function tearDown(): void

@@ -32,9 +32,9 @@ final class CurlStripeApi implements StripeApi
         return DenariusLog::trace(__METHOD__, function () use ($customerId): array {
             return $this->object('POST', '/v1/financial_connections/sessions', [
                 'account_holder' => ['type' => 'customer', 'customer' => $customerId],
-                'permissions' => ['transactions'],
+                'permissions' => ['transactions', 'balances'],
                 'filters' => ['countries' => ['US']],
-                'prefetch' => ['transactions'],
+                'prefetch' => ['transactions', 'balances'],
             ]);
         });
     }
@@ -57,6 +57,22 @@ final class CurlStripeApi implements StripeApi
             ]);
 
             return null;
+        });
+    }
+
+    public function account(string $accountId): array
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($accountId): array {
+            return $this->object('GET', '/v1/financial_connections/accounts/' . rawurlencode($accountId), []);
+        });
+    }
+
+    public function refreshTransactions(string $accountId): array
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($accountId): array {
+            return $this->object('POST', '/v1/financial_connections/accounts/' . rawurlencode($accountId) . '/refresh', [
+                'features' => ['transactions'],
+            ]);
         });
     }
 
@@ -154,10 +170,35 @@ final class CurlStripeApi implements StripeApi
             $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
             curl_close($handle);
             if (!is_string($body) || $status >= 400 || $status === 0) {
-                throw new \RuntimeException('Stripe request failed.');
+                throw new \RuntimeException($this->failureMessage($status, $body));
             }
 
             return $body;
+        });
+    }
+
+    private function failureMessage(int $status, mixed $body): string
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($status, $body): string {
+            $message = 'Stripe request failed (HTTP ' . $status . ').';
+            if (!is_string($body)) {
+                return $message;
+            }
+            $decoded = json_decode($body, true);
+            if (!is_array($decoded['error'] ?? null)) {
+                return $message;
+            }
+            $error = $decoded['error'];
+            $code = trim((string) ($error['code'] ?? ''));
+            $detail = trim((string) ($error['message'] ?? ''));
+            if ($code === '' && $detail === '') {
+                return $message;
+            }
+
+            return 'Stripe request failed (HTTP ' . $status . ')'
+                . ($code !== '' ? ' [' . $code . ']' : '')
+                . ($detail !== '' ? ': ' . $detail : '')
+                . '.';
         });
     }
 }

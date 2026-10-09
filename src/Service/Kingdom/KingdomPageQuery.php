@@ -4,23 +4,26 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Kingdom;
 
-use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
-use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
-use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
-use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
+use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
+use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationEnvelope;
+use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationPipeline;
+use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
+/** Public read path: month statements from the public publication pipeline only. */
 final class KingdomPageQuery implements MonthReader
 {
     public function __construct(
-        private readonly TransactionRepositoryInterface $transactions,
-        private readonly AccountRepositoryInterface $accounts,
+        private readonly KingdomPublicationLineSource $lines,
+        private readonly PublicationPipeline $publicPipeline,
         private readonly MonthStatementBuilder $builder,
+        private readonly StatementAbsenceClassifier $absence,
+        private readonly \DateTimeImmutable $asOf,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -28,30 +31,33 @@ final class KingdomPageQuery implements MonthReader
     public function statement(KingdomRecord $kingdom, MonthWindow $month): MonthStatement
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $month): MonthStatement {
-            $names = [];
-            foreach ($this->accounts->forKingdom((int) $kingdom->getId()) as $account) {
-                if ($account->getPublished()) {
-                    $names[$account->getTellerAccountId()] = $account->getName();
-                }
+            return $this->statementForMode($kingdom, $month, DisplayMode::fromStored($kingdom->getDisplayMode()));
+        });
+    }
+
+    public function statementForMode(KingdomRecord $kingdom, MonthWindow $month, DisplayMode $mode): MonthStatement
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $month, $mode): MonthStatement {
+            $candidates = $this->lines->candidates($kingdom);
+            $envelope = new PublicationEnvelope(
+                $kingdom,
+                $month,
+                $mode,
+                $this->asOf,
+                $candidates,
+            );
+            $envelope = $this->publicPipeline->run($envelope);
+            $statement = $this->builder->build($envelope->toLedgerLines(), $mode, $month, $kingdom);
+            if ($statement->rows !== []) {
+                return $statement;
             }
 
-            $lines = [];
-            foreach ($this->transactions->forKingdom((int) $kingdom->getId()) as $transaction) {
-                if (!isset($names[$transaction->getTellerAccountId()])) {
-                    continue;
-                }
-                $lines[] = LedgerLine::builder()
-                    ->postedOn($transaction->getPostedOn())
-                    ->amountCents($transaction->getAmountCents())
-                    ->category($transaction->getCategory())
-                    ->description($transaction->getDescription())
-                    ->counterparty($transaction->getCounterparty())
-                    ->status($transaction->getStatus())
-                    ->accountName($names[$transaction->getTellerAccountId()])
-                    ->build();
-            }
-
-            return $this->builder->build($lines, DisplayMode::fromStored($kingdom->getDisplayMode()), $month);
+            return new MonthStatement(
+                $statement->mode,
+                $statement->month,
+                $statement->rows,
+                $this->absence->classify($month, $this->asOf, $candidates),
+            );
         });
     }
 }

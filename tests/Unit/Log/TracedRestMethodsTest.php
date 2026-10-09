@@ -22,13 +22,13 @@ final class TracedRestMethodsTest extends AmtgardTestCase
 
     public function testEveryRestTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         RestDomainArrange::exerciseAll();
 
         $scope = $this->methodsInRestScope();
-        $this->assertCount(108, $scope);
+        $this->assertCount(293, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);
@@ -42,7 +42,7 @@ final class TracedRestMethodsTest extends AmtgardTestCase
     /** Closes the catalog: Utilities/Log correlation sites (494/494 with M-02–M-07). */
     public function testEveryUtilitiesLogTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
 
         RestDomainArrange::exerciseUtilitiesLog();
 
@@ -93,6 +93,7 @@ final class TracedRestMethodsTest extends AmtgardTestCase
     private function isRestScope(string $method): bool
     {
         return str_contains($method, '\\Domain\\Statement\\')
+            || str_contains($method, '\\Domain\\Taxonomy\\')
             || str_contains($method, '\\Domain\\Kingdom\\')
             || str_contains($method, '\\Utilities\\Setup\\')
             || str_contains($method, '\\Utilities\\Queue\\')

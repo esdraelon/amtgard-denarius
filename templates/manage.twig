@@ -2,89 +2,291 @@
 {% import "macros.twig" as ui %}
 
 {% block title %}Manage {{ kingdom.name }}{% endblock %}
-{% block container_class %}max-w-4xl{% endblock %}
+{% block container_class %}container-lg{% endblock %}
 
 {% block content %}
-<h1 class="text-3xl font-serif font-bold text-secondary mb-2">Manage {{ kingdom.name }}</h1>
-<p class="mb-6">{{ ui.btn_secondary('Public statement', '/' ~ kingdom.slug) }}</p>
+{% embed 'components/page-header.twig' with { title: 'Manage ' ~ kingdom.name } %}
+    {% import "macros.twig" as ui %}
+    {% block header_actions %}
+        <p class="mb-0 d-flex flex-wrap gap-2 align-items-center">
+            {{ ui.btn_secondary('Public statement', '/' ~ kingdom.slug) }}
+            <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}/patterns">Patterns</a>
+        </p>
+    {% endblock %}
+{% endembed %}
 
-<section class="mb-8 pb-6 border-b border-gray-200">
-    <h2 class="text-xl font-serif font-semibold text-tertiary mb-3">Statement settings</h2>
-    <form method="post" action="/manage/{{ kingdom.slug }}/settings">
-        <input type="hidden" name="csrf" value="{{ csrf }}">
-        <label class="block mb-3 text-sm font-semibold text-tertiary">Visibility
-            <select name="visibility" class="mt-1 block w-full max-w-md border border-gray-300 rounded px-3 py-2 font-normal">
-            {% for value in ['public', 'registered', 'kingdom_only'] %}
-                <option value="{{ value }}" {% if kingdom.visibility == value %}selected{% endif %}>{{ value }}</option>
-            {% endfor %}
-            </select>
-        </label>
-        <label class="block mb-3 text-sm font-semibold text-tertiary">Display
-            <select name="display_mode" class="mt-1 block w-full max-w-md border border-gray-300 rounded px-3 py-2 font-normal">
-            {% for value in ['all', 'redacted', 'summarized'] %}
-                <option value="{{ value }}" {% if kingdom.displayMode == value %}selected{% endif %}>{{ value }}</option>
-            {% endfor %}
-            </select>
-        </label>
-        {{ ui.submit('Save') }}
-    </form>
-    <p class="mt-3 text-sm text-gray-600">Enrollment status: <span class="font-semibold">{{ kingdom.enrollmentStatus }}</span></p>
-    {% if kingdom.enrollmentStatus == 'disconnected' %}
-        <p class="mt-2 text-sm text-amber-800">Bank access was disconnected. Use Add bank below to connect again.</p>
-    {% endif %}
-</section>
-
-<section class="mb-8 pb-6 border-b border-gray-200">
-    <h2 class="text-xl font-serif font-semibold text-tertiary mb-3">Bank connection</h2>
-    {% if not connect.available %}
-        <form method="post" action="/manage/{{ kingdom.slug }}/connect">
+{% embed 'components/section-card.twig' with { title: 'Statement settings' } %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        <form method="post" action="/manage/{{ kingdom.slug }}/settings">
             <input type="hidden" name="csrf" value="{{ csrf }}">
-            {% for id in connect.skipped %}
-                <input type="hidden" name="skipped[]" value="{{ id }}">
-            {% endfor %}
-            {{ ui.submit('Add bank') }}
+            {% include 'components/form-field-select.twig' with {
+                name: 'visibility',
+                label: 'Visibility',
+                options: ['public', 'registered', 'kingdom_only'],
+                selected: kingdom.visibility,
+                max_width: '28rem'
+            } %}
+            {% include 'components/form-field-select.twig' with {
+                name: 'display_mode',
+                label: 'Public disclosure tier',
+                options: ['less_redacted', 'redacted', 'summarized'],
+                selected: kingdom.displayMode == 'all' ? 'less_redacted' : kingdom.displayMode,
+                max_width: '28rem'
+            } %}
+            <p class="small text-body-secondary mb-2">
+                <strong>Visibility</strong> controls who may open the kingdom page.
+                <strong>Disclosure tier</strong> controls what members see after the publication pipeline runs.
+            </p>
+            <ul class="small text-body-secondary mb-3">
+                <li><strong>Summarized</strong> — category totals by income, expense, and transfer (net excludes transfers); sparse buckets may roll up per kingdom settings.</li>
+                <li><strong>Redacted</strong> — dated lines with taxonomy labels and <em>quantized</em> amounts (no description or counterparty).</li>
+                <li><strong>Less redacted</strong> — adds account name and limited narrative fields; amounts stay quantized; verification and payroll-style rows may be further scrubbed.</li>
+            </ul>
+            <p class="small text-body-secondary">Public paths never show raw bank cents or provider category hints—only closed taxonomy labels after the publication pipeline. Managers review and publish in the queue before rows appear here.</p>
+            {% include 'components/form-field-select.twig' with {
+                name: 'embargo_days',
+                label: 'Publication embargo (days after posted date)',
+                options: ['1', '2', '3', '4', '5', '6', '7'],
+                selected: kingdom.embargoDays ~ '',
+                max_width: '28rem'
+            } %}
+            {{ ui.submit('Save') }}
         </form>
-        {% if connect.reason == 'exhausted' %}
-            <p class="mt-2 text-sm text-amber-800">No configured provider is available. Contact the Denarius administrator.</p>
+        <p class="mt-3 small text-body-secondary mb-0">Enrollment status: <span class="fw-semibold">{{ kingdom.enrollmentStatus }}</span></p>
+        {% if kingdom.enrollmentStatus == 'disconnected' %}
+            {% include 'components/alert.twig' with {
+                variant: 'warning',
+                message: 'Bank access was disconnected. Use Add bank below to connect again.'
+            } %}
         {% endif %}
-    {% else %}
-        <div class="space-y-2">
-            {% include 'connect/' ~ connect.provider ~ '.twig' %}
-        </div>
-        <form method="post" action="/manage/{{ kingdom.slug }}/connect" class="mt-3">
-            <input type="hidden" name="csrf" value="{{ csrf }}">
-            {% for id in connect.skipped %}
-                <input type="hidden" name="skipped[]" value="{{ id }}">
-            {% endfor %}
-            <input type="hidden" name="current" value="{{ connect.provider }}">
-            <button type="submit" name="skip" value="1" class="border border-gray-400 hover:border-gray-600 text-gray-700 py-2 px-4 rounded text-sm cursor-pointer bg-white">Try another provider</button>
-        </form>
-    {% endif %}
-</section>
+    {% endblock %}
+{% endembed %}
 
-<form id="enrollment-form" method="post" action="/manage/{{ kingdom.slug }}/enrollment" class="hidden">
+{% embed 'components/section-card.twig' with { title: 'Bank connection' } %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        {% if kingdom.enrollmentStatus == 'connected' %}
+            <p class="mb-3">
+                Connected{% if kingdom.institutionName %} to <span class="fw-semibold">{{ kingdom.institutionName }}</span>{% endif %}{% if kingdom.provider %} via {{ kingdom.provider }}{% endif %}.
+            </p>
+            <form method="post" action="/manage/{{ kingdom.slug }}/disconnect" class="mb-0">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Disconnect bank</button>
+            </form>
+            <p class="small text-body-secondary mt-2 mb-0">Removes Denarius copies of accounts and transactions so you can connect again. This does not close the link at your bank or payment provider; revoke access there if needed.</p>
+        {% elseif not connect.available %}
+            <form method="post" action="/manage/{{ kingdom.slug }}/connect">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                {% for id in connect.skipped %}
+                    <input type="hidden" name="skipped[]" value="{{ id }}">
+                {% endfor %}
+                {{ ui.submit('Add bank') }}
+            </form>
+            {% if connect.reason == 'exhausted' %}
+                {% include 'components/alert.twig' with {
+                    variant: 'warning',
+                    message: 'No configured provider is available. Contact the Denarius administrator.'
+                } %}
+            {% endif %}
+        {% else %}
+            <div class="vstack gap-2">
+                {% include 'connect/' ~ connect.provider ~ '.twig' %}
+            </div>
+            <form method="post" action="/manage/{{ kingdom.slug }}/connect" class="mt-3">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                {% for id in connect.skipped %}
+                    <input type="hidden" name="skipped[]" value="{{ id }}">
+                {% endfor %}
+                <input type="hidden" name="current" value="{{ connect.provider }}">
+                <button type="submit" name="skip" value="1" class="btn btn-outline-secondary btn-sm">Try another provider</button>
+            </form>
+        {% endif %}
+    {% endblock %}
+{% endembed %}
+
+<form id="enrollment-form" method="post" action="/manage/{{ kingdom.slug }}/enrollment" class="d-none">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="enrollment" id="enrollment-json">
 </form>
 
-<section>
-    <h2 class="text-xl font-serif font-semibold text-tertiary mb-3">Published accounts</h2>
-    <form method="post" action="/manage/{{ kingdom.slug }}/accounts">
-        <input type="hidden" name="csrf" value="{{ csrf }}">
-        <div class="space-y-2 mb-3">
-        {% for account in accounts %}
-            <label class="flex items-center gap-2 text-gray-700">
-                <input type="checkbox" name="published[]" value="{{ account.tellerAccountId }}" {% if account.published %}checked{% endif %} class="rounded">
-                {{ account.name }} ({{ account.type }})
-            </label>
-        {% endfor %}
+{% embed 'components/section-card.twig' with { title: 'Transaction review' } %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        <p class="small text-body-secondary">Assign a category before publishing. Auto-matched rows (confidence ≥ 70) can publish directly. Optional patterns never block save or publish.</p>
+        <p class="small text-body-secondary">Use <strong>Publish</strong>, <strong>Redact</strong>, and <strong>Embargo</strong> for this month, then <strong>Update publication</strong>. Redact publishes with generic description copy. Clearing Embargo makes a row publishable today. Clear both Publish and Redact to withhold a row.</p>
+        {% set reviewBase = '/manage/' ~ kingdom.slug ~ '?review_month=' %}
+        {% set filterSuffix = uncategorizedOnly ? '&uncategorized=1' : '' %}
+        <div class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary mb-2">
+            {{ ui.btn_secondary('Previous month', reviewBase ~ reviewPrevious ~ filterSuffix) }}
+            <span class="fw-semibold text-denarius-tertiary">{{ reviewMonth }}</span>
+            {{ ui.btn_secondary('Next month', reviewBase ~ reviewNext ~ filterSuffix) }}
         </div>
-        {{ ui.submit('Save accounts') }}
-    </form>
-</section>
+        <p class="mb-2">
+            {% if uncategorizedOnly %}
+                <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth }}">Show all rows</a>
+            {% else %}
+                <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth }}&amp;uncategorized=1">Uncategorized only (least confident first)</a>
+            {% endif %}
+        </p>
+        <p class="small text-body-secondary">Showing transactions posted in {{ reviewMonth }}.</p>
+        {% if ledgerSync.showImportNotice %}
+            {% include 'components/alert.twig' with {
+                variant: 'info',
+                message: ledgerSync.importNotice
+            } %}
+            <p class="small mb-3">
+                <span class="text-body-secondary">Last checked:</span>
+                {% if ledgerSync.lastCheckedAt %}
+                    <span class="fw-semibold">{{ ledgerSync.lastCheckedAt }}</span>
+                {% else %}
+                    <span class="fw-semibold">Not yet</span>
+                {% endif %}
+                <span class="text-body-secondary"> — </span>
+                <span class="fw-semibold">{{ ledgerSync.statusLabel }}</span>
+                {% if ledgerSync.statusDetail %}
+                    <span class="d-block text-body-secondary mt-1">{{ ledgerSync.statusDetail }}</span>
+                {% endif %}
+            </p>
+        {% endif %}
+        {% if reviewQueue is empty %}
+            {% include 'components/alert.twig' with {
+                variant: 'info',
+                message: 'No transactions on published accounts for this month.'
+            } %}
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-striped align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Posted</th>
+                            <th scope="col">Account</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Amount</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-center">Publish</th>
+                            <th scope="col" class="text-center">Redact</th>
+                            <th scope="col" class="text-center">Embargo</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in reviewQueue %}
+                            <tr>
+                                <td>{{ row.postedOn }}</td>
+                                <td>{{ row.accountName }}</td>
+                                <td>{{ row.description }}</td>
+                                <td>{{ row.amount }}</td>
+                                <td style="min-width: 14rem;">
+                                    {% set flow = row.amountCents > 0 ? 'income' : (row.amountCents < 0 ? 'expense' : 'transfer') %}
+                                    <form method="post" action="/manage/{{ kingdom.slug }}/transactions/update" class="review-category-form">
+                                        <input type="hidden" name="csrf" value="{{ csrf }}">
+                                        <input type="hidden" name="review_month" value="{{ reviewMonth }}">
+                                        <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
+                                        {% include 'components/category-typeahead.twig' with {
+                                            inputId: 'cat-' ~ row.tellerTransactionId,
+                                            listId: 'cat-list-' ~ row.tellerTransactionId,
+                                            inputName: 'category_display',
+                                            hiddenName: 'category',
+                                            selectedSlug: row.prefillSlug,
+                                            displayValue: row.prefillDisplay,
+                                            flow: flow,
+                                            searchUrl: '/manage/' ~ kingdom.slug ~ '/taxonomy/categories'
+                                        } %}
+                                        <div class="form-check form-check-inline mt-1">
+                                            <input class="form-check-input" type="checkbox" name="bulk_counterparty" value="1" id="bulk-{{ row.tellerTransactionId }}">
+                                            <label class="form-check-label small" for="bulk-{{ row.tellerTransactionId }}">Same counterparty this month</label>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1 mt-1">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">Save category</button>
+                                            {% if row.status == 'pending' %}
+                                                <button type="submit" name="publish" value="1" class="btn btn-primary btn-sm">Save &amp; publish</button>
+                                            {% endif %}
+                                        </div>
+                                        <p class="small mb-0 mt-1">
+                                            <a href="/manage/{{ kingdom.slug }}/patterns/new?counterparty={{ row.counterparty|url_encode }}&amp;description={{ row.description|url_encode }}&amp;category={{ row.category|url_encode }}">Create pattern…</a>
+                                            {% if row.categoryConfidence > 0 %}
+                                                <span class="text-body-secondary">· confidence {{ row.categoryConfidence }}</span>
+                                            {% endif %}
+                                        </p>
+                                    </form>
+                                </td>
+                                <td>
+                                    {% if row.status == 'pending' %}
+                                        <span class="badge text-bg-warning">Ready to publish</span>
+                                    {% elseif row.status == 'embargoed' %}
+                                        <span class="badge text-bg-secondary">Embargo</span>
+                                    {% else %}
+                                        <span class="badge text-bg-success">Published</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <input type="hidden" name="review_id[]" value="{{ row.tellerTransactionId }}" form="review-batch-form">
+                                    <input class="form-check-input" type="checkbox" name="review[{{ row.tellerTransactionId }}][publish]" value="1" form="review-batch-form" aria-label="Publish" {% if row.publish %}checked{% endif %}>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="review[{{ row.tellerTransactionId }}][redact]" value="1" form="review-batch-form" aria-label="Redact description" {% if row.redact %}checked{% endif %}>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="review[{{ row.tellerTransactionId }}][embargo]" value="1" form="review-batch-form" aria-label="Keep embargo" {% if row.embargo %}checked{% endif %}>
+                                </td>
+                                <td>
+                                    {% if row.status == 'pending' %}
+                                        <form method="post" action="/manage/{{ kingdom.slug }}/transactions/publish" class="d-inline">
+                                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                                            <input type="hidden" name="review_month" value="{{ reviewMonth }}">
+                                            <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
+                                            <button type="submit" class="btn btn-primary btn-sm">Publish</button>
+                                        </form>
+                                    {% elseif row.status == 'published' %}
+                                        <form method="post" action="/manage/{{ kingdom.slug }}/transactions/withhold" class="d-inline">
+                                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                                            <input type="hidden" name="review_month" value="{{ reviewMonth }}">
+                                            <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">Withhold</button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-body-secondary small">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <form id="review-batch-form" method="post" action="/manage/{{ kingdom.slug }}/transactions/review" class="mt-3">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <input type="hidden" name="review_month" value="{{ reviewMonth }}">
+                {{ ui.submit('Update publication') }}
+            </form>
+        {% endif %}
+    {% endblock %}
+{% endembed %}
+
+{% embed 'components/section-card.twig' with { title: 'Published accounts' } %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        <form method="post" action="/manage/{{ kingdom.slug }}/accounts">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <div class="vstack gap-2 mb-3">
+            {% for account in accounts %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="published[]" value="{{ account.tellerAccountId }}" id="pub-{{ account.tellerAccountId }}" {% if account.published %}checked{% endif %}>
+                    <label class="form-check-label" for="pub-{{ account.tellerAccountId }}">
+                        {{ account.name }} ({{ account.type }})
+                    </label>
+                </div>
+            {% endfor %}
+            </div>
+            {{ ui.submit('Save accounts') }}
+        </form>
+    {% endblock %}
+{% endembed %}
 {% endblock %}
 
 {% block scripts %}
+<script src="/js/category-typeahead.js"></script>
 {% if connect.available %}
 <script>
 function denariusEnrollment(extra) {

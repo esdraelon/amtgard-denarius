@@ -119,7 +119,7 @@ final class BranchLoggingTest extends AmtgardTestCase
     {
         $kingdoms = new MemoryKingdoms();
         $queue = new MemoryRefresh();
-        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), new MemoryAccounts(), Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $handler = new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, $enrollment));
         $this->assertFalse($handler->handle('teller', '{}', null, time()));
         MethodLogAssert::assertBranchLogged(
@@ -149,6 +149,7 @@ final class BranchLoggingTest extends AmtgardTestCase
             $orkKingdoms,
             $grantTargets,
             Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms),
+            Strategies::principalSuggester($principals),
         );
         $admin->index((new ServerRequestFactory())->createServerRequest('GET', '/admin'), new Response());
         MethodLogAssert::assertBranchLogged(
@@ -163,7 +164,7 @@ final class BranchLoggingTest extends AmtgardTestCase
             new TokenSet('a'),
             new UserProfile('9', 'person@example.com', 'jwt', null),
         ))->toSessionArray();
-        $denied = new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms));
+        $denied = new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals));
         $denied->index((new ServerRequestFactory())->createServerRequest('GET', '/admin'), new Response());
         MethodLogAssert::assertBranchLogged(
             BranchLogLevel::Warn,

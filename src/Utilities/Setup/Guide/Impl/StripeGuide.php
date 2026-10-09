@@ -34,7 +34,7 @@ final class StripeGuide implements SetupGuide
 Stripe
 1. Open the Stripe Dashboard and complete Financial Connections registration.
 2. Create a secret key and a publishable key.
-3. Add a webhook for /webhooks/stripe. Subscribe to financial_connections.account.refreshed_transactions and financial_connections.account.disconnected.
+3. Add a webhook for /webhooks/stripe. Subscribe to financial_connections.account.refreshed_transactions, financial_connections.account.refreshed_balance, and financial_connections.account.disconnected.
 4. Paste the keys when prompted. The check is a read-only account request.
 
 TEXT;

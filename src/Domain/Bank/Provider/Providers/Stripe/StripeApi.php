@@ -24,6 +24,16 @@ interface StripeApi
     public function subscribe(string $accountId): void;
 
     /**
+     * @return array<string, mixed>
+     */
+    public function account(string $accountId): array;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function refreshTransactions(string $accountId): array;
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function transactions(string $accountId, int $startsAt, int $endsAt): array;

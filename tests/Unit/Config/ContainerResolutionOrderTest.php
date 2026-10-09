@@ -10,10 +10,17 @@ use Amtgard\Denarius\Controller\KingdomPageController;
 use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
 use Amtgard\Denarius\Domain\Access\KingdomAccess;
+use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeTransactionRefreshWait;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Service\Access\PermissionService;
+use Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Service\Kingdom\ManagerKingdomPageQuery;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Utilities\Log\CorrelationMiddleware;
 use Amtgard\Denarius\Utilities\Log\MethodLog;
@@ -61,6 +68,7 @@ final class ContainerResolutionOrderTest extends TestCase
         $this->assertInstanceOf(LedgerProviderRegistry::class, $this->resolveOrSkip(LedgerProviderRegistry::class));
         $this->assertInstanceOf(ProviderWebhookHandler::class, $this->resolveOrSkip(ProviderWebhookHandler::class));
         $this->assertInstanceOf(EnrollmentService::class, $this->resolveOrSkip(EnrollmentService::class));
+        $this->assertInstanceOf(ManagerKingdomPageQuery::class, $this->resolveOrSkip(ManagerKingdomPageQuery::class));
     }
 
     public function testOrmBackedRepositoriesResolveWhenDatabaseIsReachable(): void
@@ -76,6 +84,18 @@ final class ContainerResolutionOrderTest extends TestCase
         $this->assertInstanceOf(KingdomPageController::class, $this->resolveOrSkip(KingdomPageController::class));
         $this->assertInstanceOf(AdminController::class, $this->resolveOrSkip(AdminController::class));
         $this->assertInstanceOf(ManagerController::class, $this->resolveOrSkip(ManagerController::class));
+    }
+
+    public function testStripeProviderWaitsOnTheContainerRefreshWait(): void
+    {
+        $provider = $this->resolveOrSkip(StripeLedgerProvider::class);
+        $this->assertInstanceOf(StripeTransactionRefreshWait::class, (new \ReflectionProperty($provider, 'refreshWait'))->getValue($provider));
+    }
+
+    public function testAdminControllerSuggestsThroughThePrincipalSuggester(): void
+    {
+        $admin = $this->resolveOrSkip(AdminController::class);
+        $this->assertInstanceOf(AdminPrincipalSuggester::class, (new \ReflectionProperty($admin, 'principalSuggester'))->getValue($admin));
     }
 
     public function testNamedRoutesMatchContainerControllers(): void
@@ -115,7 +135,44 @@ final class ContainerResolutionOrderTest extends TestCase
     public function testWorkerAndPermissionGraphResolveWhenInfrastructureIsReachable(): void
     {
         $this->assertInstanceOf(PermissionService::class, $this->resolveOrSkip(PermissionService::class));
-        $this->assertInstanceOf(LedgerWorker::class, $this->resolveOrSkip(LedgerWorker::class));
+        $worker = $this->resolveOrSkip(LedgerWorker::class);
+        $this->assertInstanceOf(LedgerWorker::class, $worker);
+        $jobs = (new \ReflectionProperty($worker, 'jobs'))->getValue($worker);
+        $this->assertInstanceOf(
+            \Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob::class,
+            $jobs->find('month_cache'),
+        );
+    }
+
+    public function testCategorizerChainIsWiredInContainer(): void
+    {
+        $applier = $this->resolveOrSkip(\Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier::class);
+        $this->assertInstanceOf(\Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier::class, $applier);
+        $property = new \ReflectionProperty($applier, 'categorizer');
+        $property->setAccessible(true);
+        $this->assertInstanceOf(
+            \Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer::class,
+            $property->getValue($applier),
+        );
+    }
+
+    public function testTaxonomyCatalogAndAmountSignRegistryResolveFromBootstrappedContainer(): void
+    {
+        $catalog = $this->resolveOrSkip(TaxonomyCatalog::class);
+        $this->assertInstanceOf(TaxonomyCatalog::class, $catalog);
+        $this->assertSame('taxonomy/v1', $catalog->taxonomyVersion());
+
+        $registry = $this->resolveOrSkip(ProviderAmountSignRegistry::class);
+        $this->assertInstanceOf(ProviderAmountSignRegistry::class, $registry);
+        $plaid = (new \ReflectionClass($registry))->getProperty('strategies');
+        $plaid->setAccessible(true);
+        /** @var array<string, object> $strategies */
+        $strategies = $plaid->getValue($registry);
+        $this->assertArrayHasKey('plaid', $strategies);
+
+        $loader = new TaxonomyCatalogLoader(dirname(__DIR__, 3), 'data/taxonomy');
+        $expected = $loader->load()->taxonomyVersion();
+        $this->assertSame($expected, $catalog->taxonomyVersion());
     }
 
     private function slimAppWithRoutes(): App

@@ -132,6 +132,7 @@ final class GrantTargetLoggingTest extends AmtgardTestCase
             Strategies::orkKingdoms($kingdoms, $principals),
             $grantTargets,
             Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms),
+            Strategies::principalSuggester($principals),
         );
         $_SESSION['_csrf'] = 'token';
         $request = (new ServerRequestFactory())->createServerRequest('POST', '/admin/grant')->withParsedBody([

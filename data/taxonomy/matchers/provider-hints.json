@@ -1,0 +1,69 @@
+{
+  "taxonomyVersion": "taxonomy/v1",
+  "hints": [
+    {
+      "id": "hint.plaid.bank_fees",
+      "provider": "plaid",
+      "hint": "BANK_FEES",
+      "category": "expense.bank_fees",
+      "flows": ["expense"],
+      "confidence": 65
+    },
+    {
+      "id": "hint.plaid.food_and_drink",
+      "provider": "plaid",
+      "hint": "FOOD_AND_DRINK",
+      "category": "expense.feast_groceries",
+      "flows": ["expense"],
+      "confidence": 45
+    },
+    {
+      "id": "hint.plaid.transfer_in",
+      "provider": "plaid",
+      "hint": "TRANSFER_IN",
+      "category": "transfer.internal",
+      "flows": ["transfer"],
+      "confidence": 55
+    },
+    {
+      "id": "hint.plaid.transfer_out",
+      "provider": "plaid",
+      "hint": "TRANSFER_OUT",
+      "category": "transfer.internal",
+      "flows": ["transfer"],
+      "confidence": 55
+    },
+    {
+      "id": "hint.plaid.general_merchandise",
+      "provider": "plaid",
+      "hint": "GENERAL_MERCHANDISE",
+      "category": "expense.event_supplies",
+      "flows": ["expense"],
+      "confidence": 40
+    },
+    {
+      "id": "hint.teller.groceries",
+      "provider": "teller",
+      "hint": "groceries",
+      "category": "expense.feast_groceries",
+      "flows": ["expense"],
+      "confidence": 50
+    },
+    {
+      "id": "hint.teller.dining",
+      "provider": "teller",
+      "hint": "dining",
+      "category": "expense.feast_groceries",
+      "flows": ["expense"],
+      "confidence": 45
+    },
+    {
+      "id": "hint.teller.fees",
+      "provider": "teller",
+      "hint": "fees",
+      "category": "expense.bank_fees",
+      "flows": ["expense"],
+      "confidence": 60
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+# Overlay during scripts/integ-up.sh so ledger refresh queues use integ Redis + DB (not dev).
+services:
+  ledger-worker:
+    environment:
+      ENVIRONMENT: DEV_INTEG
+      DB_HOST: amtgard-denarius-db-integ
+      DB_NAME: denarius_integ
+      SESSION_REDIS_HOST: amtgard-denarius-sessions-integ
+      REDIS_HOST: amtgard-denarius-sessions-integ
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      SESSION_REDIS_DB: "1"
