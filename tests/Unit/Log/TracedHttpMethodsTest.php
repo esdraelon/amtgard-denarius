@@ -20,7 +20,7 @@ use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Tests\Support\MethodLogAssert;
@@ -39,6 +39,8 @@ use Amtgard\Denarius\Tests\Unit\Strategies;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
+use Amtgard\Denarius\Utilities\Http\Integ\IntegIdpHttpGuard;
+use Amtgard\Denarius\Utilities\Http\Integ\IntegOrkGetKingdomsGateway;
 use Amtgard\Denarius\Utilities\Http\LoggingIdpHttpClient;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
 use Amtgard\Denarius\Utilities\Http\PostCsrfMiddleware;
@@ -64,7 +66,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
 {
     public function testEveryControllerAndHttpTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         $twig = new TwigHtmlRenderer(new Environment(new ArrayLoader([
@@ -73,6 +75,8 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             'kingdom.twig' => '{{ mode }} {{ rows|length }}',
             'admin.twig' => 'admin',
             'manage.twig' => 'manage',
+            'manage-patterns.twig' => 'patterns',
+            'pattern-form.twig' => 'pattern-form',
             'privacy-policy.twig' => 'privacy',
             'simplefin-return.twig' => 'simplefin-return',
         ])));
@@ -82,9 +86,24 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         file_put_contents($root . '/VERSION', "1\n");
 
         $kingdoms = new MemoryKingdoms();
+        $principals = new MemoryPrincipals();
         $permissions = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        $home = new HomeController($twig, $auth, new AccountNavBuilder($permissions, $kingdoms), $root);
+        $home = new HomeController(
+            $twig,
+            $auth,
+            new AccountNavBuilder($permissions, Strategies::managedKingdomResolver($kingdoms, $principals)),
+            $kingdoms,
+            KingdomAccess::standard(),
+            Strategies::orkKingdoms($kingdoms, $principals),
+            $root,
+        );
         $home->home($this->request('GET', '/'), new Response());
+        (new \Amtgard\Denarius\Utilities\Http\Twig\SiteNavTwigExtension(
+            new \Amtgard\Denarius\Service\Access\SiteNavBuilder(
+                $auth,
+                new AccountNavBuilder($permissions, Strategies::managedKingdomResolver($kingdoms, $principals)),
+            ),
+        ))->getGlobals();
         $home->version($this->request('GET', '/version'), new Response());
         $home->privacyPolicy($this->request('GET', '/privacy-policy'), new Response());
         $kingdom = $kingdoms->save(KingdomRecord::builder()
@@ -99,8 +118,8 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $accounts = new MemoryAccounts();
         $accounts->save(AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->published(true)->build());
         $transactions = new MemoryTransactions();
-        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->build());
-        $pages = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(250)->category('office')->publishedAt('2026-09-03T00:00:00+00:00')->build());
+        $pages = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $page = new KingdomPageController($kingdoms, $pages, KingdomAccess::standard(), $auth, $twig);
         $page->show($this->request('GET', '/missing'), new Response(), 'missing');
 
@@ -114,8 +133,15 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             new DenariusAuthorizer(),
             BootstrapAdmins::fromEnv(null),
         );
-        (new HomeController($twig, $auth, new AccountNavBuilder($managerPermissions, $kingdoms), $root))
-            ->home($this->request('GET', '/'), new Response());
+        (new HomeController(
+            $twig,
+            $auth,
+            new AccountNavBuilder($managerPermissions, Strategies::managedKingdomResolver($kingdoms, $principals)),
+            $kingdoms,
+            KingdomAccess::standard(),
+            Strategies::orkKingdoms($kingdoms, $principals),
+            $root,
+        ))->home($this->request('GET', '/'), new Response());
         $page->show($this->request('GET', '/golden-plains', ['month' => '2026-09']), new Response(), 'golden-plains');
         $kingdoms->save(KingdomRecord::builder()->id($kingdom->getId())->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('all')->enrollmentStatus('connected')->build());
         $page->show($this->request('GET', '/golden-plains', ['month' => '2026-09']), new Response(), 'golden-plains');
@@ -128,25 +154,81 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $grantTargets = Strategies::grantTargets($principals);
         $grants = new MemoryGrants();
         $grantedRoles = Strategies::grantedRoles($grants, $principals, $kingdoms);
-        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles);
-        (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
+        $admin = new AdminController($auth, $permissions, $principals, $kingdoms, new FakePolicies([]), $grants, $twig, Strategies::admin(), $orkKingdoms, $grantTargets, $grantedRoles, Strategies::principalSuggester($principals));
+        (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
             ->index($this->request('GET', '/admin'), new Response());
         $member = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
-        (new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
+        (new AdminController($auth, $member, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
             ->index($this->request('GET', '/admin'), new Response());
-        $admin->index($this->request('GET', '/admin', ['email' => 'person']), new Response());
-        $admin->index($this->request('GET', '/admin', ['email' => 'legacy']), new Response());
+        $admin->index($this->request('GET', '/admin', ['email' => 'person@example.com']), new Response());
+        $admin->index($this->request('GET', '/admin', ['email' => 'legacy@example.com']), new Response());
         $admin->index($this->request('GET', '/admin', ['perm_email' => 'person', 'perm_kingdom' => '']), new Response());
         $admin->kingdoms($this->request('GET', '/admin/kingdoms'), new Response());
-        $suggestions = $admin->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person']), new Response());
+        $suggestions = $admin->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person@example.com']), new Response());
         $this->assertSame(200, $suggestions->getStatusCode());
         $admin->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => '']), new Response());
-        (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms)))
-            ->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person']), new Response());
+        (new AdminController(new SessionAuthStore('empty'), $permissions, $principals, $kingdoms, new FakePolicies([]), new MemoryGrants(), $twig, Strategies::admin(), $orkKingdoms, $grantTargets, Strategies::grantedRoles(new MemoryGrants(), $principals, $kingdoms), Strategies::principalSuggester($principals)))
+            ->principalSuggestions($this->request('GET', '/admin/principal-suggestions', ['q' => 'person@example.com']), new Response());
         $orkKingdoms->list();
+        $orkKingdoms->nameForOrkId(4);
         OrkKingdomDirectory::parse('{}');
         OrkKingdomDirectory::normalizeSimpleList([['id' => 1, 'name' => 'Alpha']]);
+        $orkFetchRoot = sys_get_temp_dir() . '/traced-ork-' . uniqid();
+        mkdir($orkFetchRoot . '/data', 0775, true);
+        $fetchDirectory = new OrkKingdomDirectory(
+            $orkFetchRoot,
+            'data/ork-kingdoms.json',
+            $kingdoms,
+            $principals,
+            new \Amtgard\Denarius\Tests\Support\StubOrkGetKingdomsGateway(json_encode([
+                'kingdoms' => [['id' => 99, 'name' => 'Fetched Kingdom']],
+            ], JSON_THROW_ON_ERROR)),
+            new \Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter(),
+        );
+        $fetchDirectory->list();
+        $fetchDirectory->importOrkResponse(json_encode(['kingdoms' => [['id' => 2, 'name' => 'Beta']]], JSON_THROW_ON_ERROR));
+        copy(
+            dirname(__DIR__, 3) . '/data/ork-kingdoms.bundled.json',
+            $orkFetchRoot . '/data/ork-kingdoms.bundled.json',
+        );
+        (new OrkKingdomDirectory(
+            $orkFetchRoot,
+            'data/ork-kingdoms-seed.json',
+            $kingdoms,
+            $principals,
+            new \Amtgard\Denarius\Tests\Support\StubOrkGetKingdomsGateway(null),
+            new \Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter(),
+        ))->list();
+        (new \Amtgard\Denarius\Utilities\Http\Impl\CurlOrkGetKingdomsGateway(
+            'https://ork.example.test',
+            'denarius-test',
+            'https://denarius.amtgard.com',
+            1,
+            static fn (string $url, string $body): string => '{"Status":{"Status":0},"Kingdoms":[]}',
+        ))->getKingdomsJson();
+        (new \Amtgard\Denarius\Utilities\Http\Impl\CurlOrkGetKingdomsGateway(
+            'https://ork.example.test',
+            'denarius-test',
+            'https://denarius.amtgard.com',
+            1,
+            static fn (string $url, string $body): string => '<!DOCTYPE html>',
+        ))->getKingdomsJson();
+        (new \Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter())->write(
+            $orkFetchRoot . '/data/manual.json',
+            [['id' => 1, 'name' => 'Manual']],
+        );
         $_SESSION['_csrf'] = 'token';
+        $syncPayload = json_encode([
+            'csrf' => 'token',
+            'ork_json' => json_encode(['kingdoms' => [['id' => 5, 'name' => 'Sync Kingdom']]], JSON_THROW_ON_ERROR),
+        ], JSON_THROW_ON_ERROR);
+        $syncStream = fopen('php://temp', 'r+');
+        fwrite($syncStream, $syncPayload);
+        rewind($syncStream);
+        $admin->syncKingdoms(
+            $this->request('POST', '/admin/kingdoms/sync')->withBody(new \Slim\Psr7\Stream($syncStream)),
+            new Response(),
+        );
         $admin->grant($this->request('POST', '/admin/grant', [], ['csrf' => 'token', 'idp_user_id' => '9', 'action' => 'grant-manager', 'ork_kingdom_id' => '4', 'kingdom_name' => 'Golden Plains']), new Response());
         $admin->grant($this->request('POST', '/admin/grant', [], [
             'csrf' => 'token',
@@ -163,24 +245,78 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             $permissions,
             $kingdoms,
             $accounts,
-            new KingdomSettings($kingdoms),
-            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()),
+            Strategies::kingdomSettings($kingdoms),
+            new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
             $queue,
             $twig,
             $connects,
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(),
+            Strategies::reviewQueue($transactions, $accounts),
+            Strategies::reviewService($transactions, $accounts),
+            Strategies::categorySearch(),
+            Strategies::kingdomPatternService($kingdoms, $transactions),
+            Strategies::patternPrefill(),
+            Strategies::ledgerSyncFeedback(),
         );
-        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, new KingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession()))
+        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::categorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternPrefill(), Strategies::ledgerSyncFeedback()))
             ->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/missing'), new Response(), 'missing');
+        $manager->show($this->request('GET', '/manage/golden-plains', ['uncategorized' => '1']), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
+        $manager->categorySearch($this->request('GET', '/manage/golden-plains/taxonomy/categories', ['flow' => 'expense', 'q' => 'site']), new Response(), 'golden-plains');
+        $manager->patterns($this->request('GET', '/manage/golden-plains/patterns'), new Response(), 'golden-plains');
+        $manager->patternNew($this->request('GET', '/manage/golden-plains/patterns/new', ['counterparty' => 'Shop', 'category' => 'expense.site_rental']), new Response(), 'golden-plains');
+        $_SESSION['_csrf'] = 'token';
+        $manager->patternCreate($this->request('POST', '/manage/golden-plains/patterns', [], [
+            'csrf' => 'token',
+            'category' => 'expense.storage',
+            'match_type' => 'token',
+            'token' => 'VENDOR TRACE',
+            'fields' => ['description'],
+            'flows' => ['expense'],
+        ]), new Response(), 'golden-plains');
+        $manager->patternUpdate($this->request('POST', '/manage/golden-plains/patterns/1', [], [
+            'csrf' => 'token',
+            'category' => 'expense.storage',
+            'match_type' => 'token',
+            'token' => 'VENDOR TRACE UPDATED',
+            'fields' => ['description'],
+            'flows' => ['expense'],
+        ]), new Response(), 'golden-plains', '1');
+        $manager->patternBulk($this->request('POST', '/manage/golden-plains/patterns/bulk', [], [
+            'csrf' => 'token',
+            'patterns' => [
+                1 => [
+                    'category' => 'expense.storage',
+                    'match_type' => 'token',
+                    'token' => 'BULK TOKEN',
+                ],
+            ],
+        ]), new Response(), 'golden-plains');
+        $manager->patternDelete($this->request('POST', '/manage/golden-plains/patterns/1/delete', [], ['csrf' => 'token']), new Response(), 'golden-plains', '1');
+        $manager->patternCreate($this->request('POST', '/manage/golden-plains/patterns', [], ['csrf' => 'nope', 'category' => 'expense.storage', 'token' => 'X']), new Response(), 'golden-plains');
         $manager->connect($this->request('POST', '/manage/golden-plains/connect', [], ['csrf' => 'token']), new Response(), 'golden-plains');
         $manager->connectGet($this->request('GET', '/manage/golden-plains/connect'), new Response(), 'golden-plains');
-        $manager->settings($this->request('POST', '/manage/golden-plains/settings', [], ['csrf' => 'token', 'visibility' => 'public', 'display_mode' => 'all']), new Response(), 'golden-plains');
+        $manager->settings($this->request('POST', '/manage/golden-plains/settings', [], ['csrf' => 'token', 'visibility' => 'public', 'display_mode' => 'all', 'embargo_days' => '3']), new Response(), 'golden-plains');
         $manager->enrollment($this->request('POST', '/manage/golden-plains/enrollment', [], ['csrf' => 'token', 'enrollment' => json_encode(['accessToken' => 'tok', 'id' => 'enr_9'])]), new Response(), 'golden-plains');
         $manager->accounts($this->request('POST', '/manage/golden-plains/accounts', [], ['csrf' => 'token', 'published' => ['acc']]), new Response(), 'golden-plains');
         $manager->refresh($this->request('POST', '/manage/golden-plains/refresh', [], ['csrf' => 'token']), new Response(), 'golden-plains');
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('pub-me')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('income.event_gate')->categorySource('shared_rule')->categoryConfidence(85)->publishableAfter('2026-09-01T00:00:00+00:00')->build());
+        $manager->publishTransaction($this->request('POST', '/manage/golden-plains/transactions/publish', [], ['csrf' => 'token', 'teller_transaction_id' => 'pub-me']), new Response(), 'golden-plains');
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('pub-uncat')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-50)->category('uncategorized')->publishableAfter('2026-09-01T00:00:00+00:00')->build());
+        $manager->publishTransaction($this->request('POST', '/manage/golden-plains/transactions/publish', [], ['csrf' => 'token', 'teller_transaction_id' => 'pub-uncat']), new Response(), 'golden-plains');
+        $manager->updateTransaction($this->request('POST', '/manage/golden-plains/transactions/update', [], ['csrf' => 'token', 'teller_transaction_id' => 'pub-uncat', 'category' => 'expense.feast_groceries']), new Response(), 'golden-plains');
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('pub-me')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('uncategorized')->publishedAt('2026-09-03T00:00:00+00:00')->build());
+        $manager->withholdTransaction($this->request('POST', '/manage/golden-plains/transactions/withhold', [], ['csrf' => 'token', 'teller_transaction_id' => 'pub-me']), new Response(), 'golden-plains');
+        $manager->publishTransaction($this->request('POST', '/manage/golden-plains/transactions/publish', [], ['csrf' => 'nope', 'teller_transaction_id' => 'pub-me']), new Response(), 'golden-plains');
+        $manager->updateTransactionReview($this->request('POST', '/manage/golden-plains/transactions/review', [], [
+            'csrf' => 'token',
+            'review_month' => '2026-09',
+            'review_id' => ['pub-me'],
+            'review' => ['pub-me' => ['publish' => '1']],
+        ]), new Response(), 'golden-plains');
         $manager->settings($this->request('POST', '/x', [], ['csrf' => 'bad']), new Response(), 'golden-plains');
+        $manager->disconnectBank($this->request('POST', '/manage/golden-plains/disconnect', [], ['csrf' => 'token']), new Response(), 'golden-plains');
 
         $_ENV['APP_PUBLIC_URL'] = 'http://localhost:37180';
         \Amtgard\Denarius\Utilities\Http\AppPublicUrl::base();
@@ -209,7 +345,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             $auth,
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment(
                 $kingdoms,
-                new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, $simplefinProviders, new TokenCipher('k'), $queue, Strategies::months()),
+                new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, $simplefinProviders, new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
                 $simplefinSession,
                 $permissions,
             ),
@@ -219,10 +355,10 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $simplefinReturn->show($this->request('GET', '/bank/simplefin/return?setup_token=' . rawurlencode($token)), new Response());
         $simplefinReturn->show($this->request('GET', '/bank/simplefin/return'), new Response());
         $simplefinReturn->submit($this->request('POST', '/bank/simplefin/return', [], ['csrf' => 'nope']), new Response());
-        (new \Amtgard\Denarius\Controller\SimpleFinReturnController(new SessionAuthStore('empty'), new \Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment($kingdoms, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months()), new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), $member), $twig))
+        (new \Amtgard\Denarius\Controller\SimpleFinReturnController(new SessionAuthStore('empty'), new \Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment($kingdoms, new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), $member), $twig))
             ->show($this->request('GET', '/bank/simplefin/return'), new Response());
 
-        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $handler = new ProviderWebhookHandler(Strategies::providers(Strategies::teller()), $kingdoms, Strategies::events($queue, $enrollment));
         $webhook = new WebhookController($handler);
         $webhook->teller($this->request('POST', '/webhooks/teller'), new Response());
@@ -262,8 +398,16 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             }
         }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'https://idp.example.test/resources/client/service-format'));
 
+        (new IntegOrkGetKingdomsGateway(dirname(__DIR__, 3)))->getKingdomsJson();
+        (new IntegIdpHttpGuard(new class implements \Psr\Http\Client\ClientInterface {
+            public function sendRequest(\Psr\Http\Message\RequestInterface $request): \Psr\Http\Message\ResponseInterface
+            {
+                return new \Nyholm\Psr7\Response(204);
+            }
+        }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'http://localhost:37080/version'));
+
         $scope = $this->methodsInScope();
-        $this->assertCount(61, $scope);
+        $this->assertCount(86, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

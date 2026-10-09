@@ -36,6 +36,15 @@ final class RedisKeyValueStore implements KeyValueStore
         });
     }
 
+    public function setPersistent(string $key, string $value): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($key, $value): mixed {
+            $this->redis->set($key, $value);
+
+            return null;
+        });
+    }
+
     public function delete(string $key): void
     {
         DenariusLog::trace(__METHOD__, function () use ($key): mixed {

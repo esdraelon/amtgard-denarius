@@ -44,7 +44,7 @@ use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
 use Amtgard\Denarius\Service\Ledger\DailySweep;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
-use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\KingdomPageQueryFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
@@ -100,21 +100,25 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertThrows(\InvalidArgumentException::class, fn () => Money::centsFromDecimal('nope'));
         $this->assertThrows(\InvalidArgumentException::class, fn () => new MonthWindow(2026, 0));
 
-        $line = LedgerLine::builder()->postedOn('2026-01-02')->amountCents(250)->category('dining')->description('meal')->counterparty('Cafe')->status('posted')->accountName('Checking')->build();
-        $other = LedgerLine::builder()->postedOn('2026-02-01')->amountCents(100)->category('fuel')->build();
+        $line = LedgerLine::builder()->postedOn('2026-01-02')->amountCents(250)->category('dining')->categoryFlow('income')->description('meal')->counterparty('Cafe')->status('posted')->accountName('Checking')->build();
+        $other = LedgerLine::builder()->postedOn('2026-02-01')->amountCents(100)->category('fuel')->categoryFlow('income')->build();
         $builder = MonthStatementBuilder::standard();
-        $all = $builder->build([$line, $other], DisplayMode::All, $month);
-        $this->assertCount(1, $all->rows);
+        $rollupKingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->summarizedCategoryMinLines(2)->build();
+        $less = $builder->build([$line, $other], DisplayMode::LessRedacted, $month);
+        $this->assertCount(1, $less->rows);
+        $this->assertSame('meal', $less->rows[0]->getDescription());
         $redacted = $builder->build([$line], DisplayMode::Redacted, $month);
         $this->assertSame('', $redacted->rows[0]->getDescription());
         $this->assertSame('', $redacted->rows[0]->getCounterparty());
         $this->assertSame(250, $redacted->rows[0]->getAmountCents());
         $this->assertSame('2026-01-02', $redacted->rows[0]->getPostedOn());
+        $later = LedgerLine::builder()->postedOn('2026-01-20')->amountCents(75)->category('fuel')->categoryFlow('expense')->build();
+        $sorted = $builder->build([$line, $other, $later], DisplayMode::Redacted, $month);
+        $this->assertSame(['2026-01-20', '2026-01-02'], array_map(static fn (LedgerLine $row) => $row->getPostedOn(), $sorted->rows));
         $summary = $builder->build([
             $line,
-            LedgerLine::builder()->postedOn('2026-01-03')->amountCents(50)->category('dining')->build(),
-            LedgerLine::builder()->postedOn('2026-01-04')->amountCents(20)->category('fuel')->build(),
-        ], DisplayMode::Summarized, $month);
+            LedgerLine::builder()->postedOn('2026-01-03')->amountCents(50)->category('dining')->categoryFlow('income')->build(),
+        ], DisplayMode::Summarized, $month, $rollupKingdom);
         $this->assertSame('dining', $summary->rows[0]->category);
         $this->assertSame(2, $summary->rows[0]->count);
         $this->assertSame(300, $summary->rows[0]->amountCents);
@@ -189,7 +193,14 @@ final class ApplicationTest extends AmtgardTestCase
         $principals->save(PrincipalRecord::builder()->idpUserId('1')->email('a@b.c')->orkKingdomId(2)->orkKingdomName('Beta')->build());
         $kingdoms = new MemoryKingdoms();
         $kingdoms->save(KingdomRecord::builder()->orkKingdomId(3)->name('Gamma')->slug('gamma')->visibility('public')->displayMode('all')->enrollmentStatus('none')->build());
-        $directory = new OrkKingdomDirectory($root, 'data/ork-kingdoms.json', $kingdoms, $principals);
+        $directory = new OrkKingdomDirectory(
+            $root,
+            'data/ork-kingdoms.json',
+            $kingdoms,
+            $principals,
+            new \Amtgard\Denarius\Tests\Support\StubOrkGetKingdomsGateway(),
+            new \Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter(),
+        );
         $this->assertSame([
             ['id' => 1, 'name' => 'Alpha'],
             ['id' => 2, 'name' => 'Beta'],
@@ -216,10 +227,10 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertCount(5, $grants->rows);
         $this->assertThrows(\InvalidArgumentException::class, fn () => $admin->grantManager('9', 1, 'admin'));
 
-        $settings = new KingdomSettings($kingdoms);
-        $updated = $settings->update($saved, Visibility::Public, DisplayMode::All);
+        $settings = Strategies::kingdomSettings($kingdoms);
+        $updated = $settings->update($saved, Visibility::Public, DisplayMode::All, 3);
         $this->assertSame('public', $updated->getVisibility());
-        $this->assertSame('all', $updated->getDisplayMode());
+        $this->assertSame('less_redacted', $updated->getDisplayMode());
 
         $secrets = new MemorySecrets();
         $accounts = new MemoryAccounts();
@@ -227,7 +238,7 @@ final class ApplicationTest extends AmtgardTestCase
         $teller = Strategies::teller();
         $cipher = new TokenCipher('app-key');
         $cache = new ArrayStore();
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache));
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($teller), $cipher, $queue, Strategies::months($cache), Strategies::bankReset());
         $connected = $enrollment->connect($updated, [
             'accessToken' => 'token-1',
             'enrollment' => ['id' => 'enr_1', 'institution' => ['name' => 'Bank']],
@@ -247,7 +258,8 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertThrows(\RuntimeException::class, fn () => $cipher->decrypt(base64_encode('short')));
 
         $transactions = new MemoryTransactions();
-        $sync = new TransactionSynchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache));
+        $monthMessages = new MemoryMessages();
+        $sync = Strategies::synchronizer($kingdoms, $accounts, $secrets, $transactions, Strategies::providers($teller), $cipher, new \DateTimeImmutable('2026-09-01'), Strategies::months($cache, new \Amtgard\Denarius\Service\Month\MonthCacheRefreshPublisher($monthMessages, $transactions)));
         $enrollment->setPublished($kingdoms->findByOrkId(4), ['acc_1' => true]);
         $kingdoms->save(KingdomRecord::builder()
             ->id($connected->getId())
@@ -262,7 +274,7 @@ final class ApplicationTest extends AmtgardTestCase
             ->provider('teller')
             ->build());
         $this->assertTrue($sync->sync(4));
-        $this->assertGreaterThan(0, (int) $cache->get('denarius:month-gen:1'));
+        $this->assertSame('month_cache', json_decode($monthMessages->published[0]['message'], true, flags: JSON_THROW_ON_ERROR)['type']);
         $this->assertFalse($sync->sync(99));
         $this->assertSame(2, count($transactions->forKingdom((int) $connected->getId())));
         $this->assertNotNull($kingdoms->findByOrkId(4)->getLastSyncedAt());
@@ -291,9 +303,27 @@ final class ApplicationTest extends AmtgardTestCase
         $this->assertFalse($verifier->verify('body', 't=' . ($now - 500), $now));
         $this->assertFalse((new TellerWebhookVerifier(''))->verify('body', $signature, $now));
 
-        $page = new KingdomPageQuery($transactions, $accounts, MonthStatementBuilder::standard());
-        $statement = $page->statement($kingdoms->findByOrkId(4), new MonthWindow(2026, 9));
-        $this->assertNotEmpty($statement->rows);
+        $page = KingdomPageQueryFactory::publicRead($transactions, $accounts);
+        $kingdomRow = $kingdoms->findByOrkId(4);
+        $statement = $page->statement($kingdomRow, new MonthWindow(2026, 9));
+        $this->assertEmpty($statement->rows);
+        $synced = $transactions->forKingdom((int) $kingdomRow->getId())[0];
+        $transactions->upsert(TransactionRecord::builder()
+            ->id($synced->getId())
+            ->kingdomId($synced->getKingdomId())
+            ->tellerTransactionId($synced->getTellerTransactionId())
+            ->tellerAccountId($synced->getTellerAccountId())
+            ->postedOn($synced->getPostedOn())
+            ->amountCents($synced->getAmountCents())
+            ->category($synced->getCategory())
+            ->description($synced->getDescription())
+            ->counterparty($synced->getCounterparty())
+            ->status($synced->getStatus())
+            ->publishedAt('2026-09-03T12:00:00+00:00')
+            ->publishableAfter($synced->getPublishableAfter())
+            ->build());
+        $this->assertNotEmpty($page->statement($kingdomRow, new MonthWindow(2026, 9))->rows);
+        $this->assertNotNull($kingdoms->findByOrkId(4)->getInitialBackfillCompletedAt());
 
         $principals = new MemoryPrincipals();
         $syncPrincipal = new PrincipalSync($principals);
@@ -319,7 +349,7 @@ final class ApplicationTest extends AmtgardTestCase
         $refresh->publishLedger(4);
         $this->assertSame('ledger:4', $messages->published[0]['key']);
 
-        $sync = new TransactionSynchronizer(
+        $sync = Strategies::synchronizer(
             new MemoryKingdoms(),
             new MemoryAccounts(),
             new MemorySecrets(),
@@ -346,6 +376,11 @@ final class ApplicationTest extends AmtgardTestCase
                 $this->data[$key] = $value;
                 return $ttl > 0;
             }
+            public function set(string $key, string $value): bool
+            {
+                $this->data[$key] = $value;
+                return true;
+            }
             public function del(string $key): int
             {
                 unset($this->data[$key]);
@@ -354,7 +389,9 @@ final class ApplicationTest extends AmtgardTestCase
         };
         $store = new RedisKeyValueStore($redis);
         $store->set('a', 'b', 5);
+        $store->setPersistent('p', 'v');
         $this->assertSame('b', $store->get('a'));
+        $this->assertSame('v', $store->get('p'));
         $store->delete('a');
         $this->assertNull($store->get('missing'));
 
@@ -471,6 +508,12 @@ final class ArrayStore implements KeyValueStore
     {
         $this->data[$key] = $value;
     }
+
+    public function setPersistent(string $key, string $value): void
+    {
+        $this->data[$key] = $value;
+    }
+
     public function delete(string $key): void
     {
         unset($this->data[$key]);
@@ -535,6 +578,12 @@ final class MemoryKingdoms implements KingdomRepositoryInterface
         }
         return null;
     }
+
+    public function findById(int $kingdomId): ?KingdomRecord
+    {
+        return $this->rows[$kingdomId] ?? null;
+    }
+
     public function findByOrkId(int $orkKingdomId): ?KingdomRecord
     {
         foreach ($this->rows as $row) {
@@ -577,6 +626,11 @@ final class MemoryKingdoms implements KingdomRepositoryInterface
             ->provider($kingdom->getProvider())
             ->enrollmentStatus($kingdom->getEnrollmentStatus())
             ->lastSyncedAt($kingdom->getLastSyncedAt())
+            ->lastSyncAttemptedAt($kingdom->getLastSyncAttemptedAt())
+            ->lastSyncStatus($kingdom->getLastSyncStatus())
+            ->lastSyncError($kingdom->getLastSyncError())
+            ->embargoDays($kingdom->getEmbargoDays())
+            ->initialBackfillCompletedAt($kingdom->getInitialBackfillCompletedAt())
             ->build();
         $this->rows[$id] = $saved;
         return $saved;
@@ -667,17 +721,58 @@ final class MemoryAccounts implements AccountRepositoryInterface
 
 final class MemoryTransactions implements TransactionRepositoryInterface
 {
+    /** @var array<string, TransactionRecord> */
+    public array $rowsByTellerId = [];
+
     /** @var array<int, list<TransactionRecord>> */
     public array $rows = [];
+
     public function upsert(TransactionRecord $transaction): void
     {
-        $list = $this->rows[$transaction->getKingdomId()] ?? [];
-        $list[] = $transaction;
+        $this->rowsByTellerId[$transaction->getTellerTransactionId()] = $transaction;
+        $list = [];
+        foreach ($this->rowsByTellerId as $row) {
+            if ($row->getKingdomId() === $transaction->getKingdomId()) {
+                $list[] = $row;
+            }
+        }
         $this->rows[$transaction->getKingdomId()] = $list;
     }
+
+    public function findByTellerTransactionId(string $tellerTransactionId): ?TransactionRecord
+    {
+        return $this->rowsByTellerId[$tellerTransactionId] ?? null;
+    }
+
     public function forKingdom(int $kingdomId): array
     {
         return $this->rows[$kingdomId] ?? [];
+    }
+
+    public function forKingdomPublished(int $kingdomId): array
+    {
+        return array_values(array_filter(
+            $this->forKingdom($kingdomId),
+            static fn (TransactionRecord $row): bool => $row->getPublishedAt() !== null && $row->getPublishedAt() !== '',
+        ));
+    }
+
+    public function markPublished(int $kingdomId, string $tellerTransactionId, string $publishedAt): void
+    {
+        $row = $this->findByTellerTransactionId($tellerTransactionId);
+        if ($row === null || $row->getKingdomId() !== $kingdomId) {
+            throw new \InvalidArgumentException('Transaction not found.');
+        }
+        $this->upsert(\Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder::from($row)->publishedAt($publishedAt)->build());
+    }
+
+    public function markUnpublished(int $kingdomId, string $tellerTransactionId): void
+    {
+        $row = $this->findByTellerTransactionId($tellerTransactionId);
+        if ($row === null || $row->getKingdomId() !== $kingdomId) {
+            throw new \InvalidArgumentException('Transaction not found.');
+        }
+        $this->upsert(\Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder::from($row)->publishedAt(null)->build());
     }
 }
 

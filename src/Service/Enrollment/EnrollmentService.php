@@ -9,6 +9,7 @@ use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
+use Amtgard\Denarius\Domain\Kingdom\KingdomRecordRebuilder;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
@@ -26,6 +27,7 @@ final class EnrollmentService
         private readonly TokenCipher $cipher,
         private readonly KingdomRefreshQueue $queue,
         private readonly MonthInvalidator $months,
+        private readonly KingdomBankReset $connectionReset,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -92,6 +94,35 @@ final class EnrollmentService
         });
     }
 
+    /** Clears local bank data so managers can run connect onboarding again; the provider-side link is left to the bank. */
+    public function disconnectBank(KingdomRecord $kingdom): KingdomRecord
+    {
+        $method = __METHOD__;
+
+        return DenariusLog::trace($method, function () use ($method, $kingdom): KingdomRecord {
+            $kingdomId = (int) $kingdom->getId();
+            $this->connectionReset->clearKingdom($kingdomId);
+            $saved = $this->kingdoms->save(KingdomRecordRebuilder::from($kingdom)
+                ->enrollmentId(null)
+                ->institutionName(null)
+                ->provider(null)
+                ->enrollmentStatus('disconnected')
+                ->lastSyncedAt(null)
+                ->lastSyncAttemptedAt(null)
+                ->lastSyncStatus(null)
+                ->lastSyncError(null)
+                ->initialBackfillCompletedAt(null)
+                ->build());
+            $this->months->forget($kingdomId);
+            DenariusLog::infoBranch('enrollment_bank_disconnected', $method, [
+                'kingdom_id' => $kingdomId,
+                'provider' => (string) $kingdom->getProvider(),
+            ]);
+
+            return $saved;
+        });
+    }
+
     private function importAccounts(KingdomRecord $kingdom, string $token): void
     {
         DenariusLog::trace(__METHOD__, function () use ($kingdom, $token): mixed {
@@ -120,18 +151,11 @@ final class EnrollmentService
     private function copy(KingdomRecord $kingdom, string $enrollmentId, string $institution, string $provider, string $status): KingdomRecord
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $enrollmentId, $institution, $provider, $status): KingdomRecord {
-            return KingdomRecord::builder()
-                ->id($kingdom->getId())
-                ->orkKingdomId($kingdom->getOrkKingdomId())
-                ->name($kingdom->getName())
-                ->slug($kingdom->getSlug())
-                ->visibility($kingdom->getVisibility())
-                ->displayMode($kingdom->getDisplayMode())
+            return KingdomRecordRebuilder::from($kingdom)
                 ->enrollmentId($enrollmentId !== '' ? $enrollmentId : null)
                 ->institutionName($institution !== '' ? $institution : null)
                 ->provider($provider !== '' ? $provider : null)
                 ->enrollmentStatus($status)
-                ->lastSyncedAt($kingdom->getLastSyncedAt())
                 ->build();
         });
     }

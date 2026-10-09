@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Access;
 
-use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
+use Amtgard\Denarius\Service\Kingdom\ManagedKingdomResolver;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
 final class AccountNavBuilder
 {
     public function __construct(
         private readonly PermissionService $permissions,
-        private readonly KingdomRepositoryInterface $kingdoms,
+        private readonly ManagedKingdomResolver $managedKingdoms,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -30,7 +30,7 @@ final class AccountNavBuilder
             }
 
             foreach ($this->permissions->managedKingdomIds($idpUserId) as $orkKingdomId) {
-                $kingdom = $this->kingdoms->findByOrkId($orkKingdomId);
+                $kingdom = $this->managedKingdoms->resolve($orkKingdomId);
                 if ($kingdom === null) {
                     continue;
                 }

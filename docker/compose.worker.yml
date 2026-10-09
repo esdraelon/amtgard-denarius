@@ -16,8 +16,12 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - amtgard-denarius-shared
+      - amtgard-denarius-net
 
 networks:
   amtgard-denarius-shared:
     name: amtgard-denarius-shared
+    external: true
+  amtgard-denarius-net:
+    name: amtgard-denarius-net
     external: true

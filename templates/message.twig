@@ -3,6 +3,6 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h1 class="text-3xl font-serif font-bold text-secondary mb-4">{{ title }}</h1>
-    <p class="text-gray-700">{{ message }}</p>
+    {% include 'components/page-header.twig' with { title: title } %}
+    <p class="text-body-secondary mb-0">{{ message }}</p>
 {% endblock %}

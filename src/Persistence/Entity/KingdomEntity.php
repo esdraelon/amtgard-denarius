@@ -52,4 +52,34 @@ class KingdomEntity extends RepositoryEntity
 
     #[Field('last_synced_at')]
     private ?string $lastSyncedAt = null;
+
+    #[Field('last_sync_attempted_at')]
+    private ?string $lastSyncAttemptedAt = null;
+
+    #[Field('last_sync_status')]
+    private ?string $lastSyncStatus = null;
+
+    #[Field('last_sync_error')]
+    private ?string $lastSyncError = null;
+
+    #[Field('embargo_days')]
+    private ?int $embargoDays = null;
+
+    #[Field('initial_backfill_completed_at')]
+    private ?string $initialBackfillCompletedAt = null;
+
+    #[Field('amount_quantum_cents')]
+    private ?int $amountQuantumCents = null;
+
+    #[Field('balance_quantum_floor_cents')]
+    private ?int $balanceQuantumFloorCents = null;
+
+    #[Field('balance_quantum_ceiling_cents')]
+    private ?int $balanceQuantumCeilingCents = null;
+
+    #[Field('balance_quantum_step_cents')]
+    private ?int $balanceQuantumStepCents = null;
+
+    #[Field('summarized_category_min_lines')]
+    private ?int $summarizedCategoryMinLines = null;
 }

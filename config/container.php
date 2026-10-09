@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
-use Amtgard\Denarius\Utilities\Auth\Impl\IdpPolicyGateway;
 use Amtgard\Denarius\Utilities\Auth\PolicyGateway;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AlwaysReady;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ConfiguredLedgerProviders;
@@ -17,6 +16,8 @@ use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\PresentCreden
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Support\PreviousMonthWindow;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ProviderAdmission;
 use Amtgard\Denarius\Domain\Bank\Notice\Impl\RefreshLedgerNotice;
+use Amtgard\ActiveRecordOrm\Configuration\Repository\DatabaseConfiguration;
+use Amtgard\ActiveRecordOrm\Configuration\Repository\MysqlPdoProvider;
 use Amtgard\Denarius\Persistence\Orm;
 use Amtgard\Denarius\Persistence\Repository\Account\Impl\AccountRepository;
 use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
@@ -39,13 +40,36 @@ use Amtgard\Denarius\Controller\KingdomPageController;
 use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
 use Amtgard\Denarius\Domain\Access\KingdomAccess;
+use Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign;
+use Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer;
+use Amtgard\Denarius\Domain\Taxonomy\PlaidProviderAmountSign;
+use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\CategoryMatcherChain;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\FallbackMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\KingdomRuleMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\ProviderHintMatcher;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternValidator;
+use Amtgard\Denarius\Domain\Taxonomy\RegexPatternGuard;
+use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\Impl\KingdomCategoryRuleRepository;
+use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\KingdomCategoryRuleRepositoryInterface;
+use Amtgard\Denarius\Service\Ledger\KingdomPatternService;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
+use Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
 use Amtgard\Denarius\Utilities\Http\BuildInfo;
 use Amtgard\Denarius\Utilities\Http\IdpUserDirectory;
-use Amtgard\Denarius\Utilities\Http\LoggingIdpHttpClient;
+use Amtgard\Denarius\Utilities\Http\OrkGetKingdomsGateway;
+use Amtgard\Denarius\Utilities\Http\OrkKingdomCacheWriter;
 use Amtgard\Denarius\Utilities\Http\OrkKingdomDirectory;
+use Amtgard\Denarius\Service\Kingdom\ManagedKingdomResolver;
 use Amtgard\Denarius\Utilities\Http\PostCsrfMiddleware;
 use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
@@ -61,49 +85,70 @@ use Amtgard\Denarius\Utilities\Queue\Message\MessageQueue;
 use Amtgard\Denarius\Utilities\Queue\Message\Impl\PubSubMessageQueue;
 use Amtgard\Denarius\Utilities\Queue\KeyValue\Impl\RedisKeyValueStore;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\Impl\CurlSimpleFinApi;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinHost;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApplicationConfig;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinLedgerProvider;
 use Amtgard\Denarius\Controller\SimpleFinReturnController;
 use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\Denarius\Service\Enrollment\SimpleFinReturnEnrollment;
 use Amtgard\Denarius\Service\Enrollment\BankConnect;
+use Amtgard\Denarius\Service\Enrollment\BankConnectionReset;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
+use Amtgard\Denarius\Service\Enrollment\KingdomBankReset;
+use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationPipelineFactory;
 use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
+use Amtgard\Denarius\Service\Kingdom\KingdomPublicationLineSource;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
+use Amtgard\Denarius\Service\Kingdom\ManagerKingdomPageQuery;
 use Amtgard\Denarius\Service\Month\Impl\CachingMonthReader;
+use Amtgard\Denarius\Service\Month\MonthCacheKeys;
+use Amtgard\Denarius\Service\Month\MonthCacheRefreshPublisher;
+use Amtgard\Denarius\Service\Month\MonthCacheWriter;
 use Amtgard\Denarius\Service\Month\MonthInvalidator;
+use Amtgard\Denarius\Service\Month\MonthStatementCacheCodec;
 use Amtgard\Denarius\Service\Month\MonthReader;
 use Amtgard\Denarius\Service\Access\AccountNavBuilder;
+use Amtgard\Denarius\Service\Access\SiteNavBuilder;
+use Amtgard\Denarius\Utilities\Http\Twig\SiteNavTwigExtension;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
 use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
+use Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester;
 use Amtgard\Denarius\Service\Admin\Impl\GrantAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\GrantManagerCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeAdminCommand;
 use Amtgard\Denarius\Service\Admin\Impl\RevokeManagerCommand;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\Impl\CurlPlaidApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\PlaidApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\PlaidLedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\PlaidWebhookVerifier;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeTransactionRefreshWait;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler;
+use Amtgard\Denarius\Domain\Statement\Publication\Ingest\TransactionHardRedactAnnotator;
+use Amtgard\Denarius\Domain\Statement\Publication\Ingest\VerificationKeywordHardMatcher;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
+use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
+use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
+use Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver;
+use Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier;
+use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
+use Amtgard\Denarius\Service\Ledger\TransactionRecategorizer;
+use Amtgard\Denarius\Service\Ledger\ManagerLedgerSyncFeedback;
+use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
+use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Worker\Job\Impl\LedgerRefreshJob;
+use Amtgard\Denarius\Worker\Job\Impl\MonthCacheRefreshJob;
+use Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob;
 use Amtgard\Denarius\Worker\Job\RefreshJobRegistry;
 use Amtgard\Denarius\Utilities\Session\RedisSessionHandler;
-use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\Impl\CurlTellerApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerWebhookVerifier;
 use Amtgard\Denarius\Worker\LedgerWorker;
 use Amtgard\IdpClient\Client\IdpClient;
-use Amtgard\IdpClient\Config\IdpClientEnvironmentFactory;
-use Amtgard\IdpClient\Config\IdpClientFactory;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Amtgard\IdpClient\Slim\IdpAuthController;
 use Amtgard\SetQueue\DataStructure\Impl\Redis\RedisDataStructureConfig;
@@ -116,27 +161,41 @@ use Slim\App;
 use Twig\Environment as TwigEnvironment;
 use Twig\Loader\FilesystemLoader;
 
-return [
+if (!function_exists('denariusEnv')) {
+    /** Process env (php-fpm pool, Docker, shell) wins over Dotenv values in $_ENV. */
+    function denariusEnv(string $key): string
+    {
+        $fromGetenv = getenv($key);
+        if (is_string($fromGetenv) && $fromGetenv !== '') {
+            return $fromGetenv;
+        }
+
+        $fromSuperglobal = $_ENV[$key] ?? null;
+        if (is_string($fromSuperglobal) && $fromSuperglobal !== '') {
+            return $fromSuperglobal;
+        }
+
+        return '';
+    }
+}
+
+$denariusEnvironment = denariusEnv('ENVIRONMENT') !== '' ? denariusEnv('ENVIRONMENT') : 'PROD';
+$outboundDefinitions = __DIR__ . '/container/outbound.php';
+if ($denariusEnvironment === 'DEV_INTEG') {
+    $outboundDefinitions = __DIR__ . '/container/integ/outbound.php';
+}
+
+return array_merge(
+    require $outboundDefinitions,
+    [
     KingdomRepositoryInterface::class => fn () => Orm::repository(KingdomRepository::class),
     PrincipalRepositoryInterface::class => fn () => Orm::repository(PrincipalRepository::class),
     AccountRepositoryInterface::class => fn () => Orm::repository(AccountRepository::class),
     SecretRepositoryInterface::class => fn () => Orm::repository(SecretRepository::class),
     TransactionRepositoryInterface::class => fn () => Orm::repository(TransactionRepository::class),
+    KingdomCategoryRuleRepositoryInterface::class => fn () => Orm::repository(KingdomCategoryRuleRepository::class),
     RoleGrantRepositoryInterface::class => fn () => Orm::repository(RoleGrantRepository::class),
     SessionAuthStore::class => fn () => new SessionAuthStore(),
-    LoggingIdpHttpClient::class => function () {
-        $environment = IdpClientEnvironmentFactory::fromEnvVars();
-        $inner = new \GuzzleHttp\Client([
-            'headers' => [
-                'User-Agent' => $environment->httpUserAgent(),
-                'Accept' => 'application/json',
-            ],
-        ]);
-
-        return new LoggingIdpHttpClient($inner);
-    },
-    IdpClient::class => fn (ContainerInterface $c) => IdpClientFactory::fromEnvVars(null, null, $c->get(LoggingIdpHttpClient::class)),
-    PolicyGateway::class => fn (IdpClient $idp) => new IdpPolicyGateway($idp->clientIam()),
     BootstrapAdmins::class => fn () => BootstrapAdmins::fromEnv($_ENV['DENARIUS_BOOTSTRAP_ADMIN_IDP_USER_IDS'] ?? null),
     DenariusAuthorizer::class => fn () => new DenariusAuthorizer(),
     Redis::class => function () {
@@ -151,6 +210,7 @@ return [
         $config->setConfig([
             'host' => $_ENV['REDIS_HOST'] ?? '127.0.0.1',
             'port' => (int) ($_ENV['REDIS_PORT'] ?? 6379),
+            'database' => (int) ($_ENV['REDIS_DB'] ?? 0),
         ]);
         $queue = new PubSubQueue();
         $queue->addQueue(LedgerWorker::QUEUE, new SetQueue(
@@ -171,60 +231,57 @@ return [
     ),
     AccountNavBuilder::class => fn (ContainerInterface $c) => new AccountNavBuilder(
         $c->get(PermissionService::class),
+        $c->get(ManagedKingdomResolver::class),
+    ),
+    SiteNavBuilder::class => fn (ContainerInterface $c) => new SiteNavBuilder(
+        $c->get(SessionAuthStore::class),
+        $c->get(AccountNavBuilder::class),
+    ),
+    ManagedKingdomResolver::class => fn (ContainerInterface $c) => new ManagedKingdomResolver(
         $c->get(KingdomRepositoryInterface::class),
+        $c->get(OrkKingdomDirectory::class),
     ),
+    OrkKingdomCacheWriter::class => fn () => new OrkKingdomCacheWriter(),
     TokenCipher::class => fn () => new TokenCipher($_ENV['APP_KEY'] ?? ''),
-    TellerApi::class => fn () => new CurlTellerApi(
-        $_ENV['TELLER_API_BASE'] ?? 'https://api.teller.io',
-        $_ENV['TELLER_CERT_PATH'] ?? '',
-        $_ENV['TELLER_KEY_PATH'] ?? '',
-    ),
     LedgerProvider::class => fn (ContainerInterface $c) => new TellerLedgerProvider(
         $c->get(TellerApi::class),
         $c->get(TellerWebhookVerifier::class),
         TellerLedgerProvider::actions(),
-        new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? '']),
-        $_ENV['TELLER_APPLICATION_ID'] ?? '',
-        $_ENV['TELLER_ENVIRONMENT'] ?? 'sandbox',
+        new PresentCredentials([denariusEnv('TELLER_APPLICATION_ID')]),
+        denariusEnv('TELLER_APPLICATION_ID'),
+        denariusEnv('TELLER_ENVIRONMENT') !== '' ? denariusEnv('TELLER_ENVIRONMENT') : 'sandbox',
     ),
-    StripeApi::class => fn () => new CurlStripeApi(
-        $_ENV['STRIPE_API_BASE'] ?? 'https://api.stripe.com',
-        $_ENV['STRIPE_SECRET_KEY'] ?? '',
+    StripeWebhookVerifier::class => fn () => new StripeWebhookVerifier(denariusEnv('STRIPE_WEBHOOK_SECRET')),
+    StripeTransactionRefreshWait::class => fn (ContainerInterface $c) => new StripeTransactionRefreshWait(
+        $c->get(StripeApi::class),
     ),
-    StripeWebhookVerifier::class => fn () => new StripeWebhookVerifier($_ENV['STRIPE_WEBHOOK_SECRET'] ?? ''),
     StripeLedgerProvider::class => fn (ContainerInterface $c) => new StripeLedgerProvider(
         $c->get(StripeApi::class),
         $c->get(StripeWebhookVerifier::class),
         StripeLedgerProvider::actions(),
-        new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? '']),
+        new PresentCredentials([denariusEnv('STRIPE_SECRET_KEY')]),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
+        $c->get(StripeTransactionRefreshWait::class),
         $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
-    ),
-    PlaidApi::class => fn () => new CurlPlaidApi(
-        $_ENV['PLAID_API_BASE'] ?? 'https://sandbox.plaid.com',
-        $_ENV['PLAID_CLIENT_ID'] ?? '',
-        $_ENV['PLAID_SECRET'] ?? '',
-        $_ENV['PLAID_CLIENT_NAME'] ?? 'Denarius',
     ),
     PlaidWebhookVerifier::class => fn (ContainerInterface $c) => new PlaidWebhookVerifier($c->get(PlaidApi::class)),
     PlaidLedgerProvider::class => fn (ContainerInterface $c) => new PlaidLedgerProvider(
         $c->get(PlaidApi::class),
         $c->get(PlaidWebhookVerifier::class),
         PlaidLedgerProvider::actions(),
-        new PresentCredentials([$_ENV['PLAID_CLIENT_ID'] ?? '', $_ENV['PLAID_SECRET'] ?? '']),
+        new PresentCredentials([denariusEnv('PLAID_CLIENT_ID'), denariusEnv('PLAID_SECRET')]),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
     ),
     LedgerProviderRegistry::class => fn (ContainerInterface $c) => (new ConfiguredLedgerProviders([
-        new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([$_ENV['STRIPE_SECRET_KEY'] ?? ''])),
-        new ProviderAdmission($c->get(PlaidLedgerProvider::class), new PresentCredentials([$_ENV['PLAID_CLIENT_ID'] ?? '', $_ENV['PLAID_SECRET'] ?? ''])),
-        new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([$_ENV['TELLER_APPLICATION_ID'] ?? ''])),
+        new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([denariusEnv('STRIPE_SECRET_KEY')])),
+        new ProviderAdmission($c->get(PlaidLedgerProvider::class), new PresentCredentials([denariusEnv('PLAID_CLIENT_ID'), denariusEnv('PLAID_SECRET')])),
+        new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([denariusEnv('TELLER_APPLICATION_ID')])),
         new ProviderAdmission($c->get(SimpleFinLedgerProvider::class), new PresentCredentials([
             $_ENV['SIMPLEFIN_APP_ID'] ?? '',
             $_ENV['SIMPLEFIN_APP_TOKEN'] ?? '',
         ])),
     ]))->registry(),
     SimpleFinApplicationConfig::class => fn () => SimpleFinApplicationConfig::fromEnv(),
-    SimpleFinApi::class => fn () => new CurlSimpleFinApi(new SimpleFinHost(['simplefin.org'])),
     SimpleFinLedgerProvider::class => fn (ContainerInterface $c) => new SimpleFinLedgerProvider(
         $c->get(SimpleFinApi::class),
         new PresentCredentials([
@@ -254,6 +311,71 @@ return [
         $c->get(TokenCipher::class),
         $c->get(KingdomRefreshQueue::class),
         $c->get(MonthInvalidator::class),
+        $c->get(KingdomBankReset::class),
+    ),
+    KingdomBankReset::class => fn () => new BankConnectionReset(
+        MysqlPdoProvider::fromConfiguration(DatabaseConfiguration::fromEnvironment())->getPdo(),
+    ),
+    PublicationSettingsValidator::class => fn () => new PublicationSettingsValidator(),
+    PublicationEmbargoCalculator::class => fn () => new PublicationEmbargoCalculator(),
+    VerificationKeywordHardMatcher::class => fn () => new VerificationKeywordHardMatcher(),
+    TransactionHardRedactAnnotator::class => fn (ContainerInterface $c) => new TransactionHardRedactAnnotator(
+        $c->get(VerificationKeywordHardMatcher::class),
+    ),
+    MicroDepositPairReconciler::class => fn (ContainerInterface $c) => new MicroDepositPairReconciler(
+        $c->get(TransactionRepositoryInterface::class),
+    ),
+    TransactionPublicationApplier::class => fn (ContainerInterface $c) => new TransactionPublicationApplier(
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(PublicationEmbargoCalculator::class),
+        $c->get(TransactionHardRedactAnnotator::class),
+        new DateTimeImmutable('now'),
+    ),
+    LedgerProviderIdResolver::class => fn (ContainerInterface $c) => new LedgerProviderIdResolver(
+        $c->get(LedgerProviderRegistry::class),
+    ),
+    KeywordRuleMatcher::class => fn (ContainerInterface $c) => new KeywordRuleMatcher($c->get(TaxonomyCatalog::class)),
+    KingdomRuleMatcher::class => fn (ContainerInterface $c) => new KingdomRuleMatcher(
+        $c->get(KingdomCategoryRuleRepositoryInterface::class),
+        $c->get(KeywordRuleMatcher::class),
+    ),
+    CategoryMatcherChain::class => fn (ContainerInterface $c) => new CategoryMatcherChain([
+        new ManagerLockMatcher(),
+        new ProviderHintMatcher($c->get(TaxonomyCatalog::class)),
+        $c->get(KingdomRuleMatcher::class),
+        $c->get(KeywordRuleMatcher::class),
+        new FallbackMatcher(),
+    ]),
+    KingdomPatternValidator::class => fn (ContainerInterface $c) => new KingdomPatternValidator(
+        $c->get(TaxonomyCatalog::class),
+        new RegexPatternGuard(),
+    ),
+    KingdomPatternPrefill::class => fn (ContainerInterface $c) => new KingdomPatternPrefill(
+        $c->get(DescriptionNormalizer::class),
+    ),
+    KingdomPatternService::class => fn (ContainerInterface $c) => new KingdomPatternService(
+        $c->get(KingdomCategoryRuleRepositoryInterface::class),
+        $c->get(KingdomPatternValidator::class),
+        $c->get(TaxonomyCatalog::class),
+        $c->get(TransactionRecategorizer::class),
+    ),
+    TransactionCategorizer::class => fn (ContainerInterface $c) => new TransactionCategorizer(
+        $c->get(TaxonomyCatalog::class),
+        $c->get(DescriptionNormalizer::class),
+        $c->get(ProviderAmountSignRegistry::class),
+        $c->get(CategoryMatcherChain::class),
+    ),
+    TransactionCategoryApplier::class => fn (ContainerInterface $c) => new TransactionCategoryApplier(
+        $c->get(TransactionCategorizer::class),
+        $c->get(LedgerProviderIdResolver::class),
+    ),
+    TransactionRecategorizer::class => fn (ContainerInterface $c) => new TransactionRecategorizer(
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(TransactionCategorizer::class),
+        $c->get(LedgerProviderIdResolver::class),
+        $c->get(TaxonomyCatalog::class),
+        $c->get(MonthInvalidator::class),
     ),
     TransactionSynchronizer::class => fn (ContainerInterface $c) => new TransactionSynchronizer(
         $c->get(KingdomRepositoryInterface::class),
@@ -264,8 +386,11 @@ return [
         $c->get(TokenCipher::class),
         new DateTimeImmutable('now'),
         $c->get(MonthInvalidator::class),
+        $c->get(TransactionCategoryApplier::class),
+        $c->get(TransactionPublicationApplier::class),
+        $c->get(MicroDepositPairReconciler::class),
     ),
-    TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier($_ENV['TELLER_WEBHOOK_SECRET'] ?? ''),
+    TellerWebhookVerifier::class => fn () => new TellerWebhookVerifier(denariusEnv('TELLER_WEBHOOK_SECRET')),
     ProviderWebhookHandler::class => fn (ContainerInterface $c) => new ProviderWebhookHandler(
         $c->get(LedgerProviderRegistry::class),
         $c->get(KingdomRepositoryInterface::class),
@@ -274,20 +399,82 @@ return [
             new DisconnectLedgerNotice($c->get(EnrollmentService::class)),
         ]),
     ),
-    KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
+    PublicationPipelineFactory::class => fn (ContainerInterface $c) => PublicationPipelineFactory::standard(
+        $c->get(TaxonomyCatalog::class),
+    ),
+    KingdomPublicationLineSource::class => fn (ContainerInterface $c) => new KingdomPublicationLineSource(
         $c->get(TransactionRepositoryInterface::class),
         $c->get(AccountRepositoryInterface::class),
-        new MonthStatementBuilder($c->get(StatementPresenterRegistry::class)),
     ),
-    MonthInvalidator::class => fn (RedisKeyValueStore $store) => new MonthInvalidator($store),
+    StatementAbsenceClassifier::class => fn () => new StatementAbsenceClassifier(),
+    KingdomPageQuery::class => fn (ContainerInterface $c) => new KingdomPageQuery(
+        $c->get(KingdomPublicationLineSource::class),
+        $c->get(PublicationPipelineFactory::class)->forPublicRead(),
+        new MonthStatementBuilder(
+            $c->get(StatementPresenterRegistry::class),
+            $c->get(PublicationSettingsValidator::class),
+        ),
+        $c->get(StatementAbsenceClassifier::class),
+        new DateTimeImmutable('now'),
+    ),
+    ManagerKingdomPageQuery::class => fn (ContainerInterface $c) => new ManagerKingdomPageQuery(
+        $c->get(KingdomPublicationLineSource::class),
+        $c->get(PublicationPipelineFactory::class)->forManagerReview(),
+        new MonthStatementBuilder(
+            $c->get(StatementPresenterRegistry::class),
+            $c->get(PublicationSettingsValidator::class),
+        ),
+        new DateTimeImmutable('now'),
+    ),
+    MonthStatementCacheCodec::class => fn () => new MonthStatementCacheCodec(),
+    MonthCacheWriter::class => fn (ContainerInterface $c) => new MonthCacheWriter(
+        $c->get(RedisKeyValueStore::class),
+        $c->get(TaxonomyCatalog::class),
+        new MonthCacheKeys(),
+        $c->get(MonthStatementCacheCodec::class),
+    ),
+    MonthCacheRefreshPublisher::class => fn (ContainerInterface $c) => new MonthCacheRefreshPublisher(
+        $c->get(MessageQueue::class),
+        $c->get(TransactionRepositoryInterface::class),
+    ),
+    MonthInvalidator::class => fn (ContainerInterface $c) => new MonthInvalidator(
+        $c->get(MonthCacheWriter::class),
+        $c->get(MonthCacheRefreshPublisher::class),
+    ),
     MonthReader::class => fn (ContainerInterface $c) => new CachingMonthReader(
         $c->get(KingdomPageQuery::class),
         $c->get(RedisKeyValueStore::class),
+        $c->get(MonthCacheWriter::class),
+        $c->get(MonthStatementCacheCodec::class),
     ),
     StatementPresenterRegistry::class => fn () => StatementPresenterRegistry::standard(),
     VisibilityPolicyRegistry::class => fn () => VisibilityPolicyRegistry::standard(),
     KingdomAccess::class => fn (VisibilityPolicyRegistry $policies) => new KingdomAccess($policies),
-    KingdomSettings::class => fn (KingdomRepositoryInterface $kingdoms) => new KingdomSettings($kingdoms),
+    KingdomSettings::class => fn (ContainerInterface $c) => new KingdomSettings(
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(PublicationSettingsValidator::class),
+        $c->get(MonthInvalidator::class),
+    ),
+    ReviewCategoryValidator::class => fn (ContainerInterface $c) => new ReviewCategoryValidator(
+        $c->get(TaxonomyCatalog::class),
+    ),
+    TaxonomyCategorySearch::class => fn (ContainerInterface $c) => new TaxonomyCategorySearch(
+        $c->get(TaxonomyCatalog::class),
+    ),
+    TransactionReviewQueue::class => fn (ContainerInterface $c) => new TransactionReviewQueue(
+        $c->get(KingdomPublicationLineSource::class),
+        $c->get(TaxonomyCatalog::class),
+        new DateTimeImmutable('now'),
+    ),
+    TransactionReviewService::class => fn (ContainerInterface $c) => new TransactionReviewService(
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
+        $c->get(MonthInvalidator::class),
+        $c->get(ReviewCategoryValidator::class),
+        $c->get(TaxonomyCatalog::class),
+        $c->get(PublicationEmbargoCalculator::class),
+        new DateTimeImmutable('now'),
+    ),
     PrincipalSync::class => fn (PrincipalRepositoryInterface $principals) => new PrincipalSync($principals),
     PostCsrfMiddleware::class => fn () => new PostCsrfMiddleware(new Slim\Psr7\Factory\ResponseFactory()),
     SyncPrincipalMiddleware::class => fn (ContainerInterface $c) => new SyncPrincipalMiddleware(
@@ -298,6 +485,12 @@ return [
         $debug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
         $handlers = [new JsonStderrHandler()];
         $root = dirname(__DIR__);
+        $spoolEnabled = (($_ENV['LOG_SPOOL_ENABLED'] ?? 'true') === 'true');
+        if ($spoolEnabled) {
+            $handlers[] = new Amtgard\Denarius\Utilities\Log\Sqlite\JsonLogSpoolHandler(
+                Amtgard\Denarius\Utilities\Log\Sqlite\LogPathResolver::fromEnv($root),
+            );
+        }
         $logFile = $_ENV['DENARIUS_METHOD_LOG'] ?? ($debug ? $root . '/logs/method-trace.jsonl' : '');
         if ($logFile !== '') {
             $dir = dirname($logFile);
@@ -319,7 +512,7 @@ return [
     },
     StderrMethodLog::class => fn (ContainerInterface $c) => $c->get(MethodLog::class),
     CorrelationMiddleware::class => fn () => new CorrelationMiddleware(),
-    TwigEnvironment::class => function () {
+    TwigEnvironment::class => function (ContainerInterface $c) {
         $root = dirname(__DIR__);
         $twig = new TwigEnvironment(new FilesystemLoader($root . '/templates'), [
             'cache' => __DIR__ . '/cache/twig',
@@ -327,6 +520,8 @@ return [
         ]);
         $twig->addGlobal('appVersion', BuildInfo::version($root));
         $twig->addFunction(new Twig\TwigFunction('csrf_token', static fn (): string => Amtgard\Denarius\Utilities\Http\CsrfToken::issue()));
+        $twig->addExtension(new SiteNavTwigExtension($c->get(SiteNavBuilder::class)));
+
         return $twig;
     },
     TwigHtmlRenderer::class => fn (TwigEnvironment $twig) => new TwigHtmlRenderer($twig),
@@ -334,6 +529,9 @@ return [
         $c->get(TwigHtmlRenderer::class),
         $c->get(SessionAuthStore::class),
         $c->get(AccountNavBuilder::class),
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(KingdomAccess::class),
+        $c->get(OrkKingdomDirectory::class),
         dirname(__DIR__),
     ),
     KingdomPageController::class => fn (ContainerInterface $c) => new KingdomPageController(
@@ -343,18 +541,14 @@ return [
         $c->get(SessionAuthStore::class),
         $c->get(TwigHtmlRenderer::class),
     ),
-    IdpUserDirectory::class => function (ContainerInterface $c) {
-        $psr17 = new \Nyholm\Psr7\Factory\Psr17Factory();
-
-        return new IdpUserDirectory(
-            IdpClientEnvironmentFactory::fromEnvVars(),
-            $c->get(LoggingIdpHttpClient::class),
-            $psr17,
-        );
-    },
     AdminGrantTargetResolver::class => fn (ContainerInterface $c) => new AdminGrantTargetResolver(
         $c->get(IdpUserDirectory::class),
         $c->get(PrincipalRepositoryInterface::class),
+        $c->get(PrincipalSync::class),
+    ),
+    AdminPrincipalSuggester::class => fn (ContainerInterface $c) => new AdminPrincipalSuggester(
+        $c->get(PrincipalRepositoryInterface::class),
+        $c->get(IdpUserDirectory::class),
         $c->get(PrincipalSync::class),
     ),
     AdminGrantedRoleIndex::class => fn (ContainerInterface $c) => new AdminGrantedRoleIndex(
@@ -367,6 +561,8 @@ return [
         $_ENV['ORK_KINGDOMS_CACHE'] ?? null,
         $c->get(KingdomRepositoryInterface::class),
         $c->get(PrincipalRepositoryInterface::class),
+        $c->get(OrkGetKingdomsGateway::class),
+        $c->get(OrkKingdomCacheWriter::class),
     ),
     AdminController::class => fn (ContainerInterface $c) => new AdminController(
         $c->get(SessionAuthStore::class),
@@ -385,7 +581,9 @@ return [
         $c->get(OrkKingdomDirectory::class),
         $c->get(AdminGrantTargetResolver::class),
         $c->get(AdminGrantedRoleIndex::class),
+        $c->get(AdminPrincipalSuggester::class),
     ),
+    ManagerLedgerSyncFeedback::class => fn () => new ManagerLedgerSyncFeedback(),
     ManagerController::class => fn (ContainerInterface $c) => new ManagerController(
         $c->get(SessionAuthStore::class),
         $c->get(PermissionService::class),
@@ -397,12 +595,24 @@ return [
         $c->get(TwigHtmlRenderer::class),
         $c->get(BankConnect::class),
         $c->get(SimpleFinConnectSession::class),
+        $c->get(TransactionReviewQueue::class),
+        $c->get(TransactionReviewService::class),
+        $c->get(TaxonomyCategorySearch::class),
+        $c->get(KingdomPatternService::class),
+        $c->get(KingdomPatternPrefill::class),
+        $c->get(ManagerLedgerSyncFeedback::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(
         $c->get(MessageQueue::class),
         new RefreshJobRegistry([
             new LedgerRefreshJob($c->get(TransactionSynchronizer::class)),
+            new TransactionRecategorizeJob($c->get(TransactionRecategorizer::class)),
+            new MonthCacheRefreshJob(
+                $c->get(KingdomRepositoryInterface::class),
+                $c->get(KingdomPageQuery::class),
+                $c->get(MonthCacheWriter::class),
+            ),
         ]),
     ),
     RedisSessionHandler::class => function () {
@@ -426,4 +636,21 @@ return [
         (require __DIR__ . '/routes.php')($app);
         return $app;
     },
-];
+    DescriptionNormalizer::class => fn () => new DescriptionNormalizer(),
+    TaxonomyCatalog::class => fn () => (new TaxonomyCatalogLoader(
+        dirname(__DIR__),
+        is_string($_ENV['TAXONOMY_DATA_PATH'] ?? null) && trim($_ENV['TAXONOMY_DATA_PATH']) !== ''
+            ? trim($_ENV['TAXONOMY_DATA_PATH'])
+            : 'data/taxonomy',
+    ))->load(),
+    ProviderAmountSignRegistry::class => fn () => new ProviderAmountSignRegistry(
+        [
+            'plaid' => new PlaidProviderAmountSign(),
+            'teller' => new CreditPositiveProviderAmountSign(),
+            'stripe' => new CreditPositiveProviderAmountSign(),
+            'simplefin' => new CreditPositiveProviderAmountSign(),
+        ],
+        new CreditPositiveProviderAmountSign(),
+    ),
+    ],
+);

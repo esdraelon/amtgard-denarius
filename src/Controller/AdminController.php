@@ -17,6 +17,7 @@ use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Amtgard\Denarius\Service\Admin\AdminCommandRegistry;
 use Amtgard\Denarius\Service\Admin\AdminGrantedRoleIndex;
 use Amtgard\Denarius\Service\Admin\AdminGrantTargetResolver;
+use Amtgard\Denarius\Service\Admin\AdminPrincipalSuggester;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Admin\RoleAdmin;
 use Amtgard\IdpClient\Exception\ClientIamException;
@@ -39,6 +40,7 @@ final class AdminController
         private readonly OrkKingdomDirectory $orkKingdoms,
         private readonly AdminGrantTargetResolver $grantTargets,
         private readonly AdminGrantedRoleIndex $grantedRoles,
+        private readonly AdminPrincipalSuggester $principalSuggester,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -56,7 +58,7 @@ final class AdminController
             $permKingdom = trim((string) ($query['perm_kingdom'] ?? ''));
 
             $principalViews = [];
-            foreach ($term === '' ? [] : $this->principals->searchByEmail($term) as $principal) {
+            foreach ($term === '' ? [] : $this->principalSuggester->match($term) as $principal) {
                 $principalViews[] = $this->grantTargets->viewForAdmin($principal);
             }
 
@@ -67,6 +69,7 @@ final class AdminController
                 'perm_kingdom' => $permKingdom,
                 'principals' => $principalViews,
                 'grantedPermissions' => $this->grantedRoles->search($permEmail, $permKingdom),
+                'ork_api_base_url' => $_ENV['ORK_API_BASE_URL'] ?? 'https://ork.amtgard.com',
             ]);
         });
     }
@@ -77,6 +80,38 @@ final class AdminController
             $denied = $this->guardJson($response);
             if ($denied !== null) {
                 return $denied;
+            }
+
+            return JsonBody::write($response, ['kingdoms' => $this->orkKingdoms->list()]);
+        });
+    }
+
+    public function syncKingdoms(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response): ResponseInterface {
+            $denied = $this->guardJson($response);
+            if ($denied !== null) {
+                return $denied;
+            }
+
+            $body = json_decode((string) $request->getBody(), true);
+            if (! is_array($body)) {
+                return JsonBody::write($response, ['error' => 'invalid_json'], 400);
+            }
+
+            if (! CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
+                DenariusLog::warnBranch('csrf_reject', __METHOD__, ['surface' => 'admin_kingdoms_sync']);
+
+                return JsonBody::write($response, ['error' => 'csrf'], 403);
+            }
+
+            $raw = $body['ork_json'] ?? '';
+            if (! is_string($raw) || trim($raw) === '') {
+                return JsonBody::write($response, ['error' => 'missing_ork_json'], 400);
+            }
+
+            if (! $this->orkKingdoms->importOrkResponse($raw)) {
+                return JsonBody::write($response, ['error' => 'parse_failed'], 422);
             }
 
             return JsonBody::write($response, ['kingdoms' => $this->orkKingdoms->list()]);
@@ -97,7 +132,7 @@ final class AdminController
 
             $suggestions = array_map(
                 static fn ($principal) => $principal->view(),
-                $this->principals->searchByEmail($term),
+                $this->principalSuggester->match($term),
             );
 
             return JsonBody::write($response, ['suggestions' => $suggestions]);

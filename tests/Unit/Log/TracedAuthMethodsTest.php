@@ -11,6 +11,12 @@ use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
 use Amtgard\Denarius\Service\Access\AccountNavBuilder;
 use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\Denarius\Service\Access\PrincipalSync;
+use Amtgard\Denarius\Service\Access\SiteNavBuilder;
+use Amtgard\IdpClient\OAuth\TokenSet;
+use Amtgard\IdpClient\Resource\AuthenticatedSession;
+use Amtgard\IdpClient\Resource\OrkProfile;
+use Amtgard\IdpClient\Resource\UserProfile;
+use Amtgard\IdpClient\Session\SessionAuthStore;
 use Amtgard\Denarius\Tests\Support\MethodLogAssert;
 use Amtgard\Denarius\Tests\Support\TracedMethodCatalog;
 use Amtgard\Denarius\Tests\Unit\ApplicationTest;
@@ -40,7 +46,7 @@ final class TracedAuthMethodsTest extends AmtgardTestCase
 
     public function testEveryAuthAccessTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         $adminOrn = ClaimOrn::admin();
@@ -119,9 +125,16 @@ final class TracedAuthMethodsTest extends AmtgardTestCase
 
         $kingdoms = new MemoryKingdoms();
         $kingdoms->save(KingdomRecord::builder()->orkKingdomId(6)->name('Iron Mountains')->slug('iron-mountains')->build());
-        $nav = new AccountNavBuilder($permissions, $kingdoms);
+        $nav = new AccountNavBuilder($permissions, \Amtgard\Denarius\Tests\Unit\Strategies::managedKingdomResolver($kingdoms, new \Amtgard\Denarius\Tests\Unit\MemoryPrincipals()));
         $composed = $nav->actionsFor('9');
         $this->assertCount(2, $composed);
+
+        $auth = new SessionAuthStore('test_session');
+        $_SESSION['test_session'] = (new AuthenticatedSession(
+            new TokenSet('a'),
+            new UserProfile('9', 'person@example.com', 'jwt', OrkProfile::fromArray(['kingdom_id' => 4])),
+        ))->toSessionArray();
+        (new SiteNavBuilder($auth, $nav))->links();
 
         $principals = new MemoryPrincipals();
         $sync = new PrincipalSync($principals);
@@ -146,7 +159,7 @@ final class TracedAuthMethodsTest extends AmtgardTestCase
         $access->decide(Visibility::KingdomOnly, new Viewer('9', 99), 4);
 
         $scope = $this->methodsInScope();
-        $this->assertCount(44, $scope);
+        $this->assertCount(46, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

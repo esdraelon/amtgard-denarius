@@ -15,5 +15,5 @@ interface StatementPresenter
      * @param list<LedgerLine> $lines
      * @return list<LedgerLine|\Amtgard\Denarius\Domain\Statement\Line\CategoryTotal>
      */
-    public function present(array $lines): array;
+    public function present(array $lines, int $summarizedCategoryMinLines = 2): array;
 }

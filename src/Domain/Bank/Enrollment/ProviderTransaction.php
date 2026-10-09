@@ -12,6 +12,7 @@ final readonly class ProviderTransaction
         public string $id,
         public string $postedOn,
         public string $amount,
+        /** Provider hint (Plaid/Teller raw category); not a taxonomy slug. */
         public string $category,
         public string $description,
         public string $counterparty,

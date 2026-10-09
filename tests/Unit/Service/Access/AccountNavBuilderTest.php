@@ -6,6 +6,7 @@ namespace Amtgard\Denarius\Tests\Unit\Service\Access;
 
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Service\Access\AccountNavBuilder;
+use Amtgard\Denarius\Tests\Unit\Strategies;
 use Amtgard\Denarius\Tests\Unit\ApplicationTest;
 use Amtgard\Denarius\Tests\Unit\ArrayStore;
 use Amtgard\Denarius\Tests\Unit\FakePolicies;
@@ -36,7 +37,7 @@ final class AccountNavBuilderTest extends AmtgardTestCase
             new DenariusAuthorizer(),
             BootstrapAdmins::fromEnv(null),
         );
-        $nav = new AccountNavBuilder($permissions, $kingdoms);
+        $nav = new AccountNavBuilder($permissions, Strategies::managedKingdomResolver($kingdoms, new \Amtgard\Denarius\Tests\Unit\MemoryPrincipals()));
 
         $actions = $nav->actionsFor('user-1');
         $this->assertCount(3, $actions);

@@ -41,6 +41,24 @@ class TransactionEntity extends RepositoryEntity
     #[Field('category')]
     private ?string $category = null;
 
+    #[Field('provider_category')]
+    private ?string $providerCategory = null;
+
+    #[Field('category_source')]
+    private ?string $categorySource = null;
+
+    #[Field('category_rule_id')]
+    private ?string $categoryRuleId = null;
+
+    #[Field('category_confidence')]
+    private ?int $categoryConfidence = null;
+
+    #[Field('category_suggested')]
+    private ?string $categorySuggested = null;
+
+    #[Field('taxonomy_version')]
+    private ?string $taxonomyVersion = null;
+
     #[Field('description')]
     private ?string $description = null;
 
@@ -49,4 +67,13 @@ class TransactionEntity extends RepositoryEntity
 
     #[Field('status')]
     private ?string $status = null;
+
+    #[Field('published_at')]
+    private ?string $publishedAt = null;
+
+    #[Field('publishable_after')]
+    private ?string $publishableAfter = null;
+
+    #[Field('publication_flags')]
+    private ?string $publicationFlags = null;
 }

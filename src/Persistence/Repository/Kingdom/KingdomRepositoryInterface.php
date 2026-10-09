@@ -10,6 +10,8 @@ interface KingdomRepositoryInterface
 {
     public function findBySlug(string $slug): ?KingdomRecord;
 
+    public function findById(int $kingdomId): ?KingdomRecord;
+
     public function findByOrkId(int $orkKingdomId): ?KingdomRecord;
 
     public function findByEnrollmentId(string $enrollmentId): ?KingdomRecord;

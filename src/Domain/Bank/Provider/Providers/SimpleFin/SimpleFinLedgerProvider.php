@@ -173,7 +173,7 @@ final class SimpleFinLedgerProvider implements LedgerProvider
                 $id,
                 $postedOn,
                 $this->amount($row['amount'] ?? '0'),
-                'general',
+                '',
                 $this->text($row['description'] ?? null),
                 '',
                 ($row['pending'] ?? false) === true ? 'pending' : 'posted',

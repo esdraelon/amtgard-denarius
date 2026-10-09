@@ -22,13 +22,13 @@ final class TracedBankMethodsTest extends AmtgardTestCase
 
     public function testEveryBankTraceSiteIsAsserted(): void
     {
-        MethodLogAssert::reset();
+        MethodLogAssert::resetTraces();
         class_exists(ApplicationTest::class);
 
         BankDomainArrange::exerciseAll();
 
         $scope = $this->methodsInScope();
-        $this->assertCount(184, $scope);
+        $this->assertCount(190, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

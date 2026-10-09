@@ -1,0 +1,31 @@
+{
+    "kingdoms": [
+        {"id": 1, "name": "The Kingdom of the Wetlands"},
+        {"id": 3, "name": "The Empire of the Iron Mountains"},
+        {"id": 4, "name": "The Kingdom of Goldenvale"},
+        {"id": 5, "name": "The Kingdom of Neverwinter"},
+        {"id": 6, "name": "The Kingdom of the Emerald Hills"},
+        {"id": 7, "name": "The Kingdom of Burning Lands"},
+        {"id": 8, "name": "The Freeholds of Amtgard"},
+        {"id": 10, "name": "The Kingdom of the Rising Winds"},
+        {"id": 11, "name": "The Kingdom of the Golden Plains"},
+        {"id": 12, "name": "The Kingdom of Dragonspine"},
+        {"id": 14, "name": "The Celestial Kingdom"},
+        {"id": 16, "name": "The Kingdom of Blackspire"},
+        {"id": 17, "name": "The Kingdom of Crystal Groves"},
+        {"id": 18, "name": "Kingdom of the Desert Winds"},
+        {"id": 19, "name": "The Kingdom of Tal Dagore"},
+        {"id": 20, "name": "The Kingdom of Northern Lights"},
+        {"id": 21, "name": "The Kingdom of Westmarch"},
+        {"id": 22, "name": "The Empire of Rivermoor"},
+        {"id": 24, "name": "The Kingdom of Winters Edge"},
+        {"id": 25, "name": "The Kingdom of Viridian Outlands"},
+        {"id": 27, "name": "The Kingdom of Polaris"},
+        {"id": 31, "name": "The Kingdom of the Nine Blades"},
+        {"id": 34, "name": "The Golden City"},
+        {"id": 36, "name": "The Kingdom of Northreach"},
+        {"id": 38, "name": "Kingdom of 13 Roads"},
+        {"id": 39, "name": "The Principality of the Crimson Sands"},
+        {"id": 40, "name": "The Principality of The Painted Skies"}
+    ]
+}

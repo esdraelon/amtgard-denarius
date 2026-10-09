@@ -91,12 +91,23 @@ final class RecordingMethodLog implements MethodLog
         return $this->open;
     }
 
-    public function reset(): void
+    public function resetBranches(): void
+    {
+        $this->branches = [];
+        $this->open = [];
+    }
+
+    public function resetTraces(): void
     {
         $this->entered = [];
         $this->left = [];
         $this->failed = [];
-        $this->open = [];
-        $this->branches = [];
+        $this->resetBranches();
+    }
+
+    /** Clears decision-branch records only; method traces are kept for catalog gates. */
+    public function reset(): void
+    {
+        $this->resetBranches();
     }
 }

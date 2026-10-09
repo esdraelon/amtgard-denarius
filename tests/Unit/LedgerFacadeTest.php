@@ -18,12 +18,15 @@ use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Tests\Support\MethodLogAssert;
+use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
 use Amtgard\PHPUnit\AmtgardTestCase;
 
 final class LedgerFacadeTest extends AmtgardTestCase
 {
     public function testANonTellerProviderDrivesEnrollmentAndSync(): void
     {
+        MethodLogAssert::reset();
         $kingdoms = new MemoryKingdoms();
         $secrets = new MemorySecrets();
         $accounts = new MemoryAccounts();
@@ -84,14 +87,14 @@ final class LedgerFacadeTest extends AmtgardTestCase
             ->name('Wetlands')
             ->slug('wetlands')
             ->build());
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($provider), $cipher, $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $accounts, Strategies::providers($provider), $cipher, $queue, Strategies::months(), Strategies::bankReset());
         $connected = $enrollment->connect($kingdom, ['opaque' => true]);
         $this->assertSame('ext-1', $connected->getEnrollmentId());
         $this->assertSame('Other Bank', $connected->getInstitutionName());
         $this->assertSame('other-token', $cipher->decrypt((string) $secrets->findCiphertext((int) $connected->getId())));
         $this->assertSame('9999', $accounts->forKingdom((int) $connected->getId())[0]->getLastFour());
 
-        $sync = new TransactionSynchronizer(
+        $sync = Strategies::synchronizer(
             $kingdoms,
             $accounts,
             $secrets,
@@ -102,7 +105,15 @@ final class LedgerFacadeTest extends AmtgardTestCase
             Strategies::months(),
         );
         $this->assertTrue($sync->sync(8));
-        $this->assertCount(1, $transactions->forKingdom((int) $connected->getId()));
+        $stored = $transactions->forKingdom((int) $connected->getId());
+        $this->assertCount(1, $stored);
+        $this->assertSame('uncategorized', $stored[0]->getCategory());
+        $this->assertSame('food', $stored[0]->getProviderCategory());
+        MethodLogAssert::assertBranchLogged(
+            BranchLogLevel::Debug,
+            'transaction_provider_hint_recorded',
+            TransactionSynchronizer::class . '::record',
+        );
 
         $handler = new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment));
         $this->assertSame('X-Bank-Signature', $handler->signatureHeader('other'));
@@ -124,7 +135,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
 
         $rows = $provider->transactions('token', 'acc', null);
         $this->assertCount(2, $rows);
-        $this->assertSame('general', $rows[0]->category);
+        $this->assertSame('', $rows[0]->category);
         $this->assertSame('', $rows[0]->counterparty);
         $this->assertSame('', $rows[1]->counterparty);
 
@@ -132,7 +143,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
         $secrets = new MemorySecrets();
         $stored = new MemoryAccounts();
         $queue = new MemoryRefresh();
-        $enrollment = new EnrollmentService($kingdoms, $secrets, $stored, Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months());
+        $enrollment = new EnrollmentService($kingdoms, $secrets, $stored, Strategies::providers($provider), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset());
         $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(3)->name('Celestial')->slug('celestial')->build());
         $connected = $enrollment->connect($kingdom, ['accessToken' => 'token', 'id' => 'enr_sparse']);
         $handler = new ProviderWebhookHandler(Strategies::providers($provider), $kingdoms, Strategies::events($queue, $enrollment));

@@ -1,0 +1,33 @@
+{# Mode A: columns (headers) + rows (list of cell value lists) #}
+{# Mode B: columns (headers) + fields (property names) + rows (objects/arrays) #}
+{% set row_list = rows|default([]) %}
+{% if row_list is empty %}
+    <p class="text-body-secondary mb-0">{{ empty_message|default('No rows to display.') }}</p>
+{% else %}
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered table-striped align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    {% for column in columns %}
+                        <th scope="col">{{ column }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in row_list %}
+                    <tr>
+                        {% if fields is defined %}
+                            {% for field in fields %}
+                                <td>{{ attribute(row, field) }}</td>
+                            {% endfor %}
+                        {% else %}
+                            {% for cell in row %}
+                                <td>{{ cell }}</td>
+                            {% endfor %}
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
