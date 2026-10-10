@@ -58,7 +58,7 @@ final class Orm
     public static function repository(string $class): object
     {
         return DenariusLog::trace(__METHOD__, static function () use ($class): object {
-            self::configure(true);
+            self::configure(false);
             $repository = EntityManager::getManager()->getRepository($class);
             if (!$repository instanceof $class) {
                 throw new \RuntimeException($class . ' was not created.');

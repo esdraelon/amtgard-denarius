@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
@@ -26,7 +27,7 @@ final class PublicationPublicReadTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')
@@ -37,7 +38,7 @@ final class PublicationPublicReadTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-03')
             ->amountCents(-200)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('fuel')
             ->counterparty('Station')
             ->status('posted')

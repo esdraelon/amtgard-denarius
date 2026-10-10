@@ -14,6 +14,7 @@ services:
       - .env
     environment:
       - ENVIRONMENT=DEV
+      - XDEBUG_MODE=off
     networks:
       - amtgard-denarius-net
       - amtgard-denarius-shared

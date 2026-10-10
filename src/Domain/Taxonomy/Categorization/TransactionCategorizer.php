@@ -8,6 +8,7 @@ use Amtgard\Denarius\Domain\Taxonomy\CategoryConfidence;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer;
 use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
@@ -18,6 +19,7 @@ final class TransactionCategorizer
 {
     public function __construct(
         private readonly TaxonomyCatalog $catalog,
+        private readonly CategoryCatalog $categories,
         private readonly DescriptionNormalizer $normalizer,
         private readonly ProviderAmountSignRegistry $amountSigns,
         private readonly CategoryMatcherChain $chain,
@@ -38,7 +40,7 @@ final class TransactionCategorizer
             $chain = $this->chain->resolve($input);
             $decision = $this->decisionFromChain($chain);
             DenariusLog::debugBranch('transaction_categorized', self::class . '::decide', [
-                'category' => $decision->category,
+                'category_id' => $decision->categoryId,
                 'category_source' => $decision->source->value,
                 'category_rule_id' => $decision->ruleId,
                 'category_confidence' => $decision->confidence,
@@ -68,11 +70,10 @@ final class TransactionCategorizer
                 ->kingdomId($kingdomId ?? $incoming->getKingdomId());
             if ($existing !== null) {
                 $builder
-                    ->existingCategory($existing->getCategory())
+                    ->existingCategoryId($existing->getCategoryId())
                     ->existingSource($existing->getCategorySource())
                     ->existingConfidence($existing->getCategoryConfidence())
                     ->existingRuleId($existing->getCategoryRuleId())
-                    ->existingSuggested($existing->getCategorySuggested())
                     ->existingTaxonomyVersion($existing->getTaxonomyVersion());
             }
 
@@ -97,7 +98,7 @@ final class TransactionCategorizer
             $version = $this->catalog->taxonomyVersion();
             if ($match->confidence >= CategoryConfidence::AUTO_ACCEPT) {
                 return new CategoryDecision(
-                    $match->slug,
+                    $this->categories->currentIdForLineageKey($this->catalog->resolveSlug($match->slug)),
                     $match->source,
                     $match->ruleId,
                     $match->confidence,
@@ -113,7 +114,7 @@ final class TransactionCategorizer
             $confidence = $suggestion?->confidence ?? 0;
 
             return new CategoryDecision(
-                'uncategorized',
+                $this->categories->uncategorizedId(),
                 $source,
                 $ruleId,
                 $confidence,

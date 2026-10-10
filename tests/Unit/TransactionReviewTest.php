@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection;
@@ -37,7 +38,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->categorySource(CategorySource::SharedRule->value)
             ->categoryConfidence(85)
             ->description('supplies')
@@ -69,7 +70,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-200)
-            ->category('expense.site_rental')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental'))
             ->categorySource(CategorySource::SharedRule->value)
             ->categoryConfidence(72)
             ->publishableAfter('2026-09-01T00:00:00+00:00')
@@ -89,7 +90,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->publishableAfter('2026-09-01T00:00:00+00:00')
             ->build());
         MethodLogAssert::reset();
@@ -113,7 +114,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(25)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->publicationFlags($flags)
             ->publishableAfter('2026-09-01T00:00:00+00:00')
             ->build());
@@ -133,7 +134,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->build());
         $warmKey = sprintf(
             'denarius:month:%d:less_redacted:2026-09:%s',
@@ -142,9 +143,9 @@ final class TransactionReviewTest extends AmtgardTestCase
         );
         $cache->setPersistent($warmKey, '{}');
         MethodLogAssert::reset();
-        $reviews->update($kingdom['record'], 'edit', 'expense.feast_groceries', false, false);
+        $reviews->update($kingdom['record'], 'edit', CategoryCatalogFixture::id('expense.feast_groceries'), false);
         $stored = $kingdom['transactions']->findByTellerTransactionId('edit');
-        $this->assertSame('expense.feast_groceries', $stored?->getCategory());
+        $this->assertSame(CategoryCatalogFixture::id('expense.feast_groceries'), $stored?->getCategoryId());
         $this->assertSame(CategorySource::Manager->value, $stored?->getCategorySource());
         $this->assertSame(100, $stored?->getCategoryConfidence());
         $this->assertNull($cache->get($warmKey));
@@ -158,14 +159,14 @@ final class TransactionReviewTest extends AmtgardTestCase
         $this->seedReviewRow($kingdom, 'bad');
         MethodLogAssert::reset();
         try {
-            $reviews->update($kingdom['record'], 'bad', 'not.a.real.slug', false, false);
+            $reviews->update($kingdom['record'], 'bad', 999_999, false);
             $this->fail('Expected unknown slug rejection.');
         } catch (\InvalidArgumentException) {
         }
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_rejected_category', ReviewCategoryValidator::class . '::assertAssignable');
         MethodLogAssert::reset();
         try {
-            $reviews->update($kingdom['record'], 'bad', 'system.bank_verification', false, false);
+            $reviews->update($kingdom['record'], 'bad', CategoryCatalogFixture::id('system.bank_verification'), false);
             $this->fail('Expected system slug rejection.');
         } catch (\InvalidArgumentException) {
             $this->addToAssertionCount(1);
@@ -182,37 +183,16 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(500)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->build());
         MethodLogAssert::reset();
         try {
-            $reviews->update($kingdom['record'], 'credit', 'expense.feast_groceries', false, false);
+            $reviews->update($kingdom['record'], 'credit', CategoryCatalogFixture::id('expense.feast_groceries'), false);
             $this->fail('Expected flow mismatch.');
         } catch (\InvalidArgumentException) {
             $this->addToAssertionCount(1);
         }
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_rejected_category', ReviewCategoryValidator::class . '::assertAssignable');
-    }
-
-    public function testBulkCounterpartyAppliesCategoryWithinMonth(): void
-    {
-        $kingdom = $this->kingdomWithAccount();
-        $reviews = Strategies::reviewService($kingdom['transactions'], $kingdom['accounts']);
-        foreach (['a', 'b', 'c'] as $id) {
-            $kingdom['transactions']->upsert(TransactionRecord::builder()
-                ->kingdomId((int) $kingdom['record']->getId())
-                ->tellerTransactionId($id)
-                ->tellerAccountId('acc')
-                ->postedOn($id === 'c' ? '2026-08-02' : '2026-09-03')
-                ->amountCents(-100)
-                ->counterparty('Same Shop')
-                ->category('uncategorized')
-                ->build());
-        }
-        $reviews->update($kingdom['record'], 'a', 'expense.feast_groceries', false, true);
-        $this->assertSame('expense.feast_groceries', $kingdom['transactions']->findByTellerTransactionId('a')?->getCategory());
-        $this->assertSame('expense.feast_groceries', $kingdom['transactions']->findByTellerTransactionId('b')?->getCategory());
-        $this->assertSame('uncategorized', $kingdom['transactions']->findByTellerTransactionId('c')?->getCategory());
     }
 
     public function testWithholdClearsPublishedAt(): void
@@ -230,7 +210,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')
@@ -260,7 +240,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->publishableAfter('2026-09-10T00:00:00+00:00')
             ->build());
 
@@ -290,7 +270,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-01')
             ->amountCents(-50)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->publishableAfter('2026-09-05T00:00:00+00:00')
             ->build());
         $transactions->upsert(TransactionRecord::builder()
@@ -299,7 +279,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-04')
             ->amountCents(-60)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->publishableAfter('2026-09-10T00:00:00+00:00')
             ->build());
         $transactions->upsert(TransactionRecord::builder()
@@ -308,7 +288,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-08-20')
             ->amountCents(-70)
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->publishedAt('2026-08-21T00:00:00+00:00')
             ->build());
 
@@ -316,7 +296,7 @@ final class TransactionReviewTest extends AmtgardTestCase
         $queue = Strategies::reviewQueue($transactions, $accounts, $now);
         $september = $queue->rowsForManage($kingdom, new MonthWindow(2026, 9));
         $this->assertSame(['embargo', 'pending'], array_column($september, 'tellerTransactionId'));
-        $this->assertSame(['embargoed', 'pending'], array_column($september, 'status'));
+        $this->assertSame(['embargoed', 'needs_category'], array_column($september, 'status'));
         $august = $queue->rowsForManage($kingdom, new MonthWindow(2026, 8));
         $this->assertSame(['published'], array_column($august, 'status'));
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_queue_loaded', TransactionReviewQueue::class . '::rowsForManage');
@@ -335,6 +315,29 @@ final class TransactionReviewTest extends AmtgardTestCase
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'transaction_review_month_current', TransactionReviewQueue::class . '::latestReviewMonth');
     }
 
+    public function testCategorizedUnpublishedRowShowsReadyToPublishStatus(): void
+    {
+        $kingdom = $this->kingdomWithAccount();
+        $transactions = $kingdom['transactions'];
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId((int) $kingdom['record']->getId())
+            ->tellerTransactionId('ready')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-10-02')
+            ->amountCents(-100)
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
+            ->categorySource(CategorySource::Manager->value)
+            ->publishableAfter('2026-09-01T00:00:00+00:00')
+            ->build());
+
+        $rows = Strategies::reviewQueue($transactions, $kingdom['accounts'], new \DateTimeImmutable('2026-10-05'))
+            ->rowsForManage($kingdom['record'], new MonthWindow(2026, 10));
+        $byId = array_column($rows, null, 'tellerTransactionId');
+
+        $this->assertSame('pending', $byId['ready']['status']);
+        $this->assertStringContainsString('Feast', $byId['ready']['storedCategoryDisplay']);
+    }
+
     public function testUncategorizedFilterSortsLeastConfidentFirst(): void
     {
         $kingdom = $this->kingdomWithAccount();
@@ -345,7 +348,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-04')
             ->amountCents(-10)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->categoryConfidence(10)
             ->build());
         $transactions->upsert(TransactionRecord::builder()
@@ -354,7 +357,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-01')
             ->amountCents(-20)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->categoryConfidence(55)
             ->build());
         $transactions->upsert(TransactionRecord::builder()
@@ -363,7 +366,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-30)
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->build());
 
         $rows = Strategies::reviewQueue($transactions, $kingdom['accounts'])->rowsForManage($kingdom['record'], new MonthWindow(2026, 9), true);
@@ -383,7 +386,7 @@ final class TransactionReviewTest extends AmtgardTestCase
                 ->tellerAccountId('acc')
                 ->postedOn($posted)
                 ->amountCents(-100)
-                ->category($category)
+                ->categoryId(CategoryCatalogFixture::id($category))
                 ->publishableAfter($after)
                 ->publishedAt($publishedAt)
                 ->build());
@@ -477,7 +480,7 @@ final class TransactionReviewTest extends AmtgardTestCase
         $this->seedReviewRow($kingdom, 'row');
         MethodLogAssert::reset();
         try {
-            $reviews->update($kingdom['record'], 'row', 'uncategorized', true, false);
+            $reviews->update($kingdom['record'], 'row', CategoryCatalogFixture::id('uncategorized'), true);
             $this->fail('Expected publish rejection.');
         } catch (\InvalidArgumentException) {
             $this->addToAssertionCount(1);
@@ -511,7 +514,7 @@ final class TransactionReviewTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->build());
     }
 }

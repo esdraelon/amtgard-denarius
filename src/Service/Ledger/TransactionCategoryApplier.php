@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service\Ledger;
 
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
+use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\CategoryDecision;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
@@ -50,6 +51,9 @@ final class TransactionCategoryApplier
             if ($existing === null) {
                 return false;
             }
+            if (CategorySource::fromStored($existing->getCategorySource()) === CategorySource::Manager) {
+                return true;
+            }
 
             return $incoming->getDescription() === $existing->getDescription();
         });
@@ -59,11 +63,10 @@ final class TransactionCategoryApplier
     {
         return DenariusLog::trace(__METHOD__, function () use ($incoming, $existing): TransactionRecord {
             return TransactionRecordRebuilder::from($incoming)
-                ->category($existing->getCategory())
+                ->categoryId($existing->getCategoryId())
                 ->categorySource($existing->getCategorySource())
                 ->categoryRuleId($existing->getCategoryRuleId())
                 ->categoryConfidence($existing->getCategoryConfidence())
-                ->categorySuggested($existing->getCategorySuggested())
                 ->taxonomyVersion($existing->getTaxonomyVersion())
                 ->build();
         });
@@ -73,11 +76,10 @@ final class TransactionCategoryApplier
     {
         return DenariusLog::trace(__METHOD__, function () use ($incoming, $decision): TransactionRecord {
             return TransactionRecordRebuilder::from($incoming)
-                ->category($decision->category)
+                ->categoryId($decision->categoryId)
                 ->categorySource($decision->source->value)
                 ->categoryRuleId($decision->ruleId)
                 ->categoryConfidence($decision->confidence)
-                ->categorySuggested($decision->suggestedSlug)
                 ->taxonomyVersion($decision->taxonomyVersion)
                 ->build();
         });

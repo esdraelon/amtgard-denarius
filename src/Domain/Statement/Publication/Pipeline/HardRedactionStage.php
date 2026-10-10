@@ -30,6 +30,7 @@ final class HardRedactionStage implements PublicationStage
                     ->tellerTransactionId($line->getTellerTransactionId())
                     ->postedOn($line->getPostedOn())
                     ->amountCents(0)
+                    ->categoryId($line->getCategoryId())
                     ->category($line->getCategory())
                     ->categoryFlow($line->getCategoryFlow())
                     ->description(PublicationHardRedactCopy::LINE_DESCRIPTION)

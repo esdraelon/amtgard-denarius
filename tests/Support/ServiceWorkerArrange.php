@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Support;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\Line\CategoryTotal;
 use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthStatement;
@@ -189,7 +190,7 @@ final class ServiceWorkerArrange
                 ->tellerAccountId('acc_review')
                 ->postedOn('2026-09-02')
                 ->amountCents(-100)
-                ->category('expense.feast_groceries')
+                ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
                 ->categorySource('shared_rule')
                 ->categoryConfidence(85)
                 ->publishableAfter('2026-09-01T00:00:00+00:00')
@@ -197,14 +198,39 @@ final class ServiceWorkerArrange
             $reviews = Strategies::reviewService($transactions, $accounts, Strategies::months($cache), new \DateTimeImmutable('2026-10-01'));
             $reviews->publish($reviewKingdom, 'review-tx');
             $reviews->withhold($reviewKingdom, 'review-tx');
-            $reviews->update($reviewKingdom, 'review-tx', 'expense.site_rental', false, false);
+            $reviews->update($reviewKingdom, 'review-tx', \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental'), false);
+            $reviews->updateFromReviewBody($reviewKingdom, [
+                'teller_transaction_id' => 'review-tx',
+                'category' => '',
+                'category_display' => 'Expense: Site rental',
+            ]);
+            $traceAssigner = Strategies::categoryAssigner();
+            $traceKingdomId = (int) $reviewKingdom->getId();
+            $traceCategoryId = $traceAssigner->resolveForReview($reviewKingdom, [
+                'category_id' => '',
+                'category_display' => 'Expense: Trace lineage alloc ' . microtime(true),
+            ], -100);
+            $traceAssigner->isKingdomScoped($traceCategoryId, $traceKingdomId);
+            $traceAssigner->isUncategorized(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'));
+            $siteRentalId = \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental');
+            $traceAssigner->displayFor($siteRentalId, \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
+            $traceAssigner->flowFor($siteRentalId, \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
+            $traceAssigner->labelFor($siteRentalId);
+            $traceAssigner->lineageKeyFor($siteRentalId);
+            $traceAssigner->permitsFlow($siteRentalId, \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
+            $traceAssigner->resolvedLabel($siteRentalId);
+            $traceAssigner->anchorAmountCents(['anchor_amount_cents' => '-500']);
+            $traceAssigner->resolveForPattern($reviewKingdom, [
+                'category_id' => (string) $siteRentalId,
+                'category_display' => 'Expense: Site rental',
+            ]);
             $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()
                 ->kingdomId((int) $reviewKingdom->getId())
                 ->tellerTransactionId('hard-review')
                 ->tellerAccountId('acc_review')
                 ->postedOn('2026-09-03')
                 ->amountCents(25)
-                ->category('uncategorized')
+                ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
                 ->publicationFlags('{"hard":true,"pattern_ids":["ingest.test_hard"]}')
                 ->publishableAfter('2026-09-01T00:00:00+00:00')
                 ->build());
@@ -215,6 +241,7 @@ final class ServiceWorkerArrange
                 new \Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection('hard-review', false, false, true),
             );
             $reviewQueue = Strategies::reviewQueue($transactions, $accounts, new \DateTimeImmutable('2026-10-01'));
+            $reviewQueue->latestReviewMonth($reviewKingdom);
             $reviewQueue->rowsForManage($reviewKingdom, $reviewQueue->reviewMonth($reviewKingdom, ''), true);
             Strategies::categorySearch()->search('site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
         }
@@ -290,7 +317,7 @@ final class ServiceWorkerArrange
                 return new MonthStatement(
                     DisplayMode::LessRedacted,
                     $month,
-                    [LedgerLine::builder()->postedOn('2026-09-02')->amountCents(250)->category('office')->description('paper')->counterparty('Shop')->build()],
+                    [LedgerLine::builder()->postedOn('2026-09-02')->amountCents(250)->category('Office')->description('paper')->counterparty('Shop')->build()],
                 );
             }
         };
@@ -344,13 +371,20 @@ final class ServiceWorkerArrange
         $patternRules = new \Amtgard\Denarius\Tests\Support\MemoryKingdomCategoryRules();
         $patterns = \Amtgard\Denarius\Tests\Unit\Strategies::kingdomPatternService($kingdoms, $transactions, $patternRules);
         $patterns->listViews($saved);
-        $patterns->saveNew($saved, [
-            'category' => 'expense.storage',
+        $patterns->enrichFormPrefill($saved, [
+            'category_id' => \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'),
+        ]);
+        $patternDraftBody = [
+            'category_id' => (string) \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'),
+            'category_display' => 'Expense: Storage',
             'match_type' => 'token',
             'token' => 'PATTERN TOKEN',
             'fields' => ['description'],
             'flows' => ['expense'],
-        ]);
+        ];
+        $patterns->draftKeywordRule($saved, $patternDraftBody, 'draft.trace');
+        $patterns->draftKeywordRuleForPreview($saved, $patternDraftBody, 'draft.preview.trace');
+        $patterns->saveNew($saved, $patternDraftBody);
         $stored = $patternRules->forKingdom((int) $saved->getId());
         if ($stored !== []) {
             $ruleId = (int) $stored[0]->getId();
@@ -370,6 +404,56 @@ final class ServiceWorkerArrange
             ]);
             $patterns->delete($saved, $ruleId);
         }
+        $patternRules->save(\Amtgard\Denarius\Persistence\Record\KingdomCategoryRuleRecord::builder()
+            ->kingdomId((int) $saved->getId())
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
+            ->matchType('token')
+            ->token('COSTCO')
+            ->fields(['description', 'counterparty'])
+            ->flows([\Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense])
+            ->confidence(100)
+            ->build());
+        $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()
+            ->kingdomId((int) $saved->getId())
+            ->tellerTransactionId('auto-review-trace')
+            ->tellerAccountId('acc_1')
+            ->postedOn('2026-09-04')
+            ->amountCents(-2500)
+            ->description('COSTCO WHOLESALE')
+            ->counterparty('COSTCO')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+            ->build());
+        $automaticReview = \Amtgard\Denarius\Tests\Unit\Strategies::patternAutomaticReview(
+            $kingdoms,
+            $transactions,
+            $accounts,
+            $patternRules,
+        );
+        $automaticReview->candidatesForMonth($saved, '2026-09');
+        try {
+            $automaticReview->applySelected($saved, '2026-09', []);
+        } catch (\InvalidArgumentException) {
+        }
+        $wizardRules = new \Amtgard\Denarius\Tests\Support\MemoryKingdomCategoryRules();
+        $wizard = \Amtgard\Denarius\Tests\Unit\Strategies::patternWizard($kingdoms, $transactions, $accounts, $wizardRules);
+        $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()
+            ->kingdomId((int) $saved->getId())
+            ->tellerTransactionId('wizard-trace')
+            ->tellerAccountId('acc_1')
+            ->postedOn('2026-09-05')
+            ->amountCents(-100)
+            ->description('WIZARD TRACE VENDOR')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+            ->build());
+        $wizardBody = [
+            'category' => 'expense.storage',
+            'match_type' => 'token',
+            'token' => 'WIZARD',
+            'fields' => ['description'],
+            'flows' => ['expense'],
+        ];
+        $wizard->previewMatches($saved, $wizardBody);
+        $wizard->complete($saved, $wizardBody, ['wizard-trace']);
         (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle(['orkKingdomId' => 4]);
         (new \Amtgard\Denarius\Worker\Job\Impl\TransactionRecategorizeJob($recategorizer))->handle([]);
         (new \Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver(Strategies::providers($teller)))->forKingdom($saved);
@@ -483,5 +567,10 @@ final class ServiceWorkerArrange
         $pdo = new \PDO('sqlite::memory:');
         $pdo->exec('CREATE TABLE transactions (kingdom_id INTEGER); CREATE TABLE published_accounts (kingdom_id INTEGER); CREATE TABLE enrollment_secrets (kingdom_id INTEGER);');
         (new \Amtgard\Denarius\Service\Enrollment\BankConnectionReset($pdo))->clearKingdom(4);
+
+        $mariadb = PersistenceStoreArrange::tryPdo();
+        if ($mariadb !== null && $mariadb->query("SHOW TABLES LIKE 'categories'")->fetchColumn() === 'categories') {
+            new \Amtgard\Denarius\Service\Taxonomy\DbCategoryCatalog($mariadb);
+        }
     }
 }

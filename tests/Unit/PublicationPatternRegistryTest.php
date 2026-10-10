@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\Ingest\PublicationHardPatternIds;
@@ -35,7 +36,7 @@ final class PublicationPatternRegistryTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-500)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('ADP Payroll deposit')
             ->counterparty('ADP')
             ->publicationFlags($hardFlags)

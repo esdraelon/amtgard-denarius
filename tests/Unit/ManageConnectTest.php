@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
@@ -103,16 +104,22 @@ final class ManageConnectTest extends AmtgardTestCase
             new SimpleFinConnectSession(),
             Strategies::reviewQueue($transactions, $accounts),
             Strategies::reviewService($transactions, $accounts),
-            Strategies::categorySearch(),
+            Strategies::kingdomScopedCategorySearch(),
             Strategies::kingdomPatternService($kingdoms, $transactions),
+            Strategies::patternWizard($kingdoms, $transactions, $accounts),
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
+            Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
         );
     }
 
     public function testAddBankMountsProvidersInOrderThenStops(): void
     {
-        $shown = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
+        $shown = $this->body($this->manager->show(
+            $this->request('GET', '/manage/golden-plains')->withQueryParams(['tab' => 'settings']),
+            new Response(),
+            'golden-plains',
+        ));
         $this->assertStringContainsString('Add bank', $shown);
         $this->assertStringNotContainsString('Find my bank', $shown);
         $this->assertStringNotContainsString('Refresh transactions', $shown);
@@ -163,10 +170,12 @@ final class ManageConnectTest extends AmtgardTestCase
             new SimpleFinConnectSession(),
             Strategies::reviewQueue($guestTransactions, $guestAccounts),
             Strategies::reviewService($guestTransactions, $guestAccounts),
-            Strategies::categorySearch(),
+            Strategies::kingdomScopedCategorySearch(),
             Strategies::kingdomPatternService(new MemoryKingdoms(), $guestTransactions),
+            Strategies::patternWizard(new MemoryKingdoms(), $guestTransactions, $guestAccounts),
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
+            Strategies::patternAutomaticReview(new MemoryKingdoms(), $guestTransactions, $guestAccounts),
         );
         $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), 'golden-plains')->getStatusCode());
     }
@@ -180,12 +189,12 @@ final class ManageConnectTest extends AmtgardTestCase
             ->postedOn('2026-08-14')
             ->amountCents(-100)
             ->description('August supplies')
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->publishableAfter('2026-08-01T00:00:00+00:00')
             ->build());
 
         $latest = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
-        $this->assertStringContainsString('Showing transactions posted in 2026-08.', $latest);
+        $this->assertStringContainsString('>2026-08</span>', $latest);
         $this->assertStringContainsString('August supplies', $latest);
         $this->assertStringContainsString('review_month=2026-07', $latest);
         $this->assertStringContainsString('review_month=2026-09', $latest);
@@ -195,19 +204,21 @@ final class ManageConnectTest extends AmtgardTestCase
             new Response(),
             'golden-plains',
         ));
-        $this->assertStringContainsString('Showing transactions posted in 2026-07.', $july);
+        $this->assertStringContainsString('>2026-07</span>', $july);
         $this->assertStringContainsString('No transactions on published accounts for this month.', $july);
-        $this->assertStringContainsString('review_month=2026-06&amp;uncategorized=1', $july);
+        $this->assertStringContainsString('tab=review&amp;review_month=2026-06', $july);
+        $this->assertStringContainsString('uncategorized=1', $july);
+        $this->assertStringContainsString('Previous month', $july);
 
         $published = $this->manager->publishTransaction($this->request('POST', '/manage/golden-plains/transactions/publish', [
             'csrf' => 'token',
             'teller_transaction_id' => 'aug-row',
             'review_month' => '2026-08',
         ]), new Response(), 'golden-plains');
-        $this->assertSame('/manage/golden-plains?review_month=2026-08', $published->getHeaderLine('Location'));
+        $this->assertSame('/manage/golden-plains?tab=review&review_month=2026-08', $published->getHeaderLine('Location'));
 
         $refreshed = $this->manager->refresh($this->request('POST', '/manage/golden-plains/refresh', ['csrf' => 'token']), new Response(), 'golden-plains');
-        $this->assertSame('/manage/golden-plains', $refreshed->getHeaderLine('Location'));
+        $this->assertSame('/manage/golden-plains?tab=review', $refreshed->getHeaderLine('Location'));
     }
 
     public function testBatchReviewFormIsNotNestedAndAppliesSelections(): void
@@ -219,16 +230,21 @@ final class ManageConnectTest extends AmtgardTestCase
             ->postedOn('2026-08-14')
             ->amountCents(-100)
             ->description('Batch supplies')
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->publishableAfter('2026-08-01T00:00:00+00:00')
             ->build());
 
         $page = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
-        $this->assertStringContainsString('name="review[batch-row][publish]" value="1" form="review-batch-form"', $page);
-        $this->assertStringContainsString('name="review_id[]" value="batch-row" form="review-batch-form"', $page);
+        $this->assertStringContainsString('name="review[batch-row][publish]"', $page);
+        $this->assertStringContainsString('name="review_id[]" value="batch-row"', $page);
+        $this->assertStringContainsString('form="review-batch-form"', $page);
         $batchStart = strpos($page, '<form id="review-batch-form"');
         $this->assertNotFalse($batchStart);
-        $this->assertGreaterThan(strrpos($page, '</table>'), $batchStart);
+        $reviewSection = strpos($page, 'Transaction review');
+        $this->assertNotFalse($reviewSection);
+        $reviewTableEnd = strpos($page, '</table>', $reviewSection);
+        $this->assertNotFalse($reviewTableEnd);
+        $this->assertGreaterThan($reviewTableEnd, $batchStart);
         $batchForm = substr($page, $batchStart, strpos($page, '</form>', $batchStart) - $batchStart);
         $this->assertSame(1, substr_count($batchForm, '<form'));
         $this->assertStringContainsString('name="review_month" value="2026-08"', $batchForm);
@@ -239,7 +255,7 @@ final class ManageConnectTest extends AmtgardTestCase
             'review_id' => ['batch-row'],
             'review' => ['batch-row' => ['redact' => '1']],
         ]), new Response(), 'golden-plains');
-        $this->assertSame('/manage/golden-plains?review_month=2026-08', $response->getHeaderLine('Location'));
+        $this->assertSame('/manage/golden-plains?tab=review&review_month=2026-08', $response->getHeaderLine('Location'));
         $this->assertNotNull($this->transactions->findByTellerTransactionId('batch-row')?->getPublishedAt());
         $this->assertSame(403, $this->manager->updateTransactionReview($this->request('POST', '/manage/golden-plains/transactions/review', [
             'csrf' => 'nope',
@@ -260,10 +276,14 @@ final class ManageConnectTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-08-14')
             ->amountCents(-100)
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->build());
 
-        $shown = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
+        $shown = $this->body($this->manager->show(
+            $this->request('GET', '/manage/golden-plains')->withQueryParams(['tab' => 'settings']),
+            new Response(),
+            'golden-plains',
+        ));
         $this->assertStringContainsString('Connected to <span class="fw-semibold">First Credit Union</span> via teller.', $shown);
         $this->assertStringContainsString('action="/manage/golden-plains/disconnect"', $shown);
         $this->assertStringNotContainsString('Add bank', $shown);
@@ -272,7 +292,7 @@ final class ManageConnectTest extends AmtgardTestCase
         MethodLogAssert::reset();
         $response = $this->manager->disconnectBank($this->request('POST', '/manage/golden-plains/disconnect', ['csrf' => 'token']), new Response(), 'golden-plains');
 
-        $this->assertSame('/manage/golden-plains', $response->getHeaderLine('Location'));
+        $this->assertSame('/manage/golden-plains?tab=settings', $response->getHeaderLine('Location'));
         $reset = $this->kingdoms->findBySlug('golden-plains');
         $this->assertSame('disconnected', $reset?->getEnrollmentStatus());
         $this->assertNull($reset?->getEnrollmentId());
@@ -282,7 +302,11 @@ final class ManageConnectTest extends AmtgardTestCase
         $this->assertSame([], $this->accounts->forKingdom(1));
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Info, 'enrollment_bank_disconnected', EnrollmentService::class . '::disconnectBank');
 
-        $after = $this->body($this->manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains'));
+        $after = $this->body($this->manager->show(
+            $this->request('GET', '/manage/golden-plains')->withQueryParams(['tab' => 'settings']),
+            new Response(),
+            'golden-plains',
+        ));
         $this->assertStringContainsString('Add bank', $after);
     }
 
@@ -303,6 +327,7 @@ final class ManageConnectTest extends AmtgardTestCase
             'kingdom' => $kingdom,
             'accounts' => [],
             'reviewQueue' => [],
+            'manageTab' => 'settings',
             'connect' => [
                 'available' => true,
                 'autostart' => true,
@@ -326,6 +351,7 @@ final class ManageConnectTest extends AmtgardTestCase
             'kingdom' => $kingdom,
             'accounts' => [],
             'reviewQueue' => [],
+            'manageTab' => 'settings',
             'connect' => [
                 'available' => true,
                 'autostart' => true,

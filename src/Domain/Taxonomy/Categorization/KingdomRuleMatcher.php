@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Taxonomy\Categorization;
 
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\KingdomCategoryRuleRepositoryInterface;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
@@ -14,6 +15,7 @@ final class KingdomRuleMatcher implements CategoryMatcher
     public function __construct(
         private readonly KingdomCategoryRuleRepositoryInterface $rules,
         private readonly KeywordRuleMatcher $keywordEngine,
+        private readonly CategoryCatalog $categories,
     ) {
         DenariusLog::enter(__METHOD__);
     }
@@ -27,7 +29,7 @@ final class KingdomRuleMatcher implements CategoryMatcher
             }
             $keywordRules = [];
             foreach ($this->rules->forKingdom($kingdomId) as $record) {
-                $keywordRules[] = $record->toKeywordRule();
+                $keywordRules[] = $record->toKeywordRule($this->categories);
             }
             if ($keywordRules === []) {
                 return null;

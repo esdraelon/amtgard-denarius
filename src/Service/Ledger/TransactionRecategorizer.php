@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service\Ledger;
 
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\CategoryDecision;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
@@ -25,6 +26,7 @@ final class TransactionRecategorizer
         private readonly TransactionCategorizer $categorizer,
         private readonly LedgerProviderIdResolver $providerIds,
         private readonly TaxonomyCatalog $catalog,
+        private readonly CategoryCatalog $categories,
         private readonly MonthInvalidator $months,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
@@ -82,12 +84,19 @@ final class TransactionRecategorizer
         });
     }
 
-    public function recategorizeKingdomAfterPatternChange(KingdomRecord $kingdom): int
+    /**
+     * @param list<string> $excludeTellerTransactionIds
+     */
+    public function recategorizeKingdomAfterPatternChange(KingdomRecord $kingdom, array $excludeTellerTransactionIds = []): int
     {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdom): int {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $excludeTellerTransactionIds): int {
             $kingdomId = (int) $kingdom->getId();
+            $exclude = array_fill_keys($excludeTellerTransactionIds, true);
             $updated = 0;
             foreach ($this->transactions->forKingdom($kingdomId) as $row) {
+                if (isset($exclude[$row->getTellerTransactionId()])) {
+                    continue;
+                }
                 if (CategorySource::fromStored($row->getCategorySource()) === CategorySource::Manager) {
                     continue;
                 }
@@ -112,10 +121,10 @@ final class TransactionRecategorizer
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $row): bool {
             $kingdomId = (int) $kingdom->getId();
             $providerId = $this->providerIds->forKingdom($kingdom);
-            $before = $row->getCategory() . '|' . $row->getCategorySource() . '|' . ($row->getCategoryRuleId() ?? '');
+            $before = $row->getCategoryId() . '|' . $row->getCategorySource() . '|' . ($row->getCategoryRuleId() ?? '');
             $decision = $this->categorizer->decide($providerId, $row, $row, $kingdomId);
             $merged = $this->mergeDecision($row, $decision);
-            $after = $merged->getCategory() . '|' . $merged->getCategorySource() . '|' . ($merged->getCategoryRuleId() ?? '');
+            $after = $merged->getCategoryId() . '|' . $merged->getCategorySource() . '|' . ($merged->getCategoryRuleId() ?? '');
             if ($before === $after) {
                 return false;
             }
@@ -131,7 +140,7 @@ final class TransactionRecategorizer
             if (CategorySource::fromStored($row->getCategorySource()) === CategorySource::Manager) {
                 return false;
             }
-            if ($row->getCategory() === 'uncategorized') {
+            if ($row->getCategoryId() === $this->categories->uncategorizedId()) {
                 return true;
             }
 
@@ -143,11 +152,10 @@ final class TransactionRecategorizer
     {
         return DenariusLog::trace(__METHOD__, function () use ($row, $decision): TransactionRecord {
             return TransactionRecordRebuilder::from($row)
-                ->category($decision->category)
+                ->categoryId($decision->categoryId)
                 ->categorySource($decision->source->value)
                 ->categoryRuleId($decision->ruleId)
                 ->categoryConfidence($decision->confidence)
-                ->categorySuggested($decision->suggestedSlug)
                 ->taxonomyVersion($decision->taxonomyVersion)
                 ->build();
         });

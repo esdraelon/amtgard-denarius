@@ -4,9 +4,9 @@ Debug aid for the local app. Each milestone is one stacked branch and one commit
 
 Parent of M-01: `provider-framework` at `7f716d3`.
 
-**Local durable logs (IDP-aligned):** when `LOG_SPOOL_ENABLED=true` (default), each method-log JSON line is also appended to `LOG_ROOT/spool/active.jsonl`. Run **`bin/log-sqlite-writer.php`** (or the optional `log-writer` compose profile) to drain spool into hourly SQLite WAL files under `LOG_ROOT/trace/YYYY-MM-DD/HH.logs.sqlite`. Query with **`bin/denarius-logs.php query --request-id=…`** or export **`bundle --request-id=…`**. See [sqlite-logging-checklist.md](../planning/sqlite-logging-checklist.md).
+**Local durable logs (IDP-aligned):** when `LOG_SPOOL_ENABLED=true` (default), each method-log JSON line is buffered for the request and appended once at shutdown to `LOG_ROOT/spool/active.jsonl`. Run **`bin/log-sqlite-writer.php`** (or the optional `log-writer` compose profile) to drain spool into hourly SQLite WAL files under `LOG_ROOT/trace/YYYY-MM-DD/HH.logs.sqlite`. Query with **`bin/denarius-logs.php query --request-id=…`** or export **`bundle --request-id=…`**. See [sqlite-logging-checklist.md](../planning/sqlite-logging-checklist.md).
 
-**stderr / jsonl:** Lines still go to stderr as JSON so `docker logs` shows which method ran. `APP_DEBUG` can still mirror to `logs/method-trace.jsonl` via `DENARIUS_METHOD_LOG`.
+**stderr / jsonl:** Lines still go to stderr as JSON so `docker logs` shows which method ran. `logs/method-trace.jsonl` is the same JSON as the spool (not a different schema); it is only an optional on-disk mirror. With spool enabled, the implicit `APP_DEBUG` default path is not written unless you set `DENARIUS_METHOD_LOG` explicitly.
 
 ## Contract
 

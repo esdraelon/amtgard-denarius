@@ -7,6 +7,7 @@ namespace Amtgard\Denarius\Controller;
 use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Domain\Access\AccessResult;
 use Amtgard\Denarius\Domain\Statement\Line\CategoryTotal;
+use Amtgard\Denarius\Domain\Statement\Line\Money;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Access\KingdomAccess;
 use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
@@ -65,6 +66,12 @@ final class KingdomPageController
                 'mode' => DisplayMode::fromStored($kingdom->getDisplayMode())->value,
                 'rows' => $this->rows($statement->rows),
                 'absenceMessage' => $statement->absenceReason?->message(),
+                'openingBalance' => $statement->openingBalanceCents !== null
+                    ? Money::format($statement->openingBalanceCents)
+                    : null,
+                'closingBalance' => $statement->closingBalanceCents !== null
+                    ? Money::format($statement->closingBalanceCents)
+                    : null,
                 'disconnected' => $kingdom->getEnrollmentStatus() === 'disconnected',
                 'syncedAt' => $kingdom->getLastSyncedAt(),
             ]);

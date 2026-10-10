@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
@@ -20,12 +21,11 @@ final class TransactionRecordRebuilderTest extends AmtgardTestCase
             ->tellerAccountId('acc-9')
             ->postedOn('2026-09-02')
             ->amountCents(-425)
-            ->category('expense.site_rental')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental'))
             ->providerCategory('RENT')
             ->categorySource(CategorySource::ProviderHint->value)
             ->categoryRuleId('hint.plaid.rent')
             ->categoryConfidence(62)
-            ->categorySuggested('expense.feast_groceries')
             ->taxonomyVersion('taxonomy/v1')
             ->description('Site fee')
             ->counterparty('Landlord')
@@ -43,12 +43,11 @@ final class TransactionRecordRebuilderTest extends AmtgardTestCase
         $this->assertSame($expected->getTellerAccountId(), $roundTrip->getTellerAccountId());
         $this->assertSame($expected->getPostedOn(), $roundTrip->getPostedOn());
         $this->assertSame($expected->getAmountCents(), $roundTrip->getAmountCents());
-        $this->assertSame($expected->getCategory(), $roundTrip->getCategory());
+        $this->assertSame($expected->getCategoryId(), $roundTrip->getCategoryId());
         $this->assertSame($expected->getProviderCategory(), $roundTrip->getProviderCategory());
         $this->assertSame($expected->getCategorySource(), $roundTrip->getCategorySource());
         $this->assertSame($expected->getCategoryRuleId(), $roundTrip->getCategoryRuleId());
         $this->assertSame($expected->getCategoryConfidence(), $roundTrip->getCategoryConfidence());
-        $this->assertSame($expected->getCategorySuggested(), $roundTrip->getCategorySuggested());
         $this->assertSame($expected->getTaxonomyVersion(), $roundTrip->getTaxonomyVersion());
         $this->assertSame($expected->getDescription(), $roundTrip->getDescription());
         $this->assertSame($expected->getCounterparty(), $roundTrip->getCounterparty());

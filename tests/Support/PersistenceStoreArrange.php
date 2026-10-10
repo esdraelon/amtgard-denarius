@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Support;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\ActiveRecordOrm\Configuration\Repository\DatabaseConfiguration;
 use Amtgard\ActiveRecordOrm\Configuration\Repository\MysqlPdoProvider;
 use Amtgard\Denarius\Persistence\Orm;
@@ -21,7 +22,11 @@ use Amtgard\Denarius\Persistence\Repository\Secret\Impl\SecretRepository;
 use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\Impl\KingdomCategoryRuleRepository;
 use Amtgard\Denarius\Persistence\Record\KingdomCategoryRuleRecord;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
+use Amtgard\Denarius\Persistence\Driver\Transaction\PdoTransactionReadDriver;
+use Amtgard\Denarius\Persistence\Driver\Transaction\TransactionRecordMapper;
+use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\OrmTransactionRepository;
 use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\TransactionRepository;
+use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
@@ -31,6 +36,19 @@ use PDO;
 final class PersistenceStoreArrange
 {
     public const TEST_DATABASE = 'denarius_test';
+
+    public static function transactionRepository(): TransactionRepositoryInterface
+    {
+        $pdo = self::tryPdo();
+        if ($pdo === null) {
+            throw new \RuntimeException('MariaDB is not available.');
+        }
+
+        return new TransactionRepository(
+            Orm::repository(OrmTransactionRepository::class),
+            new PdoTransactionReadDriver($pdo, new TransactionRecordMapper()),
+        );
+    }
 
     public static function tryPdo(): ?PDO
     {
@@ -50,9 +68,11 @@ final class PersistenceStoreArrange
     {
         self::assertSafeToWipe();
 
-        foreach (['kingdom_category_rules', 'role_grants', 'transactions', 'enrollment_secrets', 'published_accounts_audit', 'published_accounts', 'kingdoms_audit', 'kingdoms', 'principals', 'phinxlog'] as $table) {
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
+        foreach (['kingdom_category_rules', 'category_lineages', 'categories', 'kingdom_custom_categories', 'role_grants', 'transactions', 'enrollment_secrets', 'published_accounts_audit', 'published_accounts', 'kingdoms_audit', 'kingdoms', 'principals', 'phinxlog'] as $table) {
             $pdo->exec('DROP TABLE IF EXISTS ' . $table);
         }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
         $phinx = dirname(__DIR__, 2) . '/vendor/bin/phinx';
         $root = dirname(__DIR__, 2);
         $command = sprintf(
@@ -200,8 +220,8 @@ final class PersistenceStoreArrange
         PrincipalRepository::getEntityClass();
         SecretRepository::getTableName();
         SecretRepository::getEntityClass();
-        TransactionRepository::getTableName();
-        TransactionRepository::getEntityClass();
+        OrmTransactionRepository::getTableName();
+        OrmTransactionRepository::getEntityClass();
         RoleGrantRepository::getTableName();
         RoleGrantRepository::getEntityClass();
         KingdomCategoryRuleRepository::getTableName();
@@ -237,9 +257,9 @@ final class PersistenceStoreArrange
         $secrets->saveCiphertext((int) $saved->getId(), 'cipher');
         $secrets->saveCiphertext((int) $saved->getId(), 'cipher-2');
 
-        $transactions = Orm::repository(TransactionRepository::class);
-        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn-rent')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-100)->category('expense.site_rental')->providerCategory('RENT')->categorySource(CategorySource::ProviderHint->value)->categoryRuleId('hint.test')->categoryConfidence(70)->categorySuggested('expense.feast_groceries')->taxonomyVersion('taxonomy/v1')->description('paper')->counterparty('Shop')->status('posted')->publishableAfter('2026-09-05T23:59:59+00:00')->build());
-        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn-grocery')->tellerAccountId('acc')->postedOn('2026-09-03')->amountCents(-200)->category('expense.feast_groceries')->description('gas')->counterparty('Station')->status('posted')->publishedAt('2026-09-04T00:00:00+00:00')->publishableAfter('2026-09-06T23:59:59+00:00')->build());
+        $transactions = self::transactionRepository();
+        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn-rent')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(-100)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental'))->providerCategory('RENT')->categorySource(CategorySource::ProviderHint->value)->categoryRuleId('hint.test')->categoryConfidence(70)->taxonomyVersion('taxonomy/v1')->description('paper')->counterparty('Shop')->status('posted')->publishableAfter('2026-09-05T23:59:59+00:00')->build());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId((int) $saved->getId())->tellerTransactionId('txn-grocery')->tellerAccountId('acc')->postedOn('2026-09-03')->amountCents(-200)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))->description('gas')->counterparty('Station')->status('posted')->publishedAt('2026-09-04T00:00:00+00:00')->publishableAfter('2026-09-06T23:59:59+00:00')->build());
         $rent = $transactions->findByTellerTransactionId('txn-rent');
         $transactions->upsert(TransactionRecordRebuilder::from($rent)->publicationFlags(PublicationFlags::empty()->withManagerRedactDescription(true)->encode())->build());
         $transactions->upsert(TransactionRecordRebuilder::from($rent)->publicationFlags(null)->build());
@@ -258,7 +278,7 @@ final class PersistenceStoreArrange
         $patternRules = Orm::repository(KingdomCategoryRuleRepository::class);
         $pattern = $patternRules->save(KingdomCategoryRuleRecord::builder()
             ->kingdomId((int) $saved->getId())
-            ->category('expense.storage')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->matchType('token')
             ->token('STORAGE UNIT')
             ->fields(['description'])
@@ -268,12 +288,12 @@ final class PersistenceStoreArrange
         $patternRules->forKingdom((int) $saved->getId());
         $patternRules->findById((int) $saved->getId(), (int) $pattern->getId());
         $pattern->publicRuleId();
-        $pattern->toKeywordRule();
-        $pattern->manageView($catalog);
+        $pattern->toKeywordRule(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface());
+        $pattern->manageView(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface());
         $patternRules->save(KingdomCategoryRuleRecord::builder()
             ->id($pattern->getId())
             ->kingdomId((int) $saved->getId())
-            ->category('expense.storage')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->matchType('token')
             ->token('STORAGE LOCKER')
             ->fields(['description'])

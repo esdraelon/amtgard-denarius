@@ -18,6 +18,7 @@ use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Ledger\ProviderWebhookHandler;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerLedgerProvider;
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Tests\Support\MethodLogAssert;
 use Amtgard\Denarius\Utilities\Log\BranchLogLevel;
 use Amtgard\PHPUnit\AmtgardTestCase;
@@ -107,7 +108,7 @@ final class LedgerFacadeTest extends AmtgardTestCase
         $this->assertTrue($sync->sync(8));
         $stored = $transactions->forKingdom((int) $connected->getId());
         $this->assertCount(1, $stored);
-        $this->assertSame('uncategorized', $stored[0]->getCategory());
+        $this->assertSame(CategoryCatalogFixture::id('uncategorized'), $stored[0]->getCategoryId());
         $this->assertSame('food', $stored[0]->getProviderCategory());
         MethodLogAssert::assertBranchLogged(
             BranchLogLevel::Debug,

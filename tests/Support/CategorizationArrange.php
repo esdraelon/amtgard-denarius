@@ -33,6 +33,7 @@ final class CategorizationArrange
 
         return new TransactionCategorizer(
             $catalog,
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
             new DescriptionNormalizer(),
             self::amountSignRegistry(),
             self::matcherChain($catalog, null, $kingdomRules),
@@ -61,9 +62,9 @@ final class CategorizationArrange
         $rules = $kingdomRules ?? new MemoryKingdomCategoryRules();
 
         return new CategoryMatcherChain([
-            new ManagerLockMatcher(),
+            new ManagerLockMatcher(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface()),
             new ProviderHintMatcher($catalog),
-            $kingdomMatcher ?? new KingdomRuleMatcher($rules, $keywords),
+            $kingdomMatcher ?? new KingdomRuleMatcher($rules, $keywords, CategoryCatalogFixture::asInterface()),
             $keywords,
             new FallbackMatcher(),
         ]);

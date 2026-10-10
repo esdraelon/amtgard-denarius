@@ -22,7 +22,7 @@ final class CategorizationInput
         private string $providerId = '',
         private string $providerCategory = '',
         private TransactionFlow $defaultFlow = TransactionFlow::Expense,
-        private ?string $existingCategory = null,
+        private ?int $existingCategoryId = null,
         private ?string $existingSource = null,
         private ?int $existingConfidence = null,
         private ?string $existingRuleId = null,
@@ -74,9 +74,9 @@ final class CategorizationInput
         });
     }
 
-    public function existingCategory(): ?string
+    public function existingCategoryId(): ?int
     {
-        return DenariusLog::trace(__METHOD__, fn (): ?string => $this->existingCategory);
+        return DenariusLog::trace(__METHOD__, fn (): ?int => $this->existingCategoryId);
     }
 
     public function existingConfidence(): ?int

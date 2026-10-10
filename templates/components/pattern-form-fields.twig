@@ -1,0 +1,50 @@
+{# Shared fields for kingdom category pattern create/edit. #}
+<input type="hidden" name="match_type" value="{{ prefill.matchType|default('token') }}">
+<input type="hidden" name="fields[]" value="description">
+<input type="hidden" name="fields[]" value="counterparty">
+<div class="mb-3 pattern-form-match-category-row">
+    <div class="row g-2 align-items-end">
+        <div class="col min-w-0">
+            <div class="d-flex align-items-center gap-1 mb-1">
+                <label class="form-label mb-0 small" for="{{ tokenInputId|default('pattern-token') }}">Match text</label>
+                {% if tokenGlobHelp|default(false) %}
+                    <button type="button"
+                            class="btn btn-link btn-sm p-0 align-baseline review-pattern-token-help"
+                            data-bs-toggle="popover"
+                            data-bs-trigger="focus"
+                            data-bs-placement="bottom"
+                            data-bs-html="true"
+                            title="Match text wildcards"
+                            data-bs-content="Use plain text, or wildcards inside normalized description and counterparty (uppercase):<br><br><code>*</code> any run of characters<br><code>?</code> one character<br><code>\s</code> one or more spaces<br><br>Example: <code>USAA\s*FSB</code> matches <code>USAA FSB</code>. This is not regex."
+                            aria-label="Match text wildcard help">
+                        <i class="fa-solid fa-circle-question text-body-secondary" aria-hidden="true"></i>
+                    </button>
+                {% endif %}
+            </div>
+            <input class="form-control form-control-sm" id="{{ tokenInputId|default('pattern-token') }}" name="token" value="{{ prefill.token|default('') }}" required maxlength="255">
+            {% if not hideTokenHelp|default(false) %}
+                <p class="small text-body-secondary mb-0 mt-1">Matched in normalized description and counterparty (uppercase).</p>
+            {% endif %}
+        </div>
+        <div class="col-auto pb-1 text-body-secondary pattern-form-match-arrow" aria-hidden="true">→</div>
+        <div class="col min-w-0">
+            {% if categoryMode|default('slug') == 'typeahead' %}
+                <label class="form-label mb-1 small" for="{{ categoryInputId|default('pattern-category-display') }}">Category</label>
+                {% include 'components/category-typeahead.twig' with {
+                    inputId: categoryInputId|default('pattern-category-display'),
+                    listId: categoryListId|default('pattern-category-list'),
+                    inputName: 'category_display',
+                    hiddenName: 'category_id',
+                    selectedCategoryId: prefill.categoryId|default(''),
+                    displayValue: prefill.categoryDisplay|default(''),
+                    flow: categoryFlow|default('expense'),
+                    searchUrl: categorySearchUrl
+                } %}
+            {% else %}
+                <label class="form-label mb-1 small" for="{{ categoryInputId|default('pattern-category') }}">Category</label>
+                <input class="form-control form-control-sm" id="{{ categoryInputId|default('pattern-category') }}" name="category" value="{{ prefill.category|default('') }}" required>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<input type="hidden" name="flows[]" value="{{ patternFlow|default('expense') }}" id="{{ patternFlowInputId|default('pattern-rule-flow') }}" class="pattern-rule-flow-input">
