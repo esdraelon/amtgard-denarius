@@ -33,12 +33,29 @@
         function hideList() {
             list.classList.add('d-none');
             input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
             activeIndex = -1;
+            syncActiveOption();
         }
 
         function showList() {
             list.classList.remove('d-none');
             input.setAttribute('aria-expanded', 'true');
+        }
+
+        function syncActiveOption() {
+            var items = list.querySelectorAll('[role="option"]');
+            items.forEach(function (node, index) {
+                var active = index === activeIndex;
+                node.classList.toggle('active', active);
+                node.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            if (activeIndex >= 0 && items[activeIndex]) {
+                input.setAttribute('aria-activedescendant', items[activeIndex].id);
+                items[activeIndex].scrollIntoView({ block: 'nearest' });
+            } else {
+                input.removeAttribute('aria-activedescendant');
+            }
         }
 
         function setSaveIndicator(state) {
@@ -110,8 +127,10 @@
             items.forEach(function (item, index) {
                 var li = document.createElement('li');
                 li.className = 'list-group-item list-group-item-action py-1 small';
+                li.id = list.id + '-opt-' + index;
                 li.setAttribute('role', 'option');
                 li.setAttribute('data-index', String(index));
+                li.setAttribute('aria-selected', 'false');
                 li.textContent = formatDisplay(item.flow, item.label);
                 li.addEventListener('mousedown', function (event) {
                     event.preventDefault();
@@ -124,7 +143,9 @@
             if (items.length === 0) {
                 hideList();
             } else {
+                activeIndex = 0;
                 showList();
+                syncActiveOption();
             }
         }
 
@@ -251,16 +272,45 @@
                 return;
             }
             if (event.key === 'ArrowDown') {
-                activeIndex = Math.min(activeIndex + 1, options.length - 1);
+                if (options.length === 0) {
+                    return;
+                }
+                if (list.classList.contains('d-none')) {
+                    showList();
+                }
+                if (activeIndex < 0) {
+                    activeIndex = 0;
+                } else {
+                    activeIndex = Math.min(activeIndex + 1, options.length - 1);
+                }
+                syncActiveOption();
                 event.preventDefault();
                 return;
             }
             if (event.key === 'ArrowUp') {
-                activeIndex = Math.max(activeIndex - 1, 0);
+                if (options.length === 0) {
+                    return;
+                }
+                if (list.classList.contains('d-none')) {
+                    showList();
+                }
+                if (activeIndex < 0) {
+                    activeIndex = options.length - 1;
+                } else {
+                    activeIndex = Math.max(activeIndex - 1, 0);
+                }
+                syncActiveOption();
                 event.preventDefault();
                 return;
             }
-            if (event.key === 'Enter' && activeIndex >= 0) {
+            if (event.key === 'Enter') {
+                if (options.length === 0 || list.classList.contains('d-none')) {
+                    return;
+                }
+                if (activeIndex < 0) {
+                    activeIndex = 0;
+                }
+                pickingFromList = true;
                 select(activeIndex);
                 event.preventDefault();
                 window.setTimeout(maybeAutoSave, 0);
