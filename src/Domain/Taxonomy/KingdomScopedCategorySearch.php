@@ -22,7 +22,11 @@ final class KingdomScopedCategorySearch
     public function search(KingdomRecord $kingdom, string $query, ?TransactionFlow $flowFilter): array
     {
         return DenariusLog::trace(__METHOD__, function () use ($kingdom, $query, $flowFilter): array {
-            return $this->categories->search($query, $flowFilter, (int) $kingdom->getId());
+            return $this->categories->search(
+                CategorySearchQuery::normalize($query),
+                $flowFilter,
+                (int) $kingdom->getId(),
+            );
         });
     }
 }

@@ -258,8 +258,14 @@ final class ManagerController
                 return $kingdom;
             }
             $query = (string) ($request->getQueryParams()['q'] ?? '');
-            $flowRaw = (string) ($request->getQueryParams()['flow'] ?? '');
-            $flow = $flowRaw !== '' ? TransactionFlow::fromStored($flowRaw) : null;
+            $flowRaw = trim((string) ($request->getQueryParams()['flow'] ?? ''));
+            if ($flowRaw === '') {
+                return JsonBody::write($response, ['results' => []]);
+            }
+            $flow = TransactionFlow::fromStored($flowRaw);
+            if ($flow === null) {
+                return JsonBody::write($response, ['results' => []]);
+            }
             $results = $this->categorySearch->search($kingdom, $query, $flow);
 
             return JsonBody::write($response, ['results' => $results]);
