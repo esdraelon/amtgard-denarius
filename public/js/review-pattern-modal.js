@@ -14,7 +14,7 @@
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         var tokenInput = document.getElementById('review-pattern-token');
         var typeaheadRoot = modalEl.querySelector('[data-category-typeahead]');
-        var categorySlugInput = typeaheadRoot ? typeaheadRoot.querySelector('[data-typeahead-slug]') : null;
+        var categoryIdInput = typeaheadRoot ? typeaheadRoot.querySelector('[data-typeahead-id]') : null;
         var categoryDisplayInput = typeaheadRoot ? typeaheadRoot.querySelector('[data-typeahead-input]') : null;
         var counterpartyInput = document.getElementById('review-pattern-source-counterparty');
         var descriptionInput = document.getElementById('review-pattern-source-description');
@@ -56,20 +56,15 @@
             ruleFlowInput.value = typeaheadRoot.getAttribute('data-flow') || 'expense';
         }
 
-        function assignablePatternSlug(slug) {
-            if (!slug || slug === 'uncategorized' || slug.indexOf('system.') === 0) {
-                return '';
-            }
-
-            return slug;
-        }
-
-        function setCategory(slug, display, flow) {
-            if (!categorySlugInput || !categoryDisplayInput || !typeaheadRoot) {
+        function setCategory(categoryId, display, flow) {
+            if (!categoryDisplayInput || !typeaheadRoot) {
                 return;
             }
-            typeaheadRoot.setAttribute('data-flow', flow || 'expense');
-            categorySlugInput.value = assignablePatternSlug(slug);
+            var resolvedFlow = flow || 'expense';
+            typeaheadRoot.setAttribute('data-flow', resolvedFlow);
+            if (categoryIdInput) {
+                categoryIdInput.value = categoryId || '';
+            }
             categoryDisplayInput.value = display || '';
             syncRuleFlow();
         }
@@ -87,7 +82,7 @@
         function previewStateKey() {
             return [
                 tokenInput.value.trim(),
-                categorySlugInput ? categorySlugInput.value.trim() : '',
+                categoryIdInput ? categoryIdInput.value.trim() : '',
                 categoryDisplayInput ? categoryDisplayInput.value.trim() : '',
                 ruleFlowInput ? ruleFlowInput.value.trim() : '',
                 anchorCentsInput ? anchorCentsInput.value.trim() : '',
@@ -178,7 +173,7 @@
             button.addEventListener('click', function () {
                 tokenInput.value = button.getAttribute('data-pattern-token') || '';
                 setCategory(
-                    button.getAttribute('data-pattern-category') || '',
+                    button.getAttribute('data-pattern-category-id') || '',
                     button.getAttribute('data-pattern-category-display') || '',
                     button.getAttribute('data-row-flow') || 'expense',
                 );
@@ -245,7 +240,7 @@
                 return;
             }
             if ((categoryDisplayInput && categoryDisplayInput.value.trim() !== '')
-                || (categorySlugInput && categorySlugInput.value.trim() !== '')) {
+                || (categoryIdInput && categoryIdInput.value.trim() !== '')) {
                 return;
             }
             event.preventDefault();

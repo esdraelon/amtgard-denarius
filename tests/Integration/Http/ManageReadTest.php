@@ -100,14 +100,17 @@ final class ManageReadTest extends IntegTestCase
         $http = $this->integHttp();
         IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
 
-        $response = $http->get(self::MANAGE_PREFIX . '/taxonomy/categories?q=rent');
+        $response = $http->get(self::MANAGE_PREFIX . '/taxonomy/categories?flow=expense&q=rent');
         $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
 
-        /** @var array{results: list<array{slug: string, label: string}>} $payload */
+        /** @var array{results: list<array{lineageKey: string, label: string, flow: string}>} $payload */
         $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         $this->assertArrayHasKey('results', $payload);
         $this->assertNotEmpty($payload['results']);
-        $slugs = array_column($payload['results'], 'slug');
-        $this->assertContains('expense.site_rental', $slugs);
+        $lineageKeys = array_column($payload['results'], 'lineageKey');
+        $this->assertContains('expense.site_rental', $lineageKeys);
+        foreach ($payload['results'] as $row) {
+            $this->assertSame('expense', $row['flow']);
+        }
     }
 }

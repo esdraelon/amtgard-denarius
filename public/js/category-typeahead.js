@@ -7,12 +7,19 @@
         return flowLabel(flow) + ': ' + label;
     }
 
+    function stripDisplayPrefix(query) {
+        return query.replace(/^\s*(expense|income|transfer)\s*:\s*/i, '').trim();
+    }
+
     function bind(root) {
         var input = root.querySelector('[data-typeahead-input]');
         var idInput = root.querySelector('[data-typeahead-id]');
         var list = root.querySelector('[data-typeahead-list]');
         var searchUrl = root.getAttribute('data-search-url');
-        var flow = root.getAttribute('data-flow') || '';
+
+        function currentFlow() {
+            return root.getAttribute('data-flow') || '';
+        }
         var form = root.closest('form.review-category-form');
         var indicatorEl = root.querySelector('.category-typeahead-save-indicator');
         var activeIndex = -1;
@@ -212,7 +219,8 @@
         }
 
         function fetchResults(query) {
-            var url = searchUrl + '?flow=' + encodeURIComponent(flow) + '&q=' + encodeURIComponent(query);
+            var flow = currentFlow();
+            var url = searchUrl + '?flow=' + encodeURIComponent(flow) + '&q=' + encodeURIComponent(stripDisplayPrefix(query));
             fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
                 .then(function (response) { return response.json(); })
                 .then(function (payload) {
