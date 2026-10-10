@@ -12,6 +12,7 @@ use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInt
 use Amtgard\Denarius\Service\Kingdom\KingdomPageQuery;
 use Amtgard\Denarius\Service\Kingdom\KingdomPublicationLineSource;
 use Amtgard\Denarius\Service\Kingdom\ManagerKingdomPageQuery;
+use Amtgard\Denarius\Tests\Support\CategorizationArrange;
 
 final class KingdomPageQueryFactory
 {
@@ -22,7 +23,10 @@ final class KingdomPageQueryFactory
         ?\DateTimeImmutable $asOf = null,
     ): KingdomPageQuery {
         $source = new KingdomPublicationLineSource($transactions, $accounts);
-        $pipelines = PublicationPipelineFactory::standard(TaxonomyCatalogFixture::load());
+        $pipelines = PublicationPipelineFactory::standard(
+            CategorizationArrange::bundledCatalog(),
+            CategoryCatalogFixture::asInterface(),
+        );
 
         return new KingdomPageQuery(
             $source,

@@ -8,12 +8,12 @@ use Amtgard\ActiveRecordOrm\Attribute\EntityOf;
 use Amtgard\ActiveRecordOrm\Attribute\Field;
 use Amtgard\ActiveRecordOrm\Attribute\PrimaryKey;
 use Amtgard\ActiveRecordOrm\Entity\Repository\RepositoryEntity;
-use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\TransactionRepository;
+use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\OrmTransactionRepository;
 use Amtgard\Traits\Builder\Builder;
 use Amtgard\Traits\Builder\Data;
 use Amtgard\Traits\Builder\ToBuilder;
 
-#[EntityOf(TransactionRepository::class)]
+#[EntityOf(OrmTransactionRepository::class)]
 class TransactionEntity extends RepositoryEntity
 {
     use Builder;
@@ -38,8 +38,8 @@ class TransactionEntity extends RepositoryEntity
     #[Field('amount_cents')]
     private ?int $amountCents = null;
 
-    #[Field('category')]
-    private ?string $category = null;
+    #[Field('category_id')]
+    private ?int $categoryId = null;
 
     #[Field('provider_category')]
     private ?string $providerCategory = null;
@@ -52,9 +52,6 @@ class TransactionEntity extends RepositoryEntity
 
     #[Field('category_confidence')]
     private ?int $categoryConfidence = null;
-
-    #[Field('category_suggested')]
-    private ?string $categorySuggested = null;
 
     #[Field('taxonomy_version')]
     private ?string $taxonomyVersion = null;

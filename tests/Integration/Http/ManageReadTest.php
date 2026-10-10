@@ -23,9 +23,22 @@ final class ManageReadTest extends IntegTestCase
 
         $body = (string) $response->getBody();
         $this->assertStringContainsString('Manage ' . IntegFixtures::KINGDOM_NAME, $body);
-        $this->assertStringContainsString('Statement settings', $body);
+        $this->assertStringContainsString('Transaction review', $body);
         $this->assertStringContainsString('name="csrf"', $body);
-        $this->assertStringContainsString('/manage/' . IntegFixtures::KINGDOM_SLUG . '/patterns', $body);
+        $this->assertStringContainsString('tab=patterns', $body);
+    }
+
+    public function testManageSettingsTabRendersForKingdomManager(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $response = $http->get(self::MANAGE_PREFIX . '?tab=settings');
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+
+        $body = (string) $response->getBody();
+        $this->assertStringContainsString('Statement settings', $body);
+        $this->assertStringContainsString('Bank connection', $body);
     }
 
     public function testManageConnectGetRedirectsToManageIndex(): void
@@ -35,11 +48,9 @@ final class ManageReadTest extends IntegTestCase
 
         $response = $http->get(self::MANAGE_PREFIX . '/connect');
         $this->assertSame(302, $response->getStatusCode());
-        $this->assertTrue(
-            $http->isRedirectToPath($response, self::MANAGE_PREFIX),
-            'GET manage connect should redirect to manage index; location='
-            . $response->getHeaderLine('Location'),
-        );
+        $location = $response->getHeaderLine('Location');
+        $this->assertStringContainsString(self::MANAGE_PREFIX, $location);
+        $this->assertStringContainsString('tab=settings', $location);
     }
 
     public function testManagePatternsListRendersForKingdomManager(): void
@@ -51,7 +62,7 @@ final class ManageReadTest extends IntegTestCase
         $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
 
         $body = (string) $response->getBody();
-        $this->assertStringContainsString('Category patterns', $body);
+        $this->assertStringContainsString('tab=patterns', $body);
         $this->assertStringContainsString(self::MANAGE_PREFIX . '/patterns/new', $body);
         $this->assertStringContainsString('name="csrf"', $body);
     }
@@ -67,7 +78,7 @@ final class ManageReadTest extends IntegTestCase
         $body = (string) $response->getBody();
         $this->assertStringContainsString('Create pattern', $body);
         $this->assertStringContainsString('id="pattern-token"', $body);
-        $this->assertStringContainsString('id="pattern-category"', $body);
+        $this->assertStringContainsString('data-category-typeahead', $body);
         $this->assertStringContainsString('action="' . self::MANAGE_PREFIX . '/patterns"', $body);
     }
 

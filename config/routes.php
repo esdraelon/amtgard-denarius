@@ -50,6 +50,8 @@ return function (App $app): void {
         $group->get('/manage/{slug}/patterns', [ManagerController::class, 'patterns']);
         $group->get('/manage/{slug}/patterns/new', [ManagerController::class, 'patternNew']);
         $group->post('/manage/{slug}/patterns/bulk', [ManagerController::class, 'patternBulk']);
+        $group->post('/manage/{slug}/patterns/preview', [ManagerController::class, 'patternPreview']);
+        $group->post('/manage/{slug}/pattern-revisions/apply', [ManagerController::class, 'applyPatternAutomaticCategories']);
         $group->post('/manage/{slug}/patterns', [ManagerController::class, 'patternCreate']);
         $group->post('/manage/{slug}/patterns/{ruleId}', [ManagerController::class, 'patternUpdate']);
         $group->post('/manage/{slug}/patterns/{ruleId}/delete', [ManagerController::class, 'patternDelete']);

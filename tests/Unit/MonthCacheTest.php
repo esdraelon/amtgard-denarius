@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Domain\Statement\Line\CategoryTotal;
 use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
@@ -38,7 +39,7 @@ final class MonthCacheTest extends AmtgardTestCase
                 return new MonthStatement(
                     DisplayMode::LessRedacted,
                     $month,
-                    [LedgerLine::builder()->postedOn('2026-09-02')->amountCents(250)->category('office')->categoryFlow('expense')->description('paper')->counterparty('Shop')->build()],
+                    [LedgerLine::builder()->postedOn('2026-09-02')->amountCents(250)->category('Office')->categoryFlow('expense')->description('paper')->counterparty('Shop')->build()],
                 );
             }
         };
@@ -117,7 +118,7 @@ final class MonthCacheTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->build());
         $warmKey = sprintf('denarius:month:%d:summarized:2026-09:%s', $kingdomId, CategorizationArrange::bundledCatalog()->taxonomyVersion());
         $store->setPersistent($warmKey, '{}');

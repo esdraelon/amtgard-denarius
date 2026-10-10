@@ -88,7 +88,7 @@ class KingdomCategoryRuleRepository extends Repository implements EntityReposito
     {
         DenariusLog::trace(__METHOD__, function () use ($entity, $rule): mixed {
             $entity->setKingdomId($rule->getKingdomId());
-            $entity->setCategory($rule->getCategory());
+            $entity->setCategoryId($rule->getCategoryId());
             $entity->setFieldsJson(json_encode($rule->getFields(), JSON_THROW_ON_ERROR));
             $entity->setMatchType($rule->getMatchType());
             $entity->setRegexPattern($rule->getRegexPattern() !== '' ? $rule->getRegexPattern() : null);
@@ -113,7 +113,7 @@ class KingdomCategoryRuleRepository extends Repository implements EntityReposito
             return KingdomCategoryRuleRecord::builder()
                 ->id($entity->getId())
                 ->kingdomId((int) $entity->getKingdomId())
-                ->category((string) $entity->getCategory())
+                ->categoryId((int) ($entity->getCategoryId() ?? 0))
                 ->fields($this->decodeStringList((string) $entity->getFieldsJson()))
                 ->matchType((string) $entity->getMatchType())
                 ->regexPattern((string) ($entity->getRegexPattern() ?? ''))
@@ -179,7 +179,10 @@ class KingdomCategoryRuleRepository extends Repository implements EntityReposito
             $strings = $this->decodeStringList($json);
             $flows = [];
             foreach ($strings as $raw) {
-                $flows[] = TransactionFlow::fromStored($raw);
+                $flow = TransactionFlow::fromStored($raw);
+                if ($flow instanceof TransactionFlow) {
+                    $flows[] = $flow;
+                }
             }
 
             return $flows !== [] ? $flows : [TransactionFlow::Expense];

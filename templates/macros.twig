@@ -18,6 +18,21 @@
     <button type="submit" class="btn btn-primary">{{ label }}</button>
 {% endmacro %}
 
+{% macro help_popover(id, title, content) %}
+    <button type="button"
+            class="btn btn-link btn-sm p-0 align-baseline text-body-secondary"
+            id="{{ id }}"
+            data-bs-toggle="popover"
+            data-bs-trigger="focus"
+            data-bs-placement="bottom"
+            data-bs-html="true"
+            title="{{ title }}"
+            data-bs-content="{{ content|e('html_attr') }}"
+            aria-label="{{ title }} help">
+        <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+    </button>
+{% endmacro %}
+
 {% macro input_text(name, value, label) %}
     <div class="mb-3">
         <label class="form-label fw-semibold text-denarius-tertiary" for="{{ name }}">{{ label }}</label>

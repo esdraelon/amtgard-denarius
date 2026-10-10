@@ -1,0 +1,83 @@
+<div class="modal fade" id="review-pattern-modal" tabindex="-1" aria-labelledby="review-pattern-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg review-pattern-modal-dialog">
+        <div class="modal-content review-pattern-modal-content">
+            <form method="post" action="/manage/{{ kingdom.slug }}/patterns" id="review-pattern-form" class="review-pattern-modal-form">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <input type="hidden" name="return_to" value="review">
+                <input type="hidden" name="review_month" value="{{ reviewMonth }}">
+                <input type="hidden" name="pattern_anchor_amount_cents" id="review-pattern-anchor-cents" value="">
+                <input type="hidden" name="pattern_anchor_transaction_id" id="review-pattern-anchor-txn" value="">
+                <div class="modal-header flex-shrink-0">
+                    <div class="d-flex align-items-center gap-1">
+                        <h2 class="modal-title h5 mb-0" id="review-pattern-modal-title">Create pattern</h2>
+                        <button type="button"
+                                class="btn btn-link btn-sm p-0 align-baseline"
+                                id="review-pattern-help-btn"
+                                data-bs-toggle="popover"
+                                data-bs-trigger="focus"
+                                data-bs-placement="bottom"
+                                data-bs-html="true"
+                                title="Create pattern"
+                                data-bs-content="<p class='mb-2'>Patterns match normalized description and counterparty on rows with the <strong>same sign</strong> as this transaction (expense outflows vs income inflows), across all months on published accounts.</p><p class='mb-2'>Type a new category name to create a kingdom-local category when you save. Selected matching rows get that category; manager-locked rows are skipped except the row you started from.</p><p class='mb-0'>Matches refresh automatically when you change match text or category. Use the <i class='fa-solid fa-circle-question'></i> beside Match text for <code>*</code>, <code>?</code>, and <code>\s</code> wildcards (not full regex).</p>"
+                                aria-label="Pattern help">
+                            <i class="fa-solid fa-circle-question text-body-secondary" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body review-pattern-modal-body">
+                    <div class="review-pattern-modal-fields">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-body-secondary" for="review-pattern-source-counterparty">Counterparty</label>
+                                <input class="form-control form-control-sm" id="review-pattern-source-counterparty" type="text" readonly tabindex="-1">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-body-secondary" for="review-pattern-source-description">Description</label>
+                                <input class="form-control form-control-sm" id="review-pattern-source-description" type="text" readonly tabindex="-1">
+                            </div>
+                        </div>
+                        {% include 'components/pattern-form-fields.twig' with {
+                            prefill: { token: '', category: '', categoryDisplay: '', matchType: 'token' },
+                            tokenInputId: 'review-pattern-token',
+                            categoryInputId: 'review-pattern-category-display',
+                            categoryListId: 'review-pattern-category-list',
+                            categoryMode: 'typeahead',
+                            categoryFlow: 'expense',
+                            categorySearchUrl: '/manage/' ~ kingdom.slug ~ '/taxonomy/categories',
+                            patternFlow: categoryFlow|default('expense'),
+                            patternFlowInputId: 'review-pattern-rule-flow',
+                            hideTokenHelp: true,
+                            tokenGlobHelp: true
+                        } %}
+                        <p class="small text-body-secondary mb-2" id="review-pattern-preview-status" aria-live="polite"></p>
+                    </div>
+                    <div id="review-pattern-matches-panel" class="review-pattern-matches-panel d-none">
+                        <h3 class="h6">Rows this pattern matches</h3>
+                        <div id="review-pattern-matches-scroll" class="review-pattern-matches-scroll border rounded" tabindex="0" aria-label="Matching transactions">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" class="text-center" style="width: 2.5rem;">
+                                            <input class="form-check-input" type="checkbox" id="review-pattern-select-all" checked aria-label="Select all matches">
+                                        </th>
+                                        <th scope="col">Posted</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col">Counterparty</th>
+                                        <th scope="col">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="review-pattern-matches-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <p class="small text-danger mb-0 d-none" id="review-pattern-error"></p>
+                </div>
+                <div class="modal-footer flex-shrink-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm" id="review-pattern-submit" disabled>Save pattern &amp; categorize selected</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

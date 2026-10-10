@@ -18,10 +18,12 @@ use Amtgard\Denarius\Service\Enrollment\BankConnect;
 use Amtgard\Denarius\Service\Enrollment\EnrollmentService;
 use Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession;
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
-use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomScopedCategorySearch;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
+use Amtgard\Denarius\Service\Ledger\KingdomPatternReviewWizard;
 use Amtgard\Denarius\Service\Ledger\KingdomPatternService;
 use Amtgard\Denarius\Service\Ledger\ManagerLedgerSyncFeedback;
+use Amtgard\Denarius\Service\Ledger\PatternAutomaticCategoryReview;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill;
@@ -47,10 +49,12 @@ final class ManagerController
         private readonly SimpleFinConnectSession $simplefinSession,
         private readonly TransactionReviewQueue $reviewQueue,
         private readonly TransactionReviewService $reviewActions,
-        private readonly TaxonomyCategorySearch $categorySearch,
+        private readonly KingdomScopedCategorySearch $categorySearch,
         private readonly KingdomPatternService $patterns,
+        private readonly KingdomPatternReviewWizard $patternWizard,
         private readonly KingdomPatternPrefill $patternPrefill,
         private readonly ManagerLedgerSyncFeedback $ledgerSyncFeedback,
+        private readonly PatternAutomaticCategoryReview $patternAutomaticReview,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -66,14 +70,21 @@ final class ManagerController
             $uncategorizedOnly = ($params['uncategorized'] ?? '') === '1';
             $connect = $kingdom->getEnrollmentStatus() === 'connected' ? $this->connects->linked() : $this->connects->idle();
 
-            return $this->page($response, $kingdom, $connect, trim((string) ($params['review_month'] ?? '')), $uncategorizedOnly);
+            return $this->page(
+                $response,
+                $kingdom,
+                $connect,
+                trim((string) ($params['review_month'] ?? '')),
+                $uncategorizedOnly,
+                $this->resolveManageTab($params),
+            );
         });
     }
 
     public function connectGet(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($response, $slug): ResponseInterface {
-            return $response->withHeader('Location', '/manage/' . $slug)->withStatus(302);
+            return $response->withHeader('Location', '/manage/' . $slug . '?tab=settings')->withStatus(302);
         });
     }
 
@@ -94,7 +105,7 @@ final class ManagerController
                 $this->simplefinSession->remember($kingdom->getSlug());
             }
 
-            return $this->page($response, $kingdom, $connect);
+            return $this->page($response, $kingdom, $connect, '', false, 'settings');
         });
     }
 
@@ -117,7 +128,7 @@ final class ManagerController
                 (int) ($body['embargo_days'] ?? 3),
             );
 
-            return $this->manageRedirect($response, $kingdom, '');
+            return $this->manageRedirect($response, $kingdom, '', 'settings');
         });
     }
 
@@ -139,7 +150,7 @@ final class ManagerController
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->connect($kingdom, $payload);
 
-            return $this->manageRedirect($response, $kingdom, '');
+            return $this->manageRedirect($response, $kingdom, '', 'settings');
         });
     }
 
@@ -164,7 +175,7 @@ final class ManagerController
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->setPublished($kingdom, $flags);
 
-            return $this->manageRedirect($response, $kingdom, '');
+            return $this->manageRedirect($response, $kingdom, '', 'settings');
         });
     }
 
@@ -182,7 +193,7 @@ final class ManagerController
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->disconnectBank($kingdom);
 
-            return $this->manageRedirect($response, $kingdom, '');
+            return $this->manageRedirect($response, $kingdom, '', 'settings');
         });
     }
 
@@ -199,7 +210,7 @@ final class ManagerController
             }
             $this->queue->publishLedger($kingdom->getOrkKingdomId());
 
-            return $this->manageRedirect($response, $kingdom, '');
+            return $this->manageRedirect($response, $kingdom, '', 'review');
         });
     }
 
@@ -224,15 +235,9 @@ final class ManagerController
     public function updateTransaction(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            return $this->reviewPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
-                $this->reviewActions->update(
-                    $kingdom,
-                    (string) ($body['teller_transaction_id'] ?? ''),
-                    (string) ($body['category'] ?? ''),
-                    ($body['publish'] ?? '') === '1',
-                    ($body['bulk_counterparty'] ?? '') === '1',
-                );
-            });
+            return $this->reviewPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): int {
+                return $this->reviewActions->updateFromReviewBody($kingdom, $body);
+            }, true);
         });
     }
 
@@ -255,7 +260,7 @@ final class ManagerController
             $query = (string) ($request->getQueryParams()['q'] ?? '');
             $flowRaw = (string) ($request->getQueryParams()['flow'] ?? '');
             $flow = $flowRaw !== '' ? TransactionFlow::fromStored($flowRaw) : null;
-            $results = $this->categorySearch->search($query, $flow);
+            $results = $this->categorySearch->search($kingdom, $query, $flow);
 
             return JsonBody::write($response, ['results' => $results]);
         });
@@ -269,11 +274,9 @@ final class ManagerController
                 return $kingdom;
             }
 
-            return $this->html->html($response, 'manage-patterns.twig', [
-                'csrf' => CsrfToken::issue(),
-                'kingdom' => $kingdom->view(),
-                'patterns' => $this->patterns->listViews($kingdom),
-            ]);
+            $connect = $kingdom->getEnrollmentStatus() === 'connected' ? $this->connects->linked() : $this->connects->idle();
+
+            return $this->page($response, $kingdom, $connect, '', false, 'patterns');
         });
     }
 
@@ -285,11 +288,11 @@ final class ManagerController
                 return $kingdom;
             }
             $params = $request->getQueryParams();
-            $prefill = $this->patternPrefill->fromReviewQuery(
+            $prefill = $this->patterns->enrichFormPrefill($kingdom, $this->patternPrefill->fromReviewQuery(
                 (string) ($params['counterparty'] ?? ''),
                 (string) ($params['description'] ?? ''),
                 (string) ($params['category'] ?? ''),
-            );
+            ));
 
             return $this->html->html($response, 'pattern-form.twig', [
                 'csrf' => CsrfToken::issue(),
@@ -304,7 +307,48 @@ final class ManagerController
     public function patternCreate(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return $this->patternPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
+            if (($body['return_to'] ?? '') === 'review') {
+                $this->patternWizard->complete(
+                    $kingdom,
+                    $body,
+                    $this->patternApplyIds($body),
+                );
+
+                return;
+            }
             $this->patterns->saveNew($kingdom, $body);
+        });
+    }
+
+    public function applyPatternAutomaticCategories(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return $this->reviewPost($request, $response, $slug, function (KingdomRecord $kingdom, array $body): void {
+            $this->patternAutomaticReview->applySelected(
+                $kingdom,
+                trim((string) ($body['review_month'] ?? '')),
+                $this->patternApplyIds($body),
+            );
+        });
+    }
+
+    public function patternPreview(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
+            $kingdom = $this->managed($response, $slug);
+            if ($kingdom instanceof ResponseInterface) {
+                return $kingdom;
+            }
+            $body = (array) $request->getParsedBody();
+            if (! CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
+                return JsonBody::write($response, ['error' => 'Forbidden'], 403);
+            }
+            try {
+                $matches = $this->patternWizard->previewMatches($kingdom, $body);
+            } catch (\InvalidArgumentException $exception) {
+                return JsonBody::write($response, ['error' => $exception->getMessage()], 400);
+            }
+
+            return JsonBody::write($response, ['matches' => $matches]);
         });
     }
 
@@ -358,37 +402,64 @@ final class ManagerController
                 return $this->html->html($response, 'message.twig', ['title' => 'Cannot save pattern', 'message' => $exception->getMessage()], 400);
             }
 
-            return $response->withHeader('Location', '/manage/' . $kingdom->getSlug() . '/patterns')->withStatus(302);
+            if (($body['return_to'] ?? '') === 'review') {
+                return $this->manageRedirect($response, $kingdom, trim((string) ($body['review_month'] ?? '')));
+            }
+
+            return $this->manageRedirect($response, $kingdom, '', 'patterns');
         });
     }
 
     /**
-     * @param callable(KingdomRecord, array<string, mixed>): void $action
+     * @param callable(KingdomRecord, array<string, mixed>): mixed $action
      */
     private function reviewPost(
         ServerRequestInterface $request,
         ResponseInterface $response,
         string $slug,
         callable $action,
+        bool $jsonOnSuccess = false,
     ): ResponseInterface {
-        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug, $action): ResponseInterface {
+        return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug, $action, $jsonOnSuccess): ResponseInterface {
             $kingdom = $this->managed($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
+            $wantsJson = $jsonOnSuccess && $this->acceptsJson($request);
             if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
+                if ($wantsJson) {
+                    return JsonBody::write($response, ['error' => 'The form token did not match.'], 403);
+                }
+
                 return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
             }
+            $result = null;
             try {
                 CurrentActor::set((string) $this->auth->get()->profile->id);
-                $action($kingdom, $body);
+                $result = $action($kingdom, $body);
             } catch (\InvalidArgumentException $exception) {
+                if ($wantsJson) {
+                    return JsonBody::write($response, ['error' => $exception->getMessage()], 400);
+                }
+
                 return $this->html->html($response, 'message.twig', ['title' => 'Cannot update', 'message' => $exception->getMessage()], 400);
+            }
+
+            if ($wantsJson) {
+                return JsonBody::write($response, [
+                    'ok' => true,
+                    'categoryId' => is_int($result) ? $result : (int) ($body['category_id'] ?? 0),
+                ]);
             }
 
             return $this->manageRedirect($response, $kingdom, trim((string) ($body['review_month'] ?? '')));
         });
+    }
+
+    private function acceptsJson(ServerRequestInterface $request): bool
+    {
+        return str_contains($request->getHeaderLine('Accept'), 'application/json');
     }
 
     /**
@@ -400,10 +471,22 @@ final class ManagerController
         array $connect,
         string $requestedMonth = '',
         bool $uncategorizedOnly = false,
+        string $manageTab = 'review',
     ): ResponseInterface {
-        return DenariusLog::trace(__METHOD__, function () use ($response, $kingdom, $connect, $requestedMonth, $uncategorizedOnly): ResponseInterface {
-            $reviewMonth = $this->reviewQueue->reviewMonth($kingdom, $requestedMonth);
-            $reviewQueue = $this->reviewQueue->rowsForManage($kingdom, $reviewMonth, $uncategorizedOnly);
+        return DenariusLog::trace(__METHOD__, function () use (
+            $response,
+            $kingdom,
+            $connect,
+            $requestedMonth,
+            $uncategorizedOnly,
+            $manageTab,
+        ): ResponseInterface {
+            [$reviewMonth, $reviewQueue] = $this->reviewQueue->manageReview($kingdom, $requestedMonth, $uncategorizedOnly);
+            $patternAutomaticCandidates = $this->patternAutomaticReview->candidatesForMonth(
+                $kingdom,
+                $reviewMonth->key(),
+            );
+            $patterns = $manageTab === 'patterns' ? $this->patterns->listViews($kingdom) : [];
 
             return $this->html->html($response, 'manage.twig', [
                 'csrf' => CsrfToken::issue(),
@@ -416,17 +499,75 @@ final class ManagerController
                 'reviewNext' => $reviewMonth->next()->key(),
                 'uncategorizedOnly' => $uncategorizedOnly,
                 'ledgerSync' => $this->ledgerSyncFeedback->forManage($kingdom, $reviewQueue !== []),
+                'patternAutomaticCandidates' => $patternAutomaticCandidates,
+                'manageTab' => $manageTab,
+                'patterns' => $patterns,
             ]);
         });
     }
 
-    private function manageRedirect(ResponseInterface $response, KingdomRecord $kingdom, string $reviewMonth): ResponseInterface
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function resolveManageTab(array $params): string
     {
-        return DenariusLog::trace(__METHOD__, function () use ($response, $kingdom, $reviewMonth): ResponseInterface {
-            $url = '/manage/' . $kingdom->getSlug();
-            if ($reviewMonth !== '') {
-                $url .= '?review_month=' . rawurlencode($reviewMonth);
+        return DenariusLog::trace(__METHOD__, function () use ($params): string {
+            $tab = trim((string) ($params['tab'] ?? ''));
+            if ($tab === '') {
+                return 'review';
             }
+            if (! in_array($tab, ['settings', 'review', 'patterns'], true)) {
+                return 'review';
+            }
+
+            return $tab;
+        });
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return list<string>
+     */
+    private function patternApplyIds(array $body): array
+    {
+        $raw = $body['apply_transaction_ids'] ?? [];
+        if (! is_array($raw)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($raw as $id) {
+            if (is_string($id) && $id !== '') {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    private function manageRedirect(
+        ResponseInterface $response,
+        KingdomRecord $kingdom,
+        string $reviewMonth = '',
+        string $tab = 'review',
+        bool $uncategorizedOnly = false,
+    ): ResponseInterface {
+        return DenariusLog::trace(__METHOD__, function () use (
+            $response,
+            $kingdom,
+            $reviewMonth,
+            $tab,
+            $uncategorizedOnly,
+        ): ResponseInterface {
+            $query = ['tab' => $tab];
+            if ($tab === 'review') {
+                if ($reviewMonth !== '') {
+                    $query['review_month'] = $reviewMonth;
+                }
+                if ($uncategorizedOnly) {
+                    $query['uncategorized'] = '1';
+                }
+            }
+            $url = '/manage/' . $kingdom->getSlug() . '?' . http_build_query($query);
 
             return $response->withHeader('Location', $url)->withStatus(302);
         });

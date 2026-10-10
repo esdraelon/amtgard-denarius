@@ -9,6 +9,7 @@ use Amtgard\Denarius\Domain\Statement\Publication\PublicationEmbargoCalculator;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
@@ -27,6 +28,8 @@ final class TransactionReviewService
         private readonly AccountRepositoryInterface $accounts,
         private readonly MonthInvalidator $months,
         private readonly ReviewCategoryValidator $categoryValidator,
+        private readonly KingdomCategoryAssigner $categoryAssigner,
+        private readonly CategoryCatalog $categories,
         private readonly TaxonomyCatalog $catalog,
         private readonly PublicationEmbargoCalculator $embargo,
         private readonly \DateTimeImmutable $now,
@@ -34,27 +37,38 @@ final class TransactionReviewService
         $entered = DenariusLog::enter(__METHOD__);
     }
 
+    /**
+     * @param array<string, mixed> $body
+     */
+    public function updateFromReviewBody(KingdomRecord $kingdom, array $body): int
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $body): int {
+            $tellerTransactionId = (string) ($body['teller_transaction_id'] ?? '');
+            $row = $this->requireReviewable($kingdom, $tellerTransactionId);
+            $categoryId = $this->categoryAssigner->resolveForReview($kingdom, $body, $row->getAmountCents());
+            $this->update($kingdom, $tellerTransactionId, $categoryId, false);
+
+            return $categoryId;
+        });
+    }
+
     public function update(
         KingdomRecord $kingdom,
         string $tellerTransactionId,
-        string $category,
+        int $categoryId,
         bool $publish,
-        bool $bulkCounterparty,
     ): void {
         $method = __METHOD__;
 
-        DenariusLog::trace($method, function () use ($method, $kingdom, $tellerTransactionId, $category, $publish, $bulkCounterparty): mixed {
+        DenariusLog::trace($method, function () use ($method, $kingdom, $tellerTransactionId, $categoryId, $publish): mixed {
             $primary = $this->requireReviewable($kingdom, $tellerTransactionId);
-            $slug = $this->categoryValidator->assertAssignable($category, $primary->getAmountCents());
+            $validated = $this->categoryValidator->assertAssignable($categoryId, $primary->getAmountCents(), (int) $kingdom->getId());
             if ($publish) {
-                $this->assertPublishableCategory($primary, $slug, $method);
+                $this->assertPublishableCategory($primary, $validated, $method);
             }
-            $targets = $this->targetsForUpdate($kingdom, $primary, $slug, $bulkCounterparty);
             $touchedMonth = false;
-            foreach ($targets as $row) {
-                if ($this->applyCategory($row, $slug, $method)) {
-                    $touchedMonth = true;
-                }
+            if ($this->applyCategory($primary, $validated, $method)) {
+                $touchedMonth = true;
             }
             if ($touchedMonth) {
                 $this->months->forget((int) $kingdom->getId());
@@ -73,7 +87,7 @@ final class TransactionReviewService
 
         DenariusLog::trace($method, function () use ($method, $kingdom, $tellerTransactionId): mixed {
             $row = $this->requireReviewable($kingdom, $tellerTransactionId);
-            $this->assertPublishableCategory($row, $row->getCategory(), $method);
+            $this->assertPublishableCategory($row, $row->getCategoryId(), $method);
             if (!$this->embargoOpen($row)) {
                 DenariusLog::debugBranch('transaction_review_rejected_embargo', $method, [
                     'teller_transaction_id' => $tellerTransactionId,
@@ -170,6 +184,13 @@ final class TransactionReviewService
     {
         DenariusLog::trace(__METHOD__, function () use ($kingdom, $row, $method): mixed {
             $id = $row->getTellerTransactionId();
+            $fresh = $this->transactions->findByTellerTransactionId($id);
+            if ($fresh === null || $fresh->getKingdomId() !== (int) $kingdom->getId()) {
+                DenariusLog::debugBranch('transaction_review_rejected_missing', $method, ['teller_transaction_id' => $id]);
+
+                return null;
+            }
+            $row = $fresh;
             if ($this->isPublished($row)) {
                 return null;
             }
@@ -178,7 +199,7 @@ final class TransactionReviewService
 
                 return null;
             }
-            if ($row->getCategory() === 'uncategorized' && !$this->isHard($row)) {
+            if ($row->getCategoryId() === $this->categories->uncategorizedId() && !$this->isHard($row)) {
                 DenariusLog::debugBranch('transaction_review_skipped_uncategorized', $method, ['teller_transaction_id' => $id]);
 
                 return null;
@@ -215,72 +236,33 @@ final class TransactionReviewService
         });
     }
 
-    /**
-     * @return list<TransactionRecord>
-     */
-    private function targetsForUpdate(
-        KingdomRecord $kingdom,
-        TransactionRecord $primary,
-        string $slug,
-        bool $bulkCounterparty,
-    ): array {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdom, $primary, $slug, $bulkCounterparty): array {
-            if (!$bulkCounterparty) {
-                return [$primary];
-            }
-            $month = substr($primary->getPostedOn(), 0, 7);
-            $counterparty = $primary->getCounterparty();
-            $targets = [];
-            foreach ($this->transactions->forKingdom((int) $kingdom->getId()) as $row) {
-                if (!$this->accountPublished((int) $kingdom->getId(), $row->getTellerAccountId())) {
-                    continue;
-                }
-                if ($row->getCounterparty() !== $counterparty) {
-                    continue;
-                }
-                if (substr($row->getPostedOn(), 0, 7) !== $month) {
-                    continue;
-                }
-                try {
-                    $this->categoryValidator->assertAssignable($slug, $row->getAmountCents());
-                } catch (\InvalidArgumentException) {
-                    continue;
-                }
-                $targets[] = $row;
-            }
-
-            return $targets;
-        });
-    }
-
-    private function applyCategory(TransactionRecord $row, string $slug, string $method): bool
+    private function applyCategory(TransactionRecord $row, int $categoryId, string $method): bool
     {
-        return DenariusLog::trace(__METHOD__, function () use ($row, $slug, $method): bool {
-            if ($row->getCategory() === $slug) {
+        return DenariusLog::trace(__METHOD__, function () use ($row, $categoryId, $method): bool {
+            if ($row->getCategoryId() === $categoryId) {
                 return false;
             }
             $updated = TransactionRecordRebuilder::from($row)
-                ->category($slug)
+                ->categoryId($categoryId)
                 ->categorySource(CategorySource::Manager->value)
                 ->categoryRuleId(null)
                 ->categoryConfidence(100)
-                ->categorySuggested(null)
                 ->taxonomyVersion($this->catalog->taxonomyVersion())
                 ->build();
             $this->transactions->upsert($updated);
             DenariusLog::infoBranch('transaction_review_category_set', $method, [
                 'teller_transaction_id' => $row->getTellerTransactionId(),
-                'slug' => $slug,
+                'category_id' => $categoryId,
             ]);
 
             return true;
         });
     }
 
-    private function assertPublishableCategory(TransactionRecord $row, string $category, string $method): void
+    private function assertPublishableCategory(TransactionRecord $row, int $categoryId, string $method): void
     {
-        DenariusLog::trace(__METHOD__, function () use ($row, $category, $method): void {
-            if ($category !== 'uncategorized') {
+        DenariusLog::trace(__METHOD__, function () use ($row, $categoryId, $method): void {
+            if ($categoryId !== $this->categories->uncategorizedId()) {
                 return;
             }
             if ($this->isHard($row)) {

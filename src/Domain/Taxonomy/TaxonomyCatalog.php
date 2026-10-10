@@ -163,6 +163,14 @@ final class TaxonomyCatalog
     /**
      * @return list<TaxonomyCategoryDefinition>
      */
+    public function allDefinitions(): array
+    {
+        return DenariusLog::trace(__METHOD__, fn (): array => array_values($this->categories));
+    }
+
+    /**
+     * @return list<TaxonomyCategoryDefinition>
+     */
     public function assignableDefinitions(): array
     {
         return DenariusLog::trace(__METHOD__, function (): array {

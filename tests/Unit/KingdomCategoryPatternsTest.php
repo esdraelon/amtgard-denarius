@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\KingdomRuleMatcher;
@@ -51,7 +52,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $rules = new MemoryKingdomCategoryRules();
         $rules->save(KingdomCategoryRuleRecord::builder()
             ->kingdomId(1)
-            ->category('expense.storage')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->matchType('token')
             ->token('COSTCO')
             ->fields(['description'])
@@ -61,12 +62,13 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $keywords = new KeywordRuleMatcher($catalog);
         $categorizer = new TransactionCategorizer(
             $catalog,
+            CategoryCatalogFixture::asInterface(),
             new DescriptionNormalizer(),
             CategorizationArrange::amountSignRegistry(),
             new CategoryMatcherChain([
-                new ManagerLockMatcher(),
+                new ManagerLockMatcher(CategoryCatalogFixture::asInterface()),
                 new ProviderHintMatcher($catalog),
-                new KingdomRuleMatcher($rules, $keywords),
+                new KingdomRuleMatcher($rules, $keywords, CategoryCatalogFixture::asInterface()),
                 $keywords,
                 new FallbackMatcher(),
             ]),
@@ -77,7 +79,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             ->description('COSTCO WHOLESALE')
             ->build();
         $decision = $categorizer->decide('teller', $incoming, null, 1);
-        $this->assertSame('expense.storage', $decision->category);
+        $this->assertSame(CategoryCatalogFixture::id('expense.storage'), $decision->categoryId);
         $this->assertSame(CategorySource::KingdomRule, $decision->source);
     }
 
@@ -96,7 +98,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             ->amountCents(-5000)
             ->description('COSTCO WHOLESALE')
             ->status('posted')
-            ->category('expense.feast_groceries')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'))
             ->categorySource(CategorySource::SharedRule->value)
             ->categoryConfidence(75)
             ->build());
@@ -104,12 +106,13 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $keywords = new KeywordRuleMatcher($catalog);
         $categorizer = new TransactionCategorizer(
             $catalog,
+            CategoryCatalogFixture::asInterface(),
             new DescriptionNormalizer(),
             CategorizationArrange::amountSignRegistry(),
             new CategoryMatcherChain([
-                new ManagerLockMatcher(),
+                new ManagerLockMatcher(CategoryCatalogFixture::asInterface()),
                 new ProviderHintMatcher($catalog),
-                new KingdomRuleMatcher($rules, $keywords),
+                new KingdomRuleMatcher($rules, $keywords, CategoryCatalogFixture::asInterface()),
                 $keywords,
                 new FallbackMatcher(),
             ]),
@@ -120,12 +123,15 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             $categorizer,
             new LedgerProviderIdResolver(Strategies::providers(Strategies::teller())),
             $catalog,
+            CategoryCatalogFixture::asInterface(),
             Strategies::months(),
         );
         $patterns = new KingdomPatternService(
             $rules,
             new KingdomPatternValidator($catalog, new RegexPatternGuard()),
             $catalog,
+            CategoryCatalogFixture::asInterface(),
+            Strategies::categoryAssigner(),
             $recategorizer,
         );
         $patterns->saveNew($kingdom, [
@@ -137,7 +143,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         ]);
         $row = $transactions->findByTellerTransactionId('txn-costco');
         $this->assertNotNull($row);
-        $this->assertSame('expense.storage', $row->getCategory());
+        $this->assertSame(CategoryCatalogFixture::id('expense.storage'), $row->getCategoryId());
         $this->assertSame(CategorySource::KingdomRule->value, $row->getCategorySource());
     }
 
@@ -150,7 +156,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $kingdomId = (int) $kingdom->getId();
         $saved = $rules->save(KingdomCategoryRuleRecord::builder()
             ->kingdomId($kingdomId)
-            ->category('expense.storage')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->matchType('token')
             ->token('JOES STORAGE')
             ->fields(['description'])
@@ -165,7 +171,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             ->amountCents(-5000)
             ->description('JOES STORAGE UNIT')
             ->status('posted')
-            ->category('expense.storage')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->categorySource(CategorySource::KingdomRule->value)
             ->categoryRuleId($saved->publicRuleId())
             ->categoryConfidence(100)
@@ -174,9 +180,10 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $keywords = new KeywordRuleMatcher($catalog);
         $categorizer = new TransactionCategorizer(
             $catalog,
+            CategoryCatalogFixture::asInterface(),
             new DescriptionNormalizer(),
             CategorizationArrange::amountSignRegistry(),
-            CategorizationArrange::matcherChain($catalog, new KingdomRuleMatcher($rules, $keywords)),
+            CategorizationArrange::matcherChain($catalog, new KingdomRuleMatcher($rules, $keywords, CategoryCatalogFixture::asInterface())),
         );
         $recategorizer = new TransactionRecategorizer(
             $kingdoms,
@@ -184,18 +191,21 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             $categorizer,
             new LedgerProviderIdResolver(Strategies::providers(Strategies::teller())),
             $catalog,
+            CategoryCatalogFixture::asInterface(),
             Strategies::months(),
         );
         $patterns = new KingdomPatternService(
             $rules,
             new KingdomPatternValidator($catalog, new RegexPatternGuard()),
             $catalog,
+            CategoryCatalogFixture::asInterface(),
+            Strategies::categoryAssigner(),
             $recategorizer,
         );
         $patterns->delete($kingdom, (int) $saved->getId());
         $row = $transactions->findByTellerTransactionId('txn-joe');
         $this->assertNotNull($row);
-        $this->assertSame('uncategorized', $row->getCategory());
+        $this->assertSame(CategoryCatalogFixture::id('uncategorized'), $row->getCategoryId());
     }
 
     public function testPatternLogsUseRuleIdOnly(): void
@@ -213,12 +223,15 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             CategorizationArrange::categorizer(),
             new LedgerProviderIdResolver(Strategies::providers(Strategies::teller())),
             $catalog,
+            CategoryCatalogFixture::asInterface(),
             Strategies::months(),
         );
         $patterns = new KingdomPatternService(
             $rules,
             new KingdomPatternValidator($catalog, new RegexPatternGuard()),
             $catalog,
+            CategoryCatalogFixture::asInterface(),
+            Strategies::categoryAssigner(),
             $recategorizer,
         );
         $patterns->saveNew($kingdom, [
@@ -293,6 +306,8 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             new MemoryKingdomCategoryRules(),
             new KingdomPatternValidator($catalog, new RegexPatternGuard()),
             $catalog,
+            CategoryCatalogFixture::asInterface(),
+            Strategies::categoryAssigner(),
             Strategies::recategorizer($kingdoms, new MemoryTransactions(), Strategies::providers(Strategies::teller())),
         );
         $this->expectException(\InvalidArgumentException::class);
@@ -305,7 +320,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $rules = new MemoryKingdomCategoryRules();
         $rules->save(KingdomCategoryRuleRecord::builder()
             ->kingdomId(3)
-            ->category('expense.site_rental')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental'))
             ->matchType('anyOf')
             ->anyOfTokens(['CAMPGROUND', 'KOA'])
             ->fields(['description'])
@@ -316,7 +331,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $categorizer = CategorizationArrange::categorizer($catalog, $rules);
         $incoming = TransactionRecord::builder()->kingdomId(3)->amountCents(-100)->description('KOA HOLIDAY')->build();
         $decision = $categorizer->decide('teller', $incoming, null, 3);
-        $this->assertSame('expense.site_rental', $decision->category);
+        $this->assertSame(CategoryCatalogFixture::id('expense.site_rental'), $decision->categoryId);
     }
 
     public function testRegexKingdomRuleMatches(): void
@@ -325,7 +340,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $rules = new MemoryKingdomCategoryRules();
         $rules->save(KingdomCategoryRuleRecord::builder()
             ->kingdomId(2)
-            ->category('expense.storage')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->matchType('regex')
             ->regexPattern('\\bUNIT\\b')
             ->fields(['description'])
@@ -335,19 +350,20 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $keywords = new KeywordRuleMatcher($catalog);
         $categorizer = new TransactionCategorizer(
             $catalog,
+            CategoryCatalogFixture::asInterface(),
             new DescriptionNormalizer(),
             CategorizationArrange::amountSignRegistry(),
             new CategoryMatcherChain([
-                new ManagerLockMatcher(),
+                new ManagerLockMatcher(CategoryCatalogFixture::asInterface()),
                 new ProviderHintMatcher($catalog),
-                new KingdomRuleMatcher($rules, $keywords),
+                new KingdomRuleMatcher($rules, $keywords, CategoryCatalogFixture::asInterface()),
                 $keywords,
                 new FallbackMatcher(),
             ]),
         );
         $incoming = TransactionRecord::builder()->kingdomId(2)->amountCents(-100)->description('STORAGE UNIT RENT')->build();
         $decision = $categorizer->decide('teller', $incoming, null, 2);
-        $this->assertSame('expense.storage', $decision->category);
+        $this->assertSame(CategoryCatalogFixture::id('expense.storage'), $decision->categoryId);
     }
 
     public function testBulkSaveSkipsUnknownRuleRows(): void
@@ -360,10 +376,364 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             $rules,
             new KingdomPatternValidator($catalog, new RegexPatternGuard()),
             $catalog,
+            CategoryCatalogFixture::asInterface(),
+            Strategies::categoryAssigner(),
             Strategies::recategorizer($kingdoms, new MemoryTransactions(), Strategies::providers(Strategies::teller()), $rules),
         );
         $patterns->bulkSave($kingdom, [99 => ['category' => 'expense.storage', 'match_type' => 'token', 'token' => 'X']]);
         $this->assertSame([], $rules->forKingdom((int) $kingdom->getId()));
+    }
+
+    public function testPatternPreviewRespectsExpenseVersusIncomeDirection(): void
+    {
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $accounts = new MemoryAccounts();
+        $rules = new MemoryKingdomCategoryRules();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(10)->name('K')->slug('k10')->provider('teller')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerAccountId('acc')
+            ->name('Checking')
+            ->published(true)
+            ->build());
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('txn-out')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-04')
+            ->amountCents(-5000)
+            ->description('USAA FSB TRNSFER')
+            ->counterparty('USAA')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+            ->build());
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('txn-in')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-04')
+            ->amountCents(5000)
+            ->description('USAA FSB TRNSFER')
+            ->counterparty('USAA')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+            ->build());
+        $wizard = Strategies::patternWizard($kingdoms, $transactions, $accounts, $rules);
+        $expenseBody = [
+            'category' => 'expense.bank_fees',
+            'match_type' => 'token',
+            'token' => 'USAA',
+            'fields' => ['description', 'counterparty'],
+            'pattern_anchor_amount_cents' => -5000,
+        ];
+        $expenseMatches = $wizard->previewMatches($kingdom, $expenseBody);
+        $this->assertSame(['txn-out'], array_column($expenseMatches, 'tellerTransactionId'));
+
+        $incomeBody = [
+            'category' => 'income.dues',
+            'match_type' => 'token',
+            'token' => 'USAA',
+            'fields' => ['description', 'counterparty'],
+            'pattern_anchor_amount_cents' => 5000,
+        ];
+        $incomeMatches = $wizard->previewMatches($kingdom, $incomeBody);
+        $this->assertSame(['txn-in'], array_column($incomeMatches, 'tellerTransactionId'));
+    }
+
+    public function testPatternPreviewUsesStoredSignForPlaidKingdoms(): void
+    {
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $accounts = new MemoryAccounts();
+        $rules = new MemoryKingdomCategoryRules();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(12)->name('K')->slug('k12')->provider('plaid')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerAccountId('acc')
+            ->name('Checking')
+            ->published(true)
+            ->build());
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('txn-usaa-out')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-04')
+            ->amountCents(-5000)
+            ->description('USAA FSB TRNSFER')
+            ->counterparty('USAA')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+            ->build());
+        $wizard = Strategies::patternWizard($kingdoms, $transactions, $accounts, $rules);
+        $matches = $wizard->previewMatches($kingdom, [
+            'match_type' => 'token',
+            'token' => 'USAA',
+            'fields' => ['description', 'counterparty'],
+            'pattern_anchor_amount_cents' => -5000,
+        ]);
+        $this->assertSame(['txn-usaa-out'], array_column($matches, 'tellerTransactionId'));
+    }
+
+    public function testPatternPreviewMatchesAllMonthsOnPublishedAccounts(): void
+    {
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $accounts = new MemoryAccounts();
+        $rules = new MemoryKingdomCategoryRules();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(15)->name('K')->slug('k15')->provider('teller')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerAccountId('acc')
+            ->name('Checking')
+            ->published(true)
+            ->build());
+        foreach (['2026-08-10', '2026-09-04'] as $postedOn) {
+            $transactions->upsert(TransactionRecord::builder()
+                ->kingdomId($kingdomId)
+                ->tellerTransactionId('txn-' . $postedOn)
+                ->tellerAccountId('acc')
+                ->postedOn($postedOn)
+                ->amountCents(-5000)
+                ->description('USAA FSB TRNSFER')
+                ->counterparty('USAA')
+                ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+                ->build());
+        }
+        $wizard = Strategies::patternWizard($kingdoms, $transactions, $accounts, $rules);
+        $matches = $wizard->previewMatches($kingdom, [
+            'match_type' => 'token',
+            'token' => 'USAA',
+            'fields' => ['description', 'counterparty'],
+            'pattern_anchor_amount_cents' => -5000,
+        ]);
+        $this->assertCount(2, $matches);
+    }
+
+    public function testPatternPreviewIncludesManagerLockedAnchorRow(): void
+    {
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $accounts = new MemoryAccounts();
+        $rules = new MemoryKingdomCategoryRules();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(13)->name('K')->slug('k13')->provider('teller')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerAccountId('acc')
+            ->name('Checking')
+            ->published(true)
+            ->build());
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('txn-anchor')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-04')
+            ->amountCents(-5000)
+            ->description('USAA FSB TRNSFER')
+            ->counterparty('USAA')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.bank_fees'))
+            ->categorySource(CategorySource::Manager->value)
+            ->build());
+        $wizard = Strategies::patternWizard($kingdoms, $transactions, $accounts, $rules);
+        $matches = $wizard->previewMatches($kingdom, [
+            'match_type' => 'token',
+            'token' => 'USAA',
+            'fields' => ['description', 'counterparty'],
+            'pattern_anchor_amount_cents' => -5000,
+            'pattern_anchor_transaction_id' => 'txn-anchor',
+        ]);
+        $this->assertSame(['txn-anchor'], array_column($matches, 'tellerTransactionId'));
+    }
+
+    public function testPatternPreviewIncludesAlreadyCategorizedNonManagerRows(): void
+    {
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $accounts = new MemoryAccounts();
+        $rules = new MemoryKingdomCategoryRules();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(11)->name('K')->slug('k11')->provider('teller')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerAccountId('acc')
+            ->name('Checking')
+            ->published(true)
+            ->build());
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('txn-tagged')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-04')
+            ->amountCents(-2500)
+            ->description('COSTCO WHOLESALE')
+            ->counterparty('COSTCO')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
+            ->categorySource(CategorySource::SharedRule->value)
+            ->build());
+        $wizard = Strategies::patternWizard($kingdoms, $transactions, $accounts, $rules);
+        $matches = $wizard->previewMatches($kingdom, [
+            'match_type' => 'token',
+            'token' => 'COSTCO',
+            'fields' => ['description', 'counterparty'],
+            'pattern_anchor_amount_cents' => -2500,
+        ]);
+        $this->assertSame(['txn-tagged'], array_column($matches, 'tellerTransactionId'));
+    }
+
+    public function testPatternReviewWizardCreatesCustomCategoryAndUpdatesRow(): void
+    {
+        $categories = CategoryCatalogFixture::load();
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $accounts = new MemoryAccounts();
+        $rules = new MemoryKingdomCategoryRules();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(14)->name('K')->slug('k14')->provider('teller')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerAccountId('acc')
+            ->name('Checking')
+            ->published(true)
+            ->build());
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('txn-usaa')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-04')
+            ->amountCents(-5000)
+            ->description('USAA FSB TRNSFER')
+            ->counterparty('USAA')
+            ->categoryId(CategoryCatalogFixture::id('uncategorized'))
+            ->build());
+        $assigner = Strategies::categoryAssigner();
+        $patterns = new KingdomPatternService(
+            $rules,
+            new KingdomPatternValidator(CategorizationArrange::bundledCatalog(), new RegexPatternGuard()),
+            CategorizationArrange::bundledCatalog(),
+            $categories,
+            $assigner,
+            Strategies::recategorizer($kingdoms, $transactions, Strategies::providers(Strategies::teller()), $rules),
+        );
+        $wizard = new \Amtgard\Denarius\Service\Ledger\KingdomPatternReviewWizard(
+            $patterns,
+            Strategies::reviewService($transactions, $accounts, null, null, $assigner),
+            $transactions,
+            $accounts,
+            new KeywordRuleMatcher(CategorizationArrange::bundledCatalog()),
+            new DescriptionNormalizer(),
+            Strategies::recategorizer($kingdoms, $transactions, Strategies::providers(Strategies::teller()), $rules),
+            $categories,
+        );
+        $body = [
+            'category_display' => 'Expense: Reallocate',
+            'match_type' => 'token',
+            'token' => 'USAA',
+            'fields' => ['description', 'counterparty'],
+            'pattern_anchor_amount_cents' => -5000,
+            'pattern_anchor_transaction_id' => 'txn-usaa',
+        ];
+        $wizard->complete($kingdom, $body, ['txn-usaa']);
+        $saved = $transactions->findByTellerTransactionId('txn-usaa');
+        $savedCategoryId = (int) ($saved?->getCategoryId() ?? 0);
+        $this->assertSame('Reallocate', $categories->labelFor($savedCategoryId));
+        $this->assertSame(CategorySource::Manager->value, $saved?->getCategorySource());
+        $this->assertSame($savedCategoryId, $rules->forKingdom($kingdomId)[0]->getCategoryId());
+    }
+
+    public function testPatternReviewWizardAppliesOnlySelectedUncategorizedRows(): void
+    {
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $accounts = new MemoryAccounts();
+        $rules = new MemoryKingdomCategoryRules();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(9)->name('K')->slug('k9')->provider('teller')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerAccountId('acc')
+            ->name('Checking')
+            ->published(true)
+            ->build());
+        foreach (['txn-a', 'txn-b'] as $id) {
+            $transactions->upsert(TransactionRecord::builder()
+                ->kingdomId($kingdomId)
+                ->tellerTransactionId($id)
+                ->tellerAccountId('acc')
+                ->postedOn('2026-09-04')
+                ->amountCents(-2500)
+                ->description('COSTCO WHOLESALE #' . $id)
+                ->counterparty('COSTCO')
+                ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+                ->build());
+        }
+        $wizard = Strategies::patternWizard($kingdoms, $transactions, $accounts, $rules);
+        $body = [
+            'category' => 'expense.storage',
+            'match_type' => 'token',
+            'token' => 'COSTCO',
+            'fields' => ['description', 'counterparty'],
+            'flows' => ['expense'],
+        ];
+        $matches = $wizard->previewMatches($kingdom, $body);
+        $this->assertCount(2, $matches);
+        $wizard->complete($kingdom, $body, ['txn-a']);
+        $this->assertSame(CategoryCatalogFixture::id('expense.storage'), $transactions->findByTellerTransactionId('txn-a')?->getCategoryId());
+        $this->assertSame(CategorySource::Manager->value, $transactions->findByTellerTransactionId('txn-a')?->getCategorySource());
+        $this->assertSame(CategoryCatalogFixture::id('uncategorized'), $transactions->findByTellerTransactionId('txn-b')?->getCategoryId());
+    }
+
+    public function testPatternAutomaticReviewListsAndAppliesMonthRevisions(): void
+    {
+        $kingdoms = new MemoryKingdoms();
+        $transactions = new MemoryTransactions();
+        $accounts = new MemoryAccounts();
+        $rules = new MemoryKingdomCategoryRules();
+        $kingdom = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(16)->name('K')->slug('k16')->provider('teller')->build());
+        $kingdomId = (int) $kingdom->getId();
+        $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerAccountId('acc')
+            ->name('Checking')
+            ->published(true)
+            ->build());
+        $rules->save(KingdomCategoryRuleRecord::builder()
+            ->kingdomId($kingdomId)
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
+            ->matchType('token')
+            ->token('COSTCO')
+            ->fields(['description', 'counterparty'])
+            ->flows([TransactionFlow::Expense])
+            ->confidence(100)
+            ->build());
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('txn-sep')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-09-04')
+            ->amountCents(-2500)
+            ->description('COSTCO WHOLESALE')
+            ->counterparty('COSTCO')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+            ->build());
+        $transactions->upsert(TransactionRecord::builder()
+            ->kingdomId($kingdomId)
+            ->tellerTransactionId('txn-aug')
+            ->tellerAccountId('acc')
+            ->postedOn('2026-08-04')
+            ->amountCents(-2500)
+            ->description('COSTCO WHOLESALE')
+            ->counterparty('COSTCO')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
+            ->build());
+        $review = Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts, $rules);
+        $candidates = $review->candidatesForMonth($kingdom, '2026-09');
+        $this->assertSame(['txn-sep'], array_column($candidates, 'tellerTransactionId'));
+        $this->assertSame('expense.storage', $candidates[0]['suggestedCategory']);
+        $review->applySelected($kingdom, '2026-09', ['txn-sep']);
+        $this->assertSame(CategoryCatalogFixture::id('expense.storage'), $transactions->findByTellerTransactionId('txn-sep')?->getCategoryId());
+        $this->assertSame(CategorySource::Manager->value, $transactions->findByTellerTransactionId('txn-sep')?->getCategorySource());
+        $this->assertSame(CategoryCatalogFixture::id('uncategorized'), $transactions->findByTellerTransactionId('txn-aug')?->getCategoryId());
     }
 
     public function testGuestCannotOpenPatterns(): void
@@ -373,7 +743,7 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $transactions = new MemoryTransactions();
         $accounts = new MemoryAccounts();
         $queue = new MemoryRefresh();
-        $twig = new TwigHtmlRenderer(new Environment(new ArrayLoader(['manage-patterns.twig' => 'patterns'])));
+        $twig = new TwigHtmlRenderer(new Environment(new ArrayLoader(['manage.twig' => 'manage'])));
         $permissions = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
         $manager = new ManagerController(
             new SessionAuthStore('empty'),
@@ -388,10 +758,12 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             new SimpleFinConnectSession(),
             Strategies::reviewQueue($transactions, $accounts),
             Strategies::reviewService($transactions, $accounts),
-            Strategies::categorySearch(),
+            Strategies::kingdomScopedCategorySearch(),
             Strategies::kingdomPatternService($kingdoms, $transactions),
+            Strategies::patternWizard($kingdoms, $transactions, $accounts),
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
+            Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
         );
         $response = $manager->patterns(
             (new \Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest('GET', '/manage/golden-plains/patterns'),

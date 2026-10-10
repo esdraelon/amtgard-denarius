@@ -1,7 +1,17 @@
-{# title: optional string; body via embed block section_body #}
+{# title: optional string; help_content + help_title for ? popover; body via embed block section_body #}
 <section class="mb-4 pb-4 border-bottom">
     {% if title is defined and title %}
-        <h2 class="font-serif h4 text-denarius-tertiary mb-3">{{ title }}</h2>
+        <div class="d-flex align-items-center gap-1 mb-3">
+            <h2 class="font-serif h4 text-denarius-tertiary mb-0">{{ title }}</h2>
+            {% if help_content is defined and help_content %}
+                {% import "macros.twig" as ui %}
+                {{ ui.help_popover(
+                    (help_id|default('help-' ~ title|lower|replace({' ': '-'}))),
+                    help_title|default(title),
+                    help_content
+                ) }}
+            {% endif %}
+        </div>
     {% endif %}
     {% block section_body %}{% endblock %}
 </section>

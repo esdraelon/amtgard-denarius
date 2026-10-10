@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationCandidateLine;
 use Amtgard\Denarius\Domain\Statement\Publication\StatementAbsenceClassifier;
@@ -29,7 +30,7 @@ final class StatementAbsenceTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->publishableAfter('2026-09-05T00:00:00+00:00')
             ->build();
 
@@ -47,7 +48,7 @@ final class StatementAbsenceTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->publishableAfter('2026-09-10T00:00:00+00:00')
             ->build();
 
@@ -65,7 +66,7 @@ final class StatementAbsenceTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-08-15')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->publishedAt('2026-08-16T00:00:00+00:00')
             ->build();
 
@@ -127,7 +128,7 @@ final class StatementAbsenceTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')

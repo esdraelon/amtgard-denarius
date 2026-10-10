@@ -8,4 +8,9 @@ namespace Amtgard\Denarius\Domain\Taxonomy;
 enum CategorySensitivity: string
 {
     case Soft = 'soft';
+
+    public static function fromStored(string $value): ?self
+    {
+        return self::tryFrom($value);
+    }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\AmountQuantizer;
@@ -45,7 +46,7 @@ final class PublicationQuantizationTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-523)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->build();
         $envelope = new PublicationEnvelope(
             $kingdom,
@@ -70,7 +71,7 @@ final class PublicationQuantizationTest extends AmtgardTestCase
             ->balanceQuantumFloorCents(500)
             ->balanceQuantumCeilingCents(500)
             ->build();
-        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->category('uncategorized')->build();
+        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))->build();
         $envelope = new PublicationEnvelope(
             $kingdom,
             new MonthWindow(2026, 9),

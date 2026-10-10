@@ -40,6 +40,8 @@ use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInt
 use Amtgard\Denarius\Service\Kingdom\KingdomSettings;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationSettingsValidator;
 use Amtgard\Denarius\Service\Kingdom\KingdomPublicationLineSource;
+use Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher;
+use Amtgard\Denarius\Service\Ledger\KingdomPatternReviewWizard;
 use Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver;
 use Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
@@ -261,6 +263,7 @@ final class Strategies
             CategorizationArrange::categorizer(null, $kingdomRules),
             new LedgerProviderIdResolver($providers),
             CategorizationArrange::bundledCatalog(),
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
             self::months(),
         );
     }
@@ -277,7 +280,66 @@ final class Strategies
             $rules,
             new KingdomPatternValidator($catalog, new RegexPatternGuard()),
             $catalog,
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+            self::categoryAssigner(),
             self::recategorizer($kingdoms, $transactions, self::providers(self::teller()), $rules),
+        );
+    }
+
+    public static function categoryAssigner(): \Amtgard\Denarius\Service\Ledger\KingdomCategoryAssigner
+    {
+        $catalog = CategorizationArrange::bundledCatalog();
+
+        return new \Amtgard\Denarius\Service\Ledger\KingdomCategoryAssigner(
+            new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategoryPicker($catalog),
+            $catalog,
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+        );
+    }
+
+    public static function patternAutomaticReview(
+        KingdomRepositoryInterface $kingdoms,
+        TransactionRepositoryInterface $transactions,
+        AccountRepositoryInterface $accounts,
+        ?MemoryKingdomCategoryRules $rules = null,
+    ): \Amtgard\Denarius\Service\Ledger\PatternAutomaticCategoryReview {
+        $rules ??= new MemoryKingdomCategoryRules();
+        $assigner = self::categoryAssigner();
+        $catalog = CategorizationArrange::bundledCatalog();
+        $keywords = new \Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher($catalog);
+        $categories = \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface();
+
+        return new \Amtgard\Denarius\Service\Ledger\PatternAutomaticCategoryReview(
+            $transactions,
+            $accounts,
+            new \Amtgard\Denarius\Domain\Taxonomy\Categorization\KingdomRuleMatcher($rules, $keywords, $categories),
+            new \Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer(),
+            $categories,
+            $assigner,
+            self::reviewService($transactions, $accounts, null, null, $assigner),
+            self::months(),
+        );
+    }
+
+    public static function patternWizard(
+        KingdomRepositoryInterface $kingdoms,
+        TransactionRepositoryInterface $transactions,
+        AccountRepositoryInterface $accounts,
+        ?MemoryKingdomCategoryRules $rules = null,
+    ): KingdomPatternReviewWizard {
+        $rules ??= new MemoryKingdomCategoryRules();
+        $providers = self::providers(self::teller());
+        $catalog = CategorizationArrange::bundledCatalog();
+
+        return new KingdomPatternReviewWizard(
+            self::kingdomPatternService($kingdoms, $transactions, $rules),
+            self::reviewService($transactions, $accounts),
+            $transactions,
+            $accounts,
+            new KeywordRuleMatcher($catalog),
+            new DescriptionNormalizer(),
+            self::recategorizer($kingdoms, $transactions, $providers, $rules),
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
         );
     }
 
@@ -298,11 +360,11 @@ final class Strategies
         AccountRepositoryInterface $accounts,
         ?\DateTimeImmutable $now = null,
     ): TransactionReviewQueue {
-        $catalog = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog();
-
         return new TransactionReviewQueue(
             new KingdomPublicationLineSource($transactions, $accounts),
-            $catalog,
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+            self::categoryAssigner(),
+            self::patternPrefill(),
             $now ?? new \DateTimeImmutable('2026-10-01'),
         );
     }
@@ -314,20 +376,31 @@ final class Strategies
         );
     }
 
+    public static function kingdomScopedCategorySearch(): \Amtgard\Denarius\Domain\Taxonomy\KingdomScopedCategorySearch
+    {
+        return new \Amtgard\Denarius\Domain\Taxonomy\KingdomScopedCategorySearch(
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+        );
+    }
+
     public static function reviewService(
         TransactionRepositoryInterface $transactions,
         AccountRepositoryInterface $accounts,
         ?MonthInvalidator $months = null,
         ?\DateTimeImmutable $now = null,
+        ?\Amtgard\Denarius\Service\Ledger\KingdomCategoryAssigner $assigner = null,
     ): TransactionReviewService {
-        $catalog = \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog();
+        $assigner ??= self::categoryAssigner();
+        $categories = \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface();
 
         return new TransactionReviewService(
             $transactions,
             $accounts,
             $months ?? self::months(),
-            new \Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator($catalog),
-            $catalog,
+            new \Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator($categories),
+            $assigner,
+            $categories,
+            \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
             new PublicationEmbargoCalculator(),
             $now ?? new \DateTimeImmutable('2026-10-01'),
         );
@@ -375,6 +448,7 @@ final class Strategies
             $now,
             $months,
             self::categoryApplier($providers),
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
             self::publicationApplier($transactions, $now),
             new \Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler($transactions),
         );

@@ -18,13 +18,14 @@ final class TransactionReviewRow
         private readonly string $counterparty,
         private readonly string $accountName,
         private readonly string $status,
-        private readonly string $category,
+        private readonly int $categoryId,
         private readonly string $categoryLabel,
         private readonly string $categorySource,
-        private readonly ?string $categorySuggested,
         private readonly int $categoryConfidence,
-        private readonly string $prefillSlug,
-        private readonly string $prefillDisplay,
+        private readonly int $storedCategoryId,
+        private readonly string $storedCategoryDisplay,
+        private readonly string $patternToken,
+        private readonly string $patternCategorySlug,
         private readonly PublicationSelection $selection,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
@@ -45,13 +46,14 @@ final class TransactionReviewRow
                 'counterparty' => $this->counterparty,
                 'accountName' => $this->accountName,
                 'status' => $this->status,
-                'category' => $this->category,
+                'categoryId' => $this->categoryId,
                 'categoryLabel' => $this->categoryLabel,
                 'categorySource' => $this->categorySource,
-                'categorySuggested' => $this->categorySuggested ?? '',
                 'categoryConfidence' => $this->categoryConfidence,
-                'prefillSlug' => $this->prefillSlug,
-                'prefillDisplay' => $this->prefillDisplay,
+                'storedCategoryId' => $this->storedCategoryId,
+                'storedCategoryDisplay' => $this->storedCategoryDisplay,
+                'patternToken' => $this->patternToken,
+                'patternCategorySlug' => $this->patternCategorySlug,
             ];
         });
     }

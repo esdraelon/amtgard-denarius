@@ -39,7 +39,7 @@ final class MemoryKingdomCategoryRules implements KingdomCategoryRuleRepositoryI
         $saved = KingdomCategoryRuleRecord::builder()
             ->id($id)
             ->kingdomId($rule->getKingdomId())
-            ->category($rule->getCategory())
+            ->categoryId($rule->getCategoryId())
             ->fields($rule->getFields())
             ->matchType($rule->getMatchType())
             ->regexPattern($rule->getRegexPattern())

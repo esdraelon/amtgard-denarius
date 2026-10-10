@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler;
@@ -43,7 +44,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-01')
             ->amountCents(-500)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('Bank VERIFY deposit')
             ->counterparty('Stripe')
             ->status('posted')
@@ -64,7 +65,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-01')
             ->amountCents(-500)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('ACCTVERIFY #ABC')
             ->counterparty('Bank')
             ->status('posted')
@@ -92,7 +93,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-01')
             ->amountCents(32)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('credit')
             ->counterparty('')
             ->status('posted')
@@ -103,7 +104,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(45)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('credit')
             ->counterparty('')
             ->status('posted')
@@ -172,7 +173,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-01')
             ->amountCents(-500)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')
@@ -204,7 +205,7 @@ final class PublicationHardRedactTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-01')
             ->amountCents(32)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('secret')
             ->counterparty('Plaid')
             ->publicationFlags($flags)
