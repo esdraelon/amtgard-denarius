@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Domain\Taxonomy\Categorization;
 
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
@@ -12,7 +13,7 @@ final class ManagerLockMatcher implements CategoryMatcher
 {
     private const MATCH_METHOD = self::class . '::match';
 
-    public function __construct()
+    public function __construct(private readonly CategoryCatalog $categories)
     {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -24,13 +25,15 @@ final class ManagerLockMatcher implements CategoryMatcher
                 return null;
             }
 
-            $slug = $input->existingCategory();
-            if ($slug === null || $slug === '') {
+            $categoryId = $input->existingCategoryId();
+            if ($categoryId === null || $categoryId === 0) {
                 return null;
             }
 
+            $slug = $this->categories->lineageKeyForId($categoryId);
+
             DenariusLog::debugBranch('transaction_category_locked', self::MATCH_METHOD, [
-                'category' => $slug,
+                'category_id' => $categoryId,
                 'category_source' => CategorySource::Manager->value,
             ]);
 

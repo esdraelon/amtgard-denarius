@@ -14,6 +14,7 @@ use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInt
 use Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler;
 use Amtgard\Denarius\Domain\Statement\Line\Money;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
 use Amtgard\Denarius\Utilities\Security\TokenCipher;
@@ -33,6 +34,7 @@ final class TransactionSynchronizer
         private readonly \DateTimeImmutable $now,
         private readonly MonthInvalidator $months,
         private readonly TransactionCategoryApplier $categories,
+        private readonly CategoryCatalog $categoryCatalog,
         private readonly TransactionPublicationApplier $publication,
         private readonly MicroDepositPairReconciler $microPairs,
     ) {
@@ -150,8 +152,7 @@ final class TransactionSynchronizer
                 $incoming = $this->record($kingdom, $accountId, $row);
                 $existing = $this->transactions->findByTellerTransactionId($incoming->getTellerTransactionId());
                 $categorized = $this->categories->apply($kingdom, $incoming, $existing);
-                if ($categorized->getCategory() === 'uncategorized'
-                    && $categorized->getCategorySuggested() === null
+                if ($categorized->getCategoryId() === $this->categoryCatalog->uncategorizedId()
                     && $categorized->getCategoryConfidence() === 0
                 ) {
                     ++$fallbackCount;
@@ -196,7 +197,7 @@ final class TransactionSynchronizer
                 ->tellerAccountId($accountId)
                 ->postedOn($row->postedOn)
                 ->amountCents(Money::centsFromDecimal($row->amount))
-                ->category('uncategorized')
+                ->categoryId($this->categoryCatalog->uncategorizedId())
                 ->providerCategory($hint === '' ? null : $hint)
                 ->categorySource(CategorySource::Fallback->value)
                 ->description($row->description)

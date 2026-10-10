@@ -13,6 +13,19 @@ final class ManageReadTest extends IntegTestCase
 {
     private const MANAGE_PREFIX = '/manage/' . IntegFixtures::KINGDOM_SLUG;
 
+    public function testManageReviewMonthQuerySelectsRequestedMonth(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $response = $http->get(self::MANAGE_PREFIX . '?tab=review&review_month=2026-09');
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+
+        $body = (string) $response->getBody();
+        $this->assertStringContainsString('>2026-09</span>', $body);
+        $this->assertStringContainsString('tab=review&amp;review_month=2026-08', $body);
+    }
+
     public function testManageIndexRendersForKingdomManager(): void
     {
         $http = $this->integHttp();
@@ -23,9 +36,22 @@ final class ManageReadTest extends IntegTestCase
 
         $body = (string) $response->getBody();
         $this->assertStringContainsString('Manage ' . IntegFixtures::KINGDOM_NAME, $body);
-        $this->assertStringContainsString('Statement settings', $body);
+        $this->assertStringContainsString('Transaction review', $body);
         $this->assertStringContainsString('name="csrf"', $body);
-        $this->assertStringContainsString('/manage/' . IntegFixtures::KINGDOM_SLUG . '/patterns', $body);
+        $this->assertStringContainsString('tab=patterns', $body);
+    }
+
+    public function testManageSettingsTabRendersForKingdomManager(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $response = $http->get(self::MANAGE_PREFIX . '?tab=settings');
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+
+        $body = (string) $response->getBody();
+        $this->assertStringContainsString('Statement settings', $body);
+        $this->assertStringContainsString('Bank connection', $body);
     }
 
     public function testManageConnectGetRedirectsToManageIndex(): void
@@ -35,11 +61,9 @@ final class ManageReadTest extends IntegTestCase
 
         $response = $http->get(self::MANAGE_PREFIX . '/connect');
         $this->assertSame(302, $response->getStatusCode());
-        $this->assertTrue(
-            $http->isRedirectToPath($response, self::MANAGE_PREFIX),
-            'GET manage connect should redirect to manage index; location='
-            . $response->getHeaderLine('Location'),
-        );
+        $location = $response->getHeaderLine('Location');
+        $this->assertStringContainsString(self::MANAGE_PREFIX, $location);
+        $this->assertStringContainsString('tab=settings', $location);
     }
 
     public function testManagePatternsListRendersForKingdomManager(): void
@@ -51,7 +75,7 @@ final class ManageReadTest extends IntegTestCase
         $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
 
         $body = (string) $response->getBody();
-        $this->assertStringContainsString('Category patterns', $body);
+        $this->assertStringContainsString('tab=patterns', $body);
         $this->assertStringContainsString(self::MANAGE_PREFIX . '/patterns/new', $body);
         $this->assertStringContainsString('name="csrf"', $body);
     }
@@ -67,7 +91,7 @@ final class ManageReadTest extends IntegTestCase
         $body = (string) $response->getBody();
         $this->assertStringContainsString('Create pattern', $body);
         $this->assertStringContainsString('id="pattern-token"', $body);
-        $this->assertStringContainsString('id="pattern-category"', $body);
+        $this->assertStringContainsString('data-category-typeahead', $body);
         $this->assertStringContainsString('action="' . self::MANAGE_PREFIX . '/patterns"', $body);
     }
 
@@ -76,14 +100,17 @@ final class ManageReadTest extends IntegTestCase
         $http = $this->integHttp();
         IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
 
-        $response = $http->get(self::MANAGE_PREFIX . '/taxonomy/categories?q=rent');
+        $response = $http->get(self::MANAGE_PREFIX . '/taxonomy/categories?flow=expense&q=rent');
         $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
 
-        /** @var array{results: list<array{slug: string, label: string}>} $payload */
+        /** @var array{results: list<array{lineageKey: string, label: string, flow: string}>} $payload */
         $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         $this->assertArrayHasKey('results', $payload);
         $this->assertNotEmpty($payload['results']);
-        $slugs = array_column($payload['results'], 'slug');
-        $this->assertContains('expense.site_rental', $slugs);
+        $lineageKeys = array_column($payload['results'], 'lineageKey');
+        $this->assertContains('expense.site_rental', $lineageKeys);
+        foreach ($payload['results'] as $row) {
+            $this->assertSame('expense', $row['flow']);
+        }
     }
 }

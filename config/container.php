@@ -29,6 +29,10 @@ use Amtgard\Denarius\Persistence\Repository\RoleGrant\Impl\RoleGrantRepository;
 use Amtgard\Denarius\Persistence\Repository\RoleGrant\RoleGrantRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Secret\Impl\SecretRepository;
 use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
+use Amtgard\Denarius\Persistence\Driver\Transaction\PdoTransactionReadDriver;
+use Amtgard\Denarius\Persistence\Driver\Transaction\TransactionReadDriver;
+use Amtgard\Denarius\Persistence\Driver\Transaction\TransactionRecordMapper;
+use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\OrmTransactionRepository;
 use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\TransactionRepository;
 use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\SimpleFinApi;
@@ -44,6 +48,7 @@ use Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign;
 use Amtgard\Denarius\Domain\Taxonomy\DescriptionNormalizer;
 use Amtgard\Denarius\Domain\Taxonomy\PlaidProviderAmountSign;
 use Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry;
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\CategoryMatcherChain;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\FallbackMatcher;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\KeywordRuleMatcher;
@@ -55,11 +60,16 @@ use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternValidator;
 use Amtgard\Denarius\Domain\Taxonomy\RegexPatternGuard;
 use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\Impl\KingdomCategoryRuleRepository;
 use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\KingdomCategoryRuleRepositoryInterface;
+use Amtgard\Denarius\Service\Ledger\KingdomCategoryAssigner;
+use Amtgard\Denarius\Service\Ledger\KingdomPatternReviewWizard;
+use Amtgard\Denarius\Service\Ledger\PatternAutomaticCategoryReview;
 use Amtgard\Denarius\Service\Ledger\KingdomPatternService;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
 use Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
+use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategoryPicker;
+use Amtgard\Denarius\Domain\Taxonomy\KingdomScopedCategorySearch;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
@@ -75,7 +85,10 @@ use Amtgard\Denarius\Utilities\Http\SyncPrincipalMiddleware;
 use Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer;
 use Amtgard\Denarius\Utilities\Log\CorrelationMiddleware;
 use Amtgard\Denarius\Utilities\Log\JsonStderrHandler;
+use Monolog\Handler\BufferHandler;
+use Monolog\Level;
 use Amtgard\Denarius\Utilities\Log\MethodLog;
+use Amtgard\Denarius\Utilities\Log\QuietMethodLog;
 use Amtgard\Denarius\Utilities\Log\StderrMethodLog;
 use Monolog\Handler\WhatFailureGroupHandler;
 use Monolog\Logger;
@@ -192,7 +205,15 @@ return array_merge(
     PrincipalRepositoryInterface::class => fn () => Orm::repository(PrincipalRepository::class),
     AccountRepositoryInterface::class => fn () => Orm::repository(AccountRepository::class),
     SecretRepositoryInterface::class => fn () => Orm::repository(SecretRepository::class),
-    TransactionRepositoryInterface::class => fn () => Orm::repository(TransactionRepository::class),
+    TransactionRecordMapper::class => fn () => new TransactionRecordMapper(),
+    TransactionReadDriver::class => fn (ContainerInterface $c) => new PdoTransactionReadDriver(
+        MysqlPdoProvider::fromConfiguration(DatabaseConfiguration::fromEnvironment())->getPdo(),
+        $c->get(TransactionRecordMapper::class),
+    ),
+    TransactionRepositoryInterface::class => fn (ContainerInterface $c) => new TransactionRepository(
+        Orm::repository(OrmTransactionRepository::class),
+        $c->get(TransactionReadDriver::class),
+    ),
     KingdomCategoryRuleRepositoryInterface::class => fn () => Orm::repository(KingdomCategoryRuleRepository::class),
     RoleGrantRepositoryInterface::class => fn () => Orm::repository(RoleGrantRepository::class),
     SessionAuthStore::class => fn () => new SessionAuthStore(),
@@ -338,9 +359,19 @@ return array_merge(
     KingdomRuleMatcher::class => fn (ContainerInterface $c) => new KingdomRuleMatcher(
         $c->get(KingdomCategoryRuleRepositoryInterface::class),
         $c->get(KeywordRuleMatcher::class),
+        $c->get(CategoryCatalog::class),
     ),
+    CategoryCatalog::class => function (ContainerInterface $c): CategoryCatalog {
+        if (denariusEnv('APP_ENV') === 'testing') {
+            return \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface();
+        }
+
+        return new \Amtgard\Denarius\Service\Taxonomy\DbCategoryCatalog(
+            MysqlPdoProvider::fromConfiguration(DatabaseConfiguration::fromEnvironment())->getPdo(),
+        );
+    },
     CategoryMatcherChain::class => fn (ContainerInterface $c) => new CategoryMatcherChain([
-        new ManagerLockMatcher(),
+        new ManagerLockMatcher($c->get(CategoryCatalog::class)),
         new ProviderHintMatcher($c->get(TaxonomyCatalog::class)),
         $c->get(KingdomRuleMatcher::class),
         $c->get(KeywordRuleMatcher::class),
@@ -353,14 +384,42 @@ return array_merge(
     KingdomPatternPrefill::class => fn (ContainerInterface $c) => new KingdomPatternPrefill(
         $c->get(DescriptionNormalizer::class),
     ),
+    KingdomCategoryAssigner::class => fn (ContainerInterface $c) => new KingdomCategoryAssigner(
+        $c->get(TaxonomyCategoryPicker::class),
+        $c->get(TaxonomyCatalog::class),
+        $c->get(CategoryCatalog::class),
+    ),
     KingdomPatternService::class => fn (ContainerInterface $c) => new KingdomPatternService(
         $c->get(KingdomCategoryRuleRepositoryInterface::class),
         $c->get(KingdomPatternValidator::class),
         $c->get(TaxonomyCatalog::class),
+        $c->get(CategoryCatalog::class),
+        $c->get(KingdomCategoryAssigner::class),
         $c->get(TransactionRecategorizer::class),
+    ),
+    KingdomPatternReviewWizard::class => fn (ContainerInterface $c) => new KingdomPatternReviewWizard(
+        $c->get(KingdomPatternService::class),
+        $c->get(TransactionReviewService::class),
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
+        $c->get(KeywordRuleMatcher::class),
+        $c->get(DescriptionNormalizer::class),
+        $c->get(TransactionRecategorizer::class),
+        $c->get(CategoryCatalog::class),
+    ),
+    PatternAutomaticCategoryReview::class => fn (ContainerInterface $c) => new PatternAutomaticCategoryReview(
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
+        $c->get(KingdomRuleMatcher::class),
+        $c->get(DescriptionNormalizer::class),
+        $c->get(CategoryCatalog::class),
+        $c->get(KingdomCategoryAssigner::class),
+        $c->get(TransactionReviewService::class),
+        $c->get(MonthInvalidator::class),
     ),
     TransactionCategorizer::class => fn (ContainerInterface $c) => new TransactionCategorizer(
         $c->get(TaxonomyCatalog::class),
+        $c->get(CategoryCatalog::class),
         $c->get(DescriptionNormalizer::class),
         $c->get(ProviderAmountSignRegistry::class),
         $c->get(CategoryMatcherChain::class),
@@ -375,6 +434,7 @@ return array_merge(
         $c->get(TransactionCategorizer::class),
         $c->get(LedgerProviderIdResolver::class),
         $c->get(TaxonomyCatalog::class),
+        $c->get(CategoryCatalog::class),
         $c->get(MonthInvalidator::class),
     ),
     TransactionSynchronizer::class => fn (ContainerInterface $c) => new TransactionSynchronizer(
@@ -387,6 +447,7 @@ return array_merge(
         new DateTimeImmutable('now'),
         $c->get(MonthInvalidator::class),
         $c->get(TransactionCategoryApplier::class),
+        $c->get(CategoryCatalog::class),
         $c->get(TransactionPublicationApplier::class),
         $c->get(MicroDepositPairReconciler::class),
     ),
@@ -401,6 +462,7 @@ return array_merge(
     ),
     PublicationPipelineFactory::class => fn (ContainerInterface $c) => PublicationPipelineFactory::standard(
         $c->get(TaxonomyCatalog::class),
+        $c->get(CategoryCatalog::class),
     ),
     KingdomPublicationLineSource::class => fn (ContainerInterface $c) => new KingdomPublicationLineSource(
         $c->get(TransactionRepositoryInterface::class),
@@ -456,14 +518,19 @@ return array_merge(
         $c->get(MonthInvalidator::class),
     ),
     ReviewCategoryValidator::class => fn (ContainerInterface $c) => new ReviewCategoryValidator(
-        $c->get(TaxonomyCatalog::class),
+        $c->get(CategoryCatalog::class),
     ),
-    TaxonomyCategorySearch::class => fn (ContainerInterface $c) => new TaxonomyCategorySearch(
+    KingdomScopedCategorySearch::class => fn (ContainerInterface $c) => new KingdomScopedCategorySearch(
+        $c->get(CategoryCatalog::class),
+    ),
+    TaxonomyCategoryPicker::class => fn (ContainerInterface $c) => new TaxonomyCategoryPicker(
         $c->get(TaxonomyCatalog::class),
     ),
     TransactionReviewQueue::class => fn (ContainerInterface $c) => new TransactionReviewQueue(
         $c->get(KingdomPublicationLineSource::class),
-        $c->get(TaxonomyCatalog::class),
+        $c->get(CategoryCatalog::class),
+        $c->get(KingdomCategoryAssigner::class),
+        $c->get(KingdomPatternPrefill::class),
         new DateTimeImmutable('now'),
     ),
     TransactionReviewService::class => fn (ContainerInterface $c) => new TransactionReviewService(
@@ -471,6 +538,8 @@ return array_merge(
         $c->get(AccountRepositoryInterface::class),
         $c->get(MonthInvalidator::class),
         $c->get(ReviewCategoryValidator::class),
+        $c->get(KingdomCategoryAssigner::class),
+        $c->get(CategoryCatalog::class),
         $c->get(TaxonomyCatalog::class),
         $c->get(PublicationEmbargoCalculator::class),
         new DateTimeImmutable('now'),
@@ -483,7 +552,9 @@ return array_merge(
     ),
     MethodLog::class => function () {
         $debug = (($_ENV['APP_DEBUG'] ?? 'false') === 'true');
-        $handlers = [new JsonStderrHandler()];
+        $bufferLogs = (($_ENV['LOG_BUFFER_METHOD_LOG'] ?? 'true') === 'true');
+        $stderr = new JsonStderrHandler();
+        $handlers = [$bufferLogs ? new BufferHandler($stderr, 0, Level::Debug, true, true) : $stderr];
         $root = dirname(__DIR__);
         $spoolEnabled = (($_ENV['LOG_SPOOL_ENABLED'] ?? 'true') === 'true');
         if ($spoolEnabled) {
@@ -491,8 +562,10 @@ return array_merge(
                 Amtgard\Denarius\Utilities\Log\Sqlite\LogPathResolver::fromEnv($root),
             );
         }
+        $logFileExplicit = array_key_exists('DENARIUS_METHOD_LOG', $_ENV);
         $logFile = $_ENV['DENARIUS_METHOD_LOG'] ?? ($debug ? $root . '/logs/method-trace.jsonl' : '');
-        if ($logFile !== '') {
+        $mirrorJsonl = $logFile !== '' && ! ($spoolEnabled && ! $logFileExplicit);
+        if ($mirrorJsonl) {
             $dir = dirname($logFile);
             $canWrite = is_file($logFile)
                 ? is_writable($logFile)
@@ -500,15 +573,18 @@ return array_merge(
             if ($canWrite) {
                 $stream = @fopen($logFile, 'ab');
                 if ($stream !== false) {
-                    $handlers[] = new JsonStderrHandler($stream);
+                    $fileHandler = new JsonStderrHandler($stream);
+                    $handlers[] = $bufferLogs ? new BufferHandler($fileHandler, 0, Level::Debug, true, true) : $fileHandler;
                 }
             }
         }
 
-        return new StderrMethodLog(
+        $core = new StderrMethodLog(
             new Logger('denarius', [new WhatFailureGroupHandler($handlers)]),
             $debug,
         );
+
+        return $debug ? $core : new QuietMethodLog($core);
     },
     StderrMethodLog::class => fn (ContainerInterface $c) => $c->get(MethodLog::class),
     CorrelationMiddleware::class => fn () => new CorrelationMiddleware(),
@@ -597,10 +673,12 @@ return array_merge(
         $c->get(SimpleFinConnectSession::class),
         $c->get(TransactionReviewQueue::class),
         $c->get(TransactionReviewService::class),
-        $c->get(TaxonomyCategorySearch::class),
+        $c->get(KingdomScopedCategorySearch::class),
         $c->get(KingdomPatternService::class),
+        $c->get(KingdomPatternReviewWizard::class),
         $c->get(KingdomPatternPrefill::class),
         $c->get(ManagerLedgerSyncFeedback::class),
+        $c->get(PatternAutomaticCategoryReview::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(

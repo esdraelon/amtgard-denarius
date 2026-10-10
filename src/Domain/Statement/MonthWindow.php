@@ -55,6 +55,15 @@ final class MonthWindow
         });
     }
 
+    public function endDate(): string
+    {
+        return DenariusLog::trace(__METHOD__, function (): string {
+            $start = new \DateTimeImmutable(sprintf('%04d-%02d-01', $this->year, $this->month));
+
+            return $start->modify('last day of this month')->format('Y-m-d');
+        });
+    }
+
     public function contains(string $isoDate): bool
     {
         return DenariusLog::trace(__METHOD__, function () use ($isoDate): bool {

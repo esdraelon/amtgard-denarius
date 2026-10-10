@@ -26,8 +26,8 @@ class KingdomCategoryRuleEntity extends RepositoryEntity
     #[Field('kingdom_id')]
     private ?int $kingdomId = null;
 
-    #[Field('category')]
-    private ?string $category = null;
+    #[Field('category_id')]
+    private ?int $categoryId = null;
 
     #[Field('fields_json')]
     private ?string $fieldsJson = null;

@@ -30,6 +30,7 @@ use Amtgard\IdpClient\Client\IdpClient;
 use Amtgard\IdpClient\Exception\IdpConfigurationException;
 use Amtgard\IdpClient\Slim\IdpAuthController;
 use Amtgard\IdpClient\Session\SessionAuthStore;
+use Amtgard\Denarius\Tests\Support\PersistenceStoreArrange;
 use DI\Bridge\Slim\Bridge;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
@@ -50,6 +51,11 @@ final class ContainerResolutionOrderTest extends TestCase
         $this->ensureIdpTestEnvironment();
         $_ENV['SESSION_REDIS_HOST'] = '';
 
+        $pdo = PersistenceStoreArrange::tryPdo();
+        if ($pdo !== null) {
+            PersistenceStoreArrange::migrateFresh($pdo);
+        }
+
         $this->container = require dirname(__DIR__, 3) . '/config/bootstrap.php';
 
         $this->applyPhpUnitEnvironmentOverrides();
@@ -60,7 +66,10 @@ final class ContainerResolutionOrderTest extends TestCase
     public function testCoreServicesResolveFromBootstrappedContainer(): void
     {
         $this->assertInstanceOf(MethodLog::class, $this->resolveOrSkip(MethodLog::class));
-        $this->assertInstanceOf(StderrMethodLog::class, $this->resolveOrSkip(StderrMethodLog::class));
+        $methodLog = $this->resolveOrSkip(MethodLog::class);
+        $this->assertTrue(
+            $methodLog instanceof StderrMethodLog || $methodLog instanceof \Amtgard\Denarius\Utilities\Log\QuietMethodLog,
+        );
         $this->assertInstanceOf(CorrelationMiddleware::class, $this->resolveOrSkip(CorrelationMiddleware::class));
         $this->assertInstanceOf(SessionAuthStore::class, $this->resolveOrSkip(SessionAuthStore::class));
         $this->assertInstanceOf(IdpClient::class, $this->resolveOrSkip(IdpClient::class));

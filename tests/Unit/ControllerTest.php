@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\DenariusAuthorizer;
 use Amtgard\Denarius\Controller\AdminController;
@@ -82,7 +83,7 @@ final class ControllerTest extends AmtgardTestCase
         $accounts = new MemoryAccounts();
         $accounts->save(\Amtgard\Denarius\Persistence\Record\AccountRecord::builder()->kingdomId(1)->tellerAccountId('acc')->name('Checking')->type('depository')->published(true)->build());
         $transactions = new MemoryTransactions();
-        $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('office')->description('paper')->counterparty('Shop')->status('posted')->build());
+        $transactions->upsert(\Amtgard\Denarius\Persistence\Record\TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('office'))->description('paper')->counterparty('Shop')->status('posted')->build());
         $pages = KingdomPageQueryFactory::publicRead($transactions, $accounts);
         $page = new KingdomPageController($kingdoms, $pages, KingdomAccess::standard(), $auth, $twig);
         $missing = $page->show($this->request('GET', '/missing'), new Response(), 'missing');
@@ -153,10 +154,12 @@ final class ControllerTest extends AmtgardTestCase
             new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(),
             Strategies::reviewQueue($transactions, $accounts),
             Strategies::reviewService($transactions, $accounts),
-            Strategies::categorySearch(),
+            Strategies::kingdomScopedCategorySearch(),
             Strategies::kingdomPatternService($kingdoms, $transactions),
+            Strategies::patternWizard($kingdoms, $transactions, $accounts),
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
+            Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
         );
         $manage = $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $this->assertStringContainsString('manage golden-plains', (string) $manage->getBody());

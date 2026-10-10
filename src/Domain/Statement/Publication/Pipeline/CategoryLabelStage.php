@@ -6,16 +6,20 @@ namespace Amtgard\Denarius\Domain\Statement\Publication\Pipeline;
 
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
+use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
+use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
-/** Chain link: map category slugs to closed vocabulary labels for public output. */
+/** Chain link: map category ids to closed vocabulary labels for public output. */
 final class CategoryLabelStage implements PublicationStage
 {
-    private const string HARD_CATEGORY = 'system.bank_verification';
+    private const string HARD_LINEAGE = 'system.bank_verification';
 
     public function __construct(
         private readonly TaxonomyCatalog $catalog,
+        private readonly CategoryCatalog $categories,
     ) {
         DenariusLog::enter(__METHOD__);
     }
@@ -35,27 +39,49 @@ final class CategoryLabelStage implements PublicationStage
         });
     }
 
-    private function labelLine(PublicationCandidateLine $line, DisplayMode $tier, string $method): PublicationCandidateLine
-    {
+    private function labelLine(
+        PublicationCandidateLine $line,
+        DisplayMode $tier,
+        string $method,
+    ): PublicationCandidateLine {
         return DenariusLog::trace(__METHOD__, function () use ($line, $tier, $method): PublicationCandidateLine {
-            $slug = $line->getCategory();
+            $categoryId = $line->getCategoryId();
+            $lineage = $this->categories->lineageKeyForId($categoryId);
             if (PublicationFlags::parse($line->getPublicationFlags())->isHard()) {
-                $slug = self::HARD_CATEGORY;
+                $lineage = self::HARD_LINEAGE;
+                $categoryId = $this->categories->currentIdForLineageKey($lineage);
             }
-            $resolved = $this->catalog->resolveSlug($slug);
+            $flow = $this->categories->flowFor($categoryId, TransactionFlow::defaultFromSignedCents($line->getAmountCents()));
+            if (preg_match('/^k\d+\./', $lineage)) {
+                $label = $this->categories->labelFor($categoryId);
+
+                return $this->buildLabeledLine($line, $label, $flow);
+            }
+            $resolved = $this->catalog->resolveSlug($lineage);
             if (! $this->catalog->hasSlug($resolved)) {
                 DenariusLog::debugBranch('publication_category_unknown_slug', $method, [
-                    'slug' => $slug,
+                    'lineage' => $lineage,
                 ]);
                 $resolved = 'uncategorized';
             }
             $flow = $this->catalog->flowForSlug($resolved, $line->getAmountCents());
             $label = $this->catalog->publicLabel($resolved, $tier);
 
+            return $this->buildLabeledLine($line, $label, $flow);
+        });
+    }
+
+    private function buildLabeledLine(
+        PublicationCandidateLine $line,
+        string $label,
+        TransactionFlow $flow,
+    ): PublicationCandidateLine {
+        return DenariusLog::trace(__METHOD__, function () use ($line, $label, $flow): PublicationCandidateLine {
             return PublicationCandidateLine::builder()
                 ->tellerTransactionId($line->getTellerTransactionId())
                 ->postedOn($line->getPostedOn())
                 ->amountCents($line->getAmountCents())
+                ->categoryId($line->getCategoryId())
                 ->category($label)
                 ->categoryFlow($flow->value)
                 ->description($line->getDescription())

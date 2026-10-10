@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Support;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Utilities\Log\IdpHttpTrafficLog;
 use Nyholm\Psr7\Request;
 use Nyholm\Psr7\Response;
@@ -52,6 +53,7 @@ final class RestDomainArrange
         self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testDeletePatternStopsMatchingOnRecategorize');
         self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testPatternPrefillUsesNormalizedCounterparty');
         self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testPatternLogsUseRuleIdOnly');
+        self::run(\Amtgard\Denarius\Tests\Unit\KingdomCategoryPatternsTest::class, 'testPatternReviewWizardAppliesOnlySelectedUncategorizedRows');
 
         MonthWindow::current(new \DateTimeImmutable('2026-09-15'));
 
@@ -68,6 +70,7 @@ final class RestDomainArrange
         $root = dirname(__DIR__, 2);
         $loader = new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader($root, 'data/taxonomy');
         $catalog = $loader->load();
+        \Amtgard\Denarius\Domain\Taxonomy\CategoryCatalogSeeder::fromTaxonomyCatalog($catalog);
         $catalog->taxonomyVersion();
         $catalog->resolveSlug('expense.general');
         \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog::isForbiddenMatcherTarget('expense.other');
@@ -99,6 +102,55 @@ final class RestDomainArrange
             \Amtgard\Denarius\Domain\Taxonomy\TransactionCategoryLegacyNormalizer::fromTaxonomyJson($pack),
             $migrationStore,
         ))->migrate();
+        $globalCategoriesStore = new class implements \Amtgard\Denarius\Domain\Taxonomy\GlobalCategoriesMigrationStore {
+            private int $nextId = 1;
+
+            public function legacyCustomCategories(): array
+            {
+                return [];
+            }
+
+            public function transactionsForBackfill(): array
+            {
+                return [];
+            }
+
+            public function rulesForBackfill(): array
+            {
+                return [];
+            }
+
+            public function insertCategory(
+                string $lineageKey,
+                string $label,
+                string $flowsJson,
+                ?string $sensitivity,
+                ?string $summaryParentLabel,
+                int $assignable,
+                ?int $supersedesId,
+                string $createdAt,
+            ): int {
+                return $this->nextId++;
+            }
+
+            public function insertLineage(string $lineageKey, int $categoryId): void
+            {
+            }
+
+            public function setTransactionCategoryId(int|string $transactionId, int $categoryId): void
+            {
+            }
+
+            public function setRuleCategoryId(int|string $ruleId, int $categoryId): void
+            {
+            }
+
+            public function hasTable(string $name): bool
+            {
+                return true;
+            }
+        };
+        (new \Amtgard\Denarius\Domain\Taxonomy\GlobalCategoriesMigrator($catalog, $globalCategoriesStore))->migrate();
         $registry = new \Amtgard\Denarius\Domain\Taxonomy\ProviderAmountSignRegistry(
             ['plaid' => new \Amtgard\Denarius\Domain\Taxonomy\PlaidProviderAmountSign()],
             new \Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign(),
@@ -106,6 +158,12 @@ final class RestDomainArrange
         $registry->forProvider('plaid')->signedCents('1.00');
         (new \Amtgard\Denarius\Domain\Taxonomy\CreditPositiveProviderAmountSign())->signedCents('-2.00');
         new \Amtgard\Denarius\Domain\Taxonomy\RegexPatternGuard()->assertSafe('\\bFEE\\b', 'kw.test');
+        \Amtgard\Denarius\Domain\Taxonomy\PatternGlob::matchesInText('SHOP*', 'POS SHOP DEBIT');
+        (new \Amtgard\Denarius\Domain\Taxonomy\KingdomScopedCategorySearch(CategoryCatalogFixture::asInterface()))->search(
+            KingdomRecord::builder()->id(1)->orkKingdomId(1)->name('K')->slug('k')->build(),
+            'site',
+            \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense,
+        );
     }
 
     private static function exerciseCategorizationDomain(): void
@@ -117,7 +175,7 @@ final class RestDomainArrange
             ->build();
         $categorizer->decide('teller', $incoming, null);
         $manager = TransactionRecord::builder()
-            ->category('expense.storage')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->categorySource('manager')
             ->build();
         $categorizer->decide('teller', $incoming, $manager);
@@ -127,7 +185,7 @@ final class RestDomainArrange
             ->providerId('teller')
             ->providerCategory('groceries')
             ->defaultFlow(\Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense)
-            ->existingCategory('expense.storage')
+            ->existingCategoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->existingSource('manager')
             ->existingConfidence(100)
             ->existingRuleId('kw.test')
@@ -140,13 +198,15 @@ final class RestDomainArrange
         $input->providerCategory();
         $input->defaultFlow();
         $input->existingSource();
-        $input->existingCategory();
+        $input->existingCategoryId();
         $input->existingConfidence();
         $input->existingRuleId();
         $input->existingSuggested();
         $input->existingTaxonomyVersion();
         $input->kingdomId();
-        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher())->match($input);
+        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher(
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+        ))->match($input);
         (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ProviderHintMatcher(
             \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
         ))->match($input);
@@ -157,14 +217,18 @@ final class RestDomainArrange
         $memoryRules = new MemoryKingdomCategoryRules();
         $memoryRules->save(\Amtgard\Denarius\Persistence\Record\KingdomCategoryRuleRecord::builder()
             ->kingdomId(1)
-            ->category('expense.storage')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->matchType('token')
             ->token('SHOP')
             ->fields(['counterparty'])
             ->flows([\Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense])
             ->confidence(100)
             ->build());
-        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\KingdomRuleMatcher($memoryRules, $keywords))->match(
+        (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\KingdomRuleMatcher(
+            $memoryRules,
+            $keywords,
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+        ))->match(
             \Amtgard\Denarius\Domain\Taxonomy\Categorization\CategorizationInput::builder()
                 ->kingdomId(1)
                 ->normalizedCounterparty('SHOP')
@@ -201,7 +265,7 @@ final class RestDomainArrange
         $kingdom = KingdomRecord::builder()->provider('teller')->build();
         $existing = TransactionRecord::builder()
             ->description('SAME TEXT')
-            ->category('expense.bank_fees')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.bank_fees'))
             ->categorySource('shared_rule')
             ->build();
         $resync = TransactionRecord::builder()->description('SAME TEXT')->amountCents(-100)->build();
@@ -248,7 +312,7 @@ final class RestDomainArrange
         $line = \Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-500)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->build();
         $envelope = new \Amtgard\Denarius\Domain\Statement\Publication\Pipeline\PublicationEnvelope(
             $kingdom,
@@ -259,6 +323,8 @@ final class RestDomainArrange
             10_000,
             9_500,
         );
+        (new \Amtgard\Denarius\Domain\Statement\Publication\PublicationLedgerBalanceResolver())
+            ->snapshotForMonth(new MonthWindow(2026, 9), [$line]);
         $envelope->providerBalanceCents();
         $envelope->lastPublishedBalanceCents();
         $envelope->publishedBalanceCents();
@@ -277,9 +343,10 @@ final class RestDomainArrange
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->build();
         TransactionRecordRebuilder::from($stored)->publishedAt('2026-09-03T00:00:00+00:00')->build();
+        $uncategorizedId = \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized');
         (new TransactionReviewRow(
             'review-tx',
             '2026-09-02',
@@ -289,13 +356,14 @@ final class RestDomainArrange
             'Shop',
             'Checking',
             'pending',
-            'uncategorized',
+            $uncategorizedId,
             'Uncategorized',
             'fallback',
-            null,
             0,
+            $uncategorizedId,
+            'Uncategorized',
+            'SHOP',
             'uncategorized',
-            'Expense · Uncategorized',
             $selection = new \Amtgard\Denarius\Domain\Statement\Publication\PublicationSelection('review-tx', false, true, true),
         ))->view();
         $selection->tellerTransactionId();
@@ -304,8 +372,17 @@ final class RestDomainArrange
         $selection->wantsPublished();
         $catalog = (new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader(dirname(__DIR__, 2), 'data/taxonomy'))->load();
         $catalog->assignableDefinitions();
-        (new \Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator($catalog))->assertAssignable('expense.feast_groceries', -100);
+        (new \Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator(
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+        ))->assertAssignable(
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.feast_groceries'),
+            -100,
+            1,
+        );
         (new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch($catalog))->search('site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
+        $picker = new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategoryPicker($catalog);
+        $picker->resolveForPattern('expense.event_supplies', '');
+        $picker->resolveForReview('', 'Expense: Event supplies', -100);
     }
 
     private static function exercisePublicationPipeline(): void

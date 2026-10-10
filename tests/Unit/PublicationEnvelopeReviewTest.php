@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\BalanceCoarseningStage;
@@ -29,7 +30,7 @@ final class PublicationEnvelopeReviewTest extends AmtgardTestCase
     {
         MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
-        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->category('uncategorized')->build();
+        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))->build();
         $envelope = new PublicationEnvelope(
             $kingdom,
             new MonthWindow(2026, 9),
@@ -50,7 +51,7 @@ final class PublicationEnvelopeReviewTest extends AmtgardTestCase
     {
         MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
-        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->category('uncategorized')->build();
+        $line = PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-500)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))->build();
         $envelope = new PublicationEnvelope(
             $kingdom,
             new MonthWindow(2026, 9),

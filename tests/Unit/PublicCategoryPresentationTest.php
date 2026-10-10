@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\Line\CategoryTotal;
 use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
@@ -41,11 +42,14 @@ final class PublicCategoryPresentationTest extends AmtgardTestCase
     public function testUnknownSlugsBecomeUncategorizedLabels(): void
     {
         MethodLogAssert::reset();
+        $categories = CategoryCatalogFixture::load();
+        $unknownA = $categories->createWithLabel(TransactionFlow::Expense, 'Legacy general', 'legacy.general');
+        $unknownB = $categories->createWithLabel(TransactionFlow::Expense, 'Legacy food', 'legacy.food_and_drink');
         $envelope = $this->envelope(DisplayMode::Redacted, [
-            PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-100)->category('general')->build(),
-            PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-200)->category('FOOD_AND_DRINK')->build(),
+            PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-100)->categoryId($unknownA)->build(),
+            PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(-200)->categoryId($unknownB)->build(),
         ]);
-        $result = (new CategoryLabelStage(TaxonomyCatalogFixture::load()))->process($envelope);
+        $result = $this->categoryLabelStage(null, $categories)->process($envelope);
         $labels = array_map(static fn ($line) => $line->getCategory(), $result->lines());
         $this->assertSame(['Uncategorized', 'Uncategorized'], $labels);
         MethodLogAssert::assertBranchLogged(BranchLogLevel::Debug, 'publication_category_unknown_slug', CategoryLabelStage::class . '::process');
@@ -58,22 +62,22 @@ final class PublicCategoryPresentationTest extends AmtgardTestCase
             PublicationCandidateLine::builder()
                 ->postedOn('2026-09-01')
                 ->amountCents(0)
-                ->category('income.dues')
+                ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('income.dues'))
                 ->publicationFlags($flags)
                 ->build(),
         ]);
-        $result = (new CategoryLabelStage(TaxonomyCatalogFixture::load()))->process($envelope);
+        $result = $this->categoryLabelStage()->process($envelope);
         $this->assertSame('Bank verification (withheld)', $result->lines()[0]->getCategory());
     }
 
     public function testCategoryLabelStagePreservesLineCountsAndAmounts(): void
     {
         $envelope = $this->envelope(DisplayMode::Summarized, [
-            PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-500)->category('expense.bank_fees')->build(),
-            PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(1200)->category('income.dues')->build(),
+            PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-500)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.bank_fees'))->build(),
+            PublicationCandidateLine::builder()->postedOn('2026-09-02')->amountCents(1200)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('income.dues'))->build(),
         ]);
         $before = $envelope->quantizedLineCentsSum();
-        $result = (new CategoryLabelStage(TaxonomyCatalogFixture::load()))->process($envelope);
+        $result = $this->categoryLabelStage()->process($envelope);
         $this->assertCount(2, $result->lines());
         $this->assertSame($before, $result->quantizedLineCentsSum());
     }
@@ -111,11 +115,11 @@ final class PublicCategoryPresentationTest extends AmtgardTestCase
     public function testSoftCategoryLabelMatrixByDisclosureTier(): void
     {
         $catalog = TaxonomyCatalogFixture::load();
-        $stage = new CategoryLabelStage($catalog);
+        $stage = $this->categoryLabelStage($catalog);
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-01')
             ->amountCents(-500)
-            ->category('expense.professional_services')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.professional_services'))
             ->build();
 
         $summarized = $stage->process($this->envelope(DisplayMode::Summarized, [$line]))->lines()[0]->getCategory();
@@ -152,11 +156,10 @@ final class PublicCategoryPresentationTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-500)
-            ->category('expense.bank_fees')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.bank_fees'))
             ->providerCategory('BANK_FEES')
             ->categorySource('manager')
             ->categoryConfidence(100)
-            ->categorySuggested('expense.bank_fees')
             ->description('fee')
             ->counterparty('Bank')
             ->status('posted')
@@ -177,9 +180,63 @@ final class PublicCategoryPresentationTest extends AmtgardTestCase
         PublicationForbiddenMetadataKeys::assertAbsent($cached);
     }
 
+    public function testKingdomCustomSlugUsesKingdomLabelOnPublicRead(): void
+    {
+        $categories = CategoryCatalogFixture::load();
+        $categoryId = $categories->createWithLabel(TransactionFlow::Expense, 'Ennervate', 'k1.ennervate');
+        $envelope = new PublicationEnvelope(
+            KingdomRecord::builder()->id(1)->orkKingdomId(1)->name('K')->slug('k')->build(),
+            new MonthWindow(2026, 10),
+            DisplayMode::Redacted,
+            new \DateTimeImmutable('2026-10-09'),
+            [
+                PublicationCandidateLine::builder()
+                    ->postedOn('2026-10-03')
+                    ->amountCents(-500)
+                    ->categoryId($categoryId)
+                    ->publishedAt('2026-10-09T21:55:20+00:00')
+                    ->build(),
+            ],
+        );
+        $result = $this->categoryLabelStage(TaxonomyCatalogFixture::load(), $categories)
+            ->process($envelope);
+        $this->assertSame('Ennervate', $result->lines()[0]->getCategory());
+        $this->assertSame('expense', $result->lines()[0]->getCategoryFlow());
+    }
+
+    public function testKingdomScopedSlugWithoutCustomRowStillLabelsPublicRead(): void
+    {
+        $categories = CategoryCatalogFixture::load();
+        $lineageKey = 'k59.ennervate';
+        try {
+            $categoryId = $categories->createWithLabel(TransactionFlow::Expense, 'Ennervate', $lineageKey);
+        } catch (\InvalidArgumentException) {
+            $categoryId = $categories->currentIdForLineageKey($lineageKey);
+        }
+        $envelope = new PublicationEnvelope(
+            KingdomRecord::builder()->id(59)->orkKingdomId(59)->name('K')->slug('k59')->build(),
+            new MonthWindow(2026, 10),
+            DisplayMode::Redacted,
+            new \DateTimeImmutable('2026-10-09'),
+            [
+                PublicationCandidateLine::builder()
+                    ->postedOn('2026-10-03')
+                    ->amountCents(-500)
+                    ->categoryId($categoryId)
+                    ->publishedAt('2026-10-09T21:55:20+00:00')
+                    ->build(),
+            ],
+        );
+        $result = $this->categoryLabelStage(null, $categories)->process($envelope);
+        $this->assertSame('Ennervate', $result->lines()[0]->getCategory());
+    }
+
     public function testPublicPipelineIncludesCategoryLabelStage(): void
     {
-        $pipeline = PublicationPipelineFactory::standard(TaxonomyCatalogFixture::load())->forPublicRead();
+        $pipeline = PublicationPipelineFactory::standard(
+            TaxonomyCatalogFixture::load(),
+            CategoryCatalogFixture::asInterface(),
+        )->forPublicRead();
         $stages = (new \ReflectionClass($pipeline))->getProperty('stages');
         $stages->setAccessible(true);
         $chain = $stages->getValue($pipeline);
@@ -197,9 +254,19 @@ final class PublicCategoryPresentationTest extends AmtgardTestCase
      */
     private function envelope(DisplayMode $mode, array $lines): PublicationEnvelope
     {
-        $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
+        $kingdom = KingdomRecord::builder()->id(1)->orkKingdomId(1)->name('K')->slug('k')->build();
 
         return new PublicationEnvelope($kingdom, new MonthWindow(2026, 9), $mode, new \DateTimeImmutable('2026-10-01'), $lines);
+    }
+
+    private function categoryLabelStage(
+        ?\Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog $catalog = null,
+        ?\Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog $categories = null,
+    ): CategoryLabelStage {
+        return new CategoryLabelStage(
+            $catalog ?? TaxonomyCatalogFixture::load(),
+            $categories ?? CategoryCatalogFixture::asInterface(),
+        );
     }
 
     private function labeledLine(string $postedOn, int $amount, string $label, TransactionFlow $flow): LedgerLine

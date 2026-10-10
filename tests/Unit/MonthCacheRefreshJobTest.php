@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
@@ -38,7 +39,7 @@ final class MonthCacheRefreshJobTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('general')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('general'))
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')
