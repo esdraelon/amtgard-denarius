@@ -25,6 +25,23 @@
     {% endblock %}
 {% endembed %}
 
+{% if openingBalance or closingBalance %}
+    <p class="small text-body-secondary mb-3">
+        {% if openingBalance %}
+            <span class="fw-semibold text-denarius-tertiary">Starting balance:</span> {{ openingBalance }}
+        {% endif %}
+        {% if openingBalance and closingBalance %}
+            <span class="mx-2">·</span>
+        {% endif %}
+        {% if closingBalance %}
+            <span class="fw-semibold text-denarius-tertiary">Ending balance:</span> {{ closingBalance }}
+        {% elseif openingBalance %}
+            <span class="mx-2">·</span>
+            <span class="fw-semibold text-denarius-tertiary">Ending balance:</span> unavailable (pending review)
+        {% endif %}
+    </p>
+{% endif %}
+
 {% if rows is empty %}
     {% if absenceMessage %}
         {% include 'components/alert.twig' with { variant: 'info', message: absenceMessage } %}

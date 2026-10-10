@@ -206,7 +206,7 @@ final class ManageConnectTest extends AmtgardTestCase
         ));
         $this->assertStringContainsString('>2026-07</span>', $july);
         $this->assertStringContainsString('No transactions on published accounts for this month.', $july);
-        $this->assertStringContainsString('review_month=2026-06', $july);
+        $this->assertStringContainsString('tab=review&amp;review_month=2026-06', $july);
         $this->assertStringContainsString('uncategorized=1', $july);
         $this->assertStringContainsString('Previous month', $july);
 

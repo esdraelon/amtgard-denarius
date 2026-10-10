@@ -20,6 +20,8 @@ final class MonthStatement
         public readonly MonthWindow $month,
         public readonly array $rows,
         public readonly ?StatementAbsenceReason $absenceReason = null,
+        public readonly ?int $openingBalanceCents = null,
+        public readonly ?int $closingBalanceCents = null,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }

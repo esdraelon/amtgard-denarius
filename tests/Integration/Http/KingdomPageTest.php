@@ -23,6 +23,9 @@ final class KingdomPageTest extends IntegTestCase
             '/' . IntegFixtures::KINGDOM_SLUG . '?month=',
             $body,
         );
+        if (str_contains($body, 'Starting balance:')) {
+            $this->assertStringContainsString('Ending balance:', $body);
+        }
     }
 
     public function testUnknownSlugReturnsNotFound(): void
