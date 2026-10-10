@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\Line\LedgerLine;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
@@ -54,7 +55,7 @@ final class DisplayModeDisclosureTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-01')
             ->amountCents(-500)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('supplies')
             ->counterparty('Shop')
             ->build();
@@ -78,7 +79,7 @@ final class DisplayModeDisclosureTest extends AmtgardTestCase
         $line = LedgerLine::builder()
             ->postedOn('2026-09-01')
             ->amountCents(-500)
-            ->category('uncategorized')
+            ->category('Uncategorized')
             ->description('from pipeline')
             ->counterparty('Shop')
             ->accountName('Checking')

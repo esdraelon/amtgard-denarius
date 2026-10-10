@@ -11,7 +11,7 @@ use Amtgard\Denarius\Utilities\Log\DenariusLog;
 final class CategoryDecision
 {
     public function __construct(
-        public readonly string $category,
+        public readonly int $categoryId,
         public readonly CategorySource $source,
         public readonly ?string $ruleId,
         public readonly int $confidence,

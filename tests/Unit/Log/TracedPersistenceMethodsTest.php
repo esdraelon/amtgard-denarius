@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit\Log;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Persistence\Record\AccountRecord;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\PrincipalRecord;
@@ -84,7 +85,7 @@ final class TracedPersistenceMethodsTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('office')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('office'))
             ->build();
 
         $accounts = new MemoryAccounts();
@@ -92,12 +93,12 @@ final class TracedPersistenceMethodsTest extends AmtgardTestCase
         $principals = new MemoryPrincipals();
         $principals->save(PrincipalRecord::builder()->idpUserId('9')->email('person@example.com')->build());
         $transactions = new MemoryTransactions();
-        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->category('office')->build());
+        $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('office'))->build());
 
         PersistenceStoreArrange::exerciseRepositories();
 
         $scope = $this->methodsInScope();
-        $this->assertCount(88, $scope);
+        $this->assertCount(96, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

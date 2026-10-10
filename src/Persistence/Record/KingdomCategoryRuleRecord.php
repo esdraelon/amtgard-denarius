@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Persistence\Record;
 
-use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
+use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyKeywordRule;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
@@ -23,7 +23,7 @@ final class KingdomCategoryRuleRecord
     private function __construct(
         private ?int $id = null,
         private int $kingdomId = 0,
-        private string $category = '',
+        private int $categoryId = 0,
         private array $fields = ['description', 'counterparty'],
         private string $matchType = 'token',
         private string $regexPattern = '',
@@ -45,9 +45,9 @@ final class KingdomCategoryRuleRecord
         return DenariusLog::trace(__METHOD__, fn (): int => $this->kingdomId);
     }
 
-    public function getCategory(): string
+    public function getCategoryId(): int
     {
-        return DenariusLog::trace(__METHOD__, fn (): string => $this->category);
+        return DenariusLog::trace(__METHOD__, fn (): int => $this->categoryId);
     }
 
     /**
@@ -105,11 +105,11 @@ final class KingdomCategoryRuleRecord
         });
     }
 
-    public function toKeywordRule(): TaxonomyKeywordRule
+    public function toKeywordRule(CategoryCatalog $catalog): TaxonomyKeywordRule
     {
         return DenariusLog::trace(__METHOD__, fn (): TaxonomyKeywordRule => new TaxonomyKeywordRule(
             $this->publicRuleId(),
-            $this->category,
+            $catalog->lineageKeyForId($this->categoryId),
             $this->fields,
             $this->matchType,
             $this->regexPattern,
@@ -123,14 +123,17 @@ final class KingdomCategoryRuleRecord
     /**
      * @return array<string, mixed>
      */
-    public function manageView(TaxonomyCatalog $catalog): array
+    public function manageView(CategoryCatalog $catalog): array
     {
         return DenariusLog::trace(__METHOD__, function () use ($catalog): array {
+            $lineage = $catalog->lineageKeyForId($this->categoryId);
+
             return [
                 'id' => $this->id,
                 'ruleId' => $this->id === null ? '' : $this->publicRuleId(),
-                'category' => $this->category,
-                'categoryLabel' => $catalog->label($this->category),
+                'categoryId' => $this->categoryId,
+                'category' => $lineage,
+                'categoryLabel' => $catalog->labelFor($this->categoryId),
                 'matchType' => $this->matchType,
                 'token' => $this->token,
                 'regexPattern' => $this->regexPattern,

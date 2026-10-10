@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Utilities\Auth\BootstrapAdmins;
 use Amtgard\Denarius\Utilities\Auth\ClaimOrn;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
@@ -315,7 +316,7 @@ final class ApplicationTest extends AmtgardTestCase
             ->tellerAccountId($synced->getTellerAccountId())
             ->postedOn($synced->getPostedOn())
             ->amountCents($synced->getAmountCents())
-            ->category($synced->getCategory())
+            ->categoryId($synced->getCategoryId())
             ->description($synced->getDescription())
             ->counterparty($synced->getCounterparty())
             ->status($synced->getStatus())

@@ -1,0 +1,22 @@
+{# Kingdom manage workspace tabs (URL-driven: ?tab=settings|review|patterns). #}
+{% set manageRoot = '/manage/' ~ kingdom.slug %}
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link{% if manageTab == 'settings' %} active{% endif %}"
+           href="{{ manageRoot }}?tab=settings"
+           {% if manageTab == 'settings' %}aria-current="page"{% endif %}
+           role="tab">Settings</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link{% if manageTab == 'review' %} active{% endif %}"
+           href="{{ manageRoot }}?tab=review&amp;review_month={{ reviewMonth|url_encode }}"
+           {% if manageTab == 'review' %}aria-current="page"{% endif %}
+           role="tab">Transaction review</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link{% if manageTab == 'patterns' %} active{% endif %}"
+           href="{{ manageRoot }}?tab=patterns"
+           {% if manageTab == 'patterns' %}aria-current="page"{% endif %}
+           role="tab">Patterns</a>
+    </li>
+</ul>

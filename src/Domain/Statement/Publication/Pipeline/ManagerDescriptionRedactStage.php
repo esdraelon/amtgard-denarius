@@ -29,6 +29,7 @@ final class ManagerDescriptionRedactStage implements PublicationStage
                     ->tellerTransactionId($line->getTellerTransactionId())
                     ->postedOn($line->getPostedOn())
                     ->amountCents($line->getAmountCents())
+                    ->categoryId($line->getCategoryId())
                     ->category($line->getCategory())
                     ->categoryFlow($line->getCategoryFlow())
                     ->description(PublicationManagerRedactCopy::LINE_DESCRIPTION)

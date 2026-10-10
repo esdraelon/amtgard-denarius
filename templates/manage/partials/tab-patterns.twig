@@ -1,23 +1,14 @@
-{% extends "base.twig" %}
 {% import "macros.twig" as ui %}
-
-{% block title %}Patterns — {{ kingdom.name }}{% endblock %}
-{% block container_class %}container-lg{% endblock %}
-
-{% block content %}
-{% embed 'components/page-header.twig' with { title: 'Category patterns' } %}
-    {% block header_actions %}
-        <p class="mb-0 d-flex flex-wrap gap-2">
-            <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}">Back to review</a>
-            <a class="btn btn-primary btn-sm" href="/manage/{{ kingdom.slug }}/patterns/new">New pattern</a>
-        </p>
-    {% endblock %}
-{% endembed %}
 
 <p class="small text-body-secondary">Kingdom-only rules match normalized description and counterparty text. They override shared keywords and never appear on public statements. Saving runs a recategorize pass for non-manager rows.</p>
 
+<p class="mb-3">
+    <a class="btn btn-primary btn-sm" href="/manage/{{ kingdom.slug }}/patterns/new">New pattern</a>
+</p>
+
 {% embed 'components/section-card.twig' with { title: 'Patterns' } %}
     {% block section_body %}
+        {% set patterns = patterns|default([]) %}
         {% if patterns is empty %}
             {% include 'components/alert.twig' with {
                 variant: 'info',
@@ -32,7 +23,7 @@
                             <tr>
                                 <th scope="col">Rule</th>
                                 <th scope="col">Match</th>
-                                <th scope="col">Category</th>
+                                <th scope="col" style="min-width: 14rem;">Category</th>
                                 <th scope="col"></th>
                             </tr>
                         </thead>
@@ -51,8 +42,16 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <input class="form-control form-control-sm" name="patterns[{{ row.id }}][category]" value="{{ row.category }}" aria-label="Category slug">
-                                        <span class="small text-body-secondary">{{ row.categoryLabel }}</span>
+                                        {% include 'components/category-typeahead.twig' with {
+                                            inputId: 'pattern-cat-' ~ row.id,
+                                            listId: 'pattern-cat-list-' ~ row.id,
+                                            inputName: 'patterns[' ~ row.id ~ '][category_display]',
+                                            hiddenName: 'patterns[' ~ row.id ~ '][category_id]',
+                                            selectedCategoryId: row.categoryId,
+                                            displayValue: row.categoryDisplay,
+                                            flow: row.categoryFlow,
+                                            searchUrl: '/manage/' ~ kingdom.slug ~ '/taxonomy/categories'
+                                        } %}
                                     </td>
                                     <td class="text-nowrap">
                                         <a class="btn btn-outline-secondary btn-sm" href="/manage/{{ kingdom.slug }}/patterns/new?category={{ row.category|url_encode }}">Duplicate</a>
@@ -68,4 +67,3 @@
         {% endif %}
     {% endblock %}
 {% endembed %}
-{% endblock %}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Persistence\Record\TransactionRecord;
@@ -25,7 +26,7 @@ final class TransactionPublicationApplierCategoryTest extends AmtgardTestCase
             ->postedOn('2026-09-01')
             ->amountCents(-100)
             ->description('RENT PAYMENT')
-            ->category('expense.site_rental')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental'))
             ->categorySource(CategorySource::Manager->value)
             ->categoryConfidence(100)
             ->build();
@@ -39,7 +40,7 @@ final class TransactionPublicationApplierCategoryTest extends AmtgardTestCase
             ->postedOn('2026-09-01')
             ->amountCents(-100)
             ->description('RENT PAYMENT')
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->providerCategory('RENT')
             ->categorySource(CategorySource::Fallback->value)
             ->build();
@@ -51,7 +52,7 @@ final class TransactionPublicationApplierCategoryTest extends AmtgardTestCase
         ))->apply($kingdom, $incoming, $existing);
 
         $applied = Strategies::publicationApplier($transactions)->apply($kingdom, $categorized, false);
-        $this->assertSame('expense.site_rental', $applied->getCategory());
+        $this->assertSame(CategoryCatalogFixture::id('expense.site_rental'), $applied->getCategoryId());
         $this->assertSame(CategorySource::Manager->value, $applied->getCategorySource());
         $this->assertSame('RENT', $applied->getProviderCategory());
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Taxonomy\CategoryConfidence;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
 use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
@@ -43,7 +44,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
                 '',
             );
             $decision = $this->categorizer->decide('teller', $incoming, null);
-            if ($decision->category === $case['expected']) {
+            if ($decision->categoryId === CategoryCatalogFixture::id((string) $case['expected'])) {
                 ++$hits;
             }
         }
@@ -55,7 +56,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
     {
         $incoming = $this->row('CHECKCARD K&K INSURANCE GROUP', '', '-40.00', '');
         $auto = $this->categorizer->decide('teller', $incoming, null);
-        $this->assertSame('expense.insurance', $auto->category);
+        $this->assertSame(CategoryCatalogFixture::id('expense.insurance'), $auto->categoryId);
         $this->assertGreaterThanOrEqual(CategoryConfidence::AUTO_ACCEPT, $auto->confidence);
 
         $suggest = $this->categorizer->decide('teller', TransactionRecord::builder()
@@ -63,7 +64,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             ->description('SHOP')
             ->providerCategory('groceries')
             ->build(), null);
-        $this->assertSame('uncategorized', $suggest->category);
+        $this->assertSame(CategoryCatalogFixture::id('uncategorized'), $suggest->categoryId);
         $this->assertSame('expense.feast_groceries', $suggest->suggestedSlug);
         $this->assertLessThan(CategoryConfidence::AUTO_ACCEPT, $suggest->confidence);
     }
@@ -76,8 +77,8 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             ->providerCategory('FOOD_AND_DRINK')
             ->build();
         $decision = $this->categorizer->decide('plaid', $incoming, null);
-        $this->assertSame('uncategorized', $decision->category);
-        $this->assertNotSame('expense.feast_groceries', $decision->category);
+        $this->assertSame(CategoryCatalogFixture::id('uncategorized'), $decision->categoryId);
+        $this->assertNotSame(CategoryCatalogFixture::id('expense.feast_groceries'), $decision->categoryId);
     }
 
     public function testManagerLockSurvivesSecondSyncWithChangedProviderHint(): void
@@ -89,7 +90,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             ->tellerTransactionId('txn-1')
             ->description('STAY')
             ->amountCents(-100)
-            ->category('expense.site_rental')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental'))
             ->categorySource(CategorySource::Manager->value)
             ->categoryConfidence(100)
             ->build();
@@ -100,7 +101,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             ->providerCategory('groceries')
             ->build();
         $second = $applier->apply($kingdom, $incoming, $existing);
-        $this->assertSame('expense.site_rental', $second->getCategory());
+        $this->assertSame(CategoryCatalogFixture::id('expense.site_rental'), $second->getCategoryId());
         $this->assertSame(CategorySource::Manager->value, $second->getCategorySource());
     }
 
@@ -113,7 +114,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             ->description('POS DEBIT RECREATION.GOV RESERVATION')
             ->status('pending')
             ->amountCents(-5000)
-            ->category('expense.site_rental')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.site_rental'))
             ->categorySource(CategorySource::SharedRule->value)
             ->categoryConfidence(85)
             ->taxonomyVersion('taxonomy/v1')
@@ -124,7 +125,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             ->amountCents(-5000)
             ->build();
         $kept = $applier->apply($kingdom, $postedSame, $existing);
-        $this->assertSame('expense.site_rental', $kept->getCategory());
+        $this->assertSame(CategoryCatalogFixture::id('expense.site_rental'), $kept->getCategoryId());
 
         $postedChanged = TransactionRecord::builder()
             ->description('CHECKCARD K&K INSURANCE GROUP')
@@ -132,7 +133,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             ->amountCents(-5000)
             ->build();
         $rematched = $applier->apply($kingdom, $postedChanged, $existing);
-        $this->assertSame('expense.insurance', $rematched->getCategory());
+        $this->assertSame(CategoryCatalogFixture::id('expense.insurance'), $rematched->getCategoryId());
     }
 
     public function testRecategorizeIsIdempotent(): void
@@ -149,7 +150,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             ->amountCents(-5000)
             ->description('POS DEBIT RECREATION.GOV RESERVATION')
             ->status('posted')
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->categorySource(CategorySource::Fallback->value)
             ->build());
         $providers = Strategies::providers(Strategies::teller());
@@ -160,6 +161,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
             $this->categorizer,
             new LedgerProviderIdResolver($providers),
             CategorizationArrange::bundledCatalog(),
+            CategoryCatalogFixture::asInterface(),
             $months,
         );
         $active = \Amtgard\Denarius\Tests\Support\MethodLogRecorder::active();
@@ -205,10 +207,12 @@ final class TransactionCategorizerTest extends AmtgardTestCase
         $this->assertInstanceOf(RecordingMethodLog::class, $active);
         MethodLogAssert::reset();
         $input = \Amtgard\Denarius\Domain\Taxonomy\Categorization\CategorizationInput::builder()
-            ->existingCategory('expense.storage')
+            ->existingCategoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('expense.storage'))
             ->existingSource(CategorySource::Manager->value)
             ->build();
-        $match = (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher())->match($input);
+        $match = (new \Amtgard\Denarius\Domain\Taxonomy\Categorization\ManagerLockMatcher(
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+        ))->match($input);
         $this->assertNotNull($match);
         MethodLogAssert::assertBranchLogged(
             BranchLogLevel::Debug,
@@ -257,7 +261,7 @@ final class TransactionCategorizerTest extends AmtgardTestCase
         $categorizer = CategorizationArrange::categorizer($catalog);
         $incoming = $this->row('SERVICE CHARGE FEE', '', '-3.00', '');
         $decision = $categorizer->decide('teller', $incoming, null);
-        $this->assertSame('expense.bank_fees', $decision->category);
+        $this->assertSame(CategoryCatalogFixture::id('expense.bank_fees'), $decision->categoryId);
         $this->assertSame('kw.longer', $decision->ruleId);
     }
 

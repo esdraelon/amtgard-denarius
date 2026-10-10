@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Domain\Taxonomy\Categorization;
 
 use Amtgard\Denarius\Domain\Taxonomy\CategorySource;
+use Amtgard\Denarius\Domain\Taxonomy\PatternGlob;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyKeywordRule;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
@@ -113,7 +114,7 @@ final class KeywordRuleMatcher implements CategoryMatcher
             return match ($rule->matchType) {
                 'regex' => $rule->regexPattern !== ''
                     && preg_match('/' . $rule->regexPattern . '/', $text) === 1,
-                'token' => $rule->token !== '' && str_contains($text, $rule->token),
+                'token' => $rule->token !== '' && PatternGlob::matchesInText($rule->token, $text),
                 'anyOf' => $this->matchesAnyOf($rule->anyOfTokens, $text),
                 default => false,
             };
@@ -127,7 +128,7 @@ final class KeywordRuleMatcher implements CategoryMatcher
     {
         return DenariusLog::trace(__METHOD__, function () use ($tokens, $text): bool {
             foreach ($tokens as $token) {
-                if ($token !== '' && str_contains($text, $token)) {
+                if ($token !== '' && PatternGlob::matchesInText($token, $text)) {
                     return true;
                 }
             }

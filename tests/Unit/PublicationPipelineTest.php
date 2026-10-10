@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Tests\Unit;
 
+use Amtgard\Denarius\Tests\Support\CategoryCatalogFixture;
 use Amtgard\Denarius\Domain\Statement\MonthWindow;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Statement\Publication\Pipeline\EmbargoStage;
@@ -44,7 +45,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-01')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->publishedAt('2026-09-02T00:00:00+00:00')
             ->publishableAfter('2026-09-10T00:00:00+00:00')
             ->build();
@@ -66,7 +67,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
         MethodLogAssert::reset();
         $kingdom = KingdomRecord::builder()->orkKingdomId(1)->name('K')->slug('k')->build();
         $month = new MonthWindow(2026, 9);
-        $line = PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-100)->category('uncategorized')->build();
+        $line = PublicationCandidateLine::builder()->postedOn('2026-09-01')->amountCents(-100)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))->build();
         $envelope = new PublicationEnvelope(
             $kingdom,
             $month,
@@ -93,7 +94,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
             ->tellerAccountId('acc')
             ->postedOn('2026-09-02')
             ->amountCents(-100)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->description('supplies')
             ->counterparty('Shop')
             ->status('posted')
@@ -114,7 +115,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
         $line = PublicationCandidateLine::builder()
             ->postedOn('2026-09-02')
             ->amountCents(-500)
-            ->category('uncategorized')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('uncategorized'))
             ->accountName('Checking')
             ->publishedAt('2026-09-03T00:00:00+00:00')
             ->publishableAfter('2026-09-01T00:00:00+00:00')
@@ -127,7 +128,10 @@ final class PublicationPipelineTest extends AmtgardTestCase
             [$line],
         );
 
-        $result = PublicationPipelineFactory::standard(TaxonomyCatalogFixture::load())->forPublicRead()->run($envelope);
+        $result = PublicationPipelineFactory::standard(
+            TaxonomyCatalogFixture::load(),
+            CategoryCatalogFixture::asInterface(),
+        )->forPublicRead()->run($envelope);
         $result->kingdom();
         $result->month();
         $result->disclosureTier();
@@ -160,7 +164,10 @@ final class PublicationPipelineTest extends AmtgardTestCase
     {
         $flagged = $this->candidate(PublicationFlags::empty()->withManagerRedactDescription(true)->encode());
 
-        $lines = PublicationPipelineFactory::standard(TaxonomyCatalogFixture::load())
+        $lines = PublicationPipelineFactory::standard(
+            TaxonomyCatalogFixture::load(),
+            CategoryCatalogFixture::asInterface(),
+        )
             ->forPublicRead()
             ->run($this->envelope(DisplayMode::LessRedacted, [$flagged, $this->candidate(null)]))
             ->toLedgerLines();
@@ -176,7 +183,7 @@ final class PublicationPipelineTest extends AmtgardTestCase
             ->tellerTransactionId('t-1')
             ->postedOn('2026-09-01')
             ->amountCents(-100)
-            ->category('general')
+            ->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('general'))
             ->categoryFlow('expense')
             ->description('private')
             ->counterparty('Vendor')

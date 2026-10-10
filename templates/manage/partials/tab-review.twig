@@ -1,0 +1,170 @@
+{% import "macros.twig" as ui %}
+
+{% embed 'components/section-card.twig' with {
+    title: 'Transaction review',
+    help_id: 'manage-help-transaction-review',
+    help_content: '<p class=\"mb-2\">Each row shows the category stored on that transaction (<strong>Expense:</strong> or <strong>Income:</strong> plus the label). Edit the field to change it; saving happens when you leave the field. Use the wand icon to create a kingdom pattern from a row.</p><p class=\"mb-2\">Optional <strong>Review matched patterns</strong> bulk-writes the category column for rows where an existing pattern rule does not match what is stored (manager-set rows are skipped).</p><p class=\"mb-2\">Set <strong>Publish</strong>, <strong>Redact</strong>, and <strong>Embargo</strong> for this month, then click <strong>Update publication</strong>. <strong>Redact</strong> publishes with generic description copy and checks Publish for you. Clear both Publish and Redact on a published row to withhold it.</p><p class=\"mb-0\">The table lists transactions posted in the month you select below (not the sync date).</p>'
+} %}
+    {% import "macros.twig" as ui %}
+    {% block section_body %}
+        {% set patternAutomaticCandidates = patternAutomaticCandidates|default([]) %}
+        {% if patternAutomaticCandidates|length > 0 %}
+            <p class="mb-3">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="pattern-automatic-review-open">
+                    Review matched patterns ({{ patternAutomaticCandidates|length }})
+                </button>
+            </p>
+        {% endif %}
+        {% set reviewBase = '/manage/' ~ kingdom.slug ~ '?tab=review&amp;review_month=' %}
+        {% set filterSuffix = uncategorizedOnly ? '&amp;uncategorized=1' : '' %}
+        <div class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary mb-2">
+            {{ ui.btn_secondary('Previous month', reviewBase ~ reviewPrevious ~ filterSuffix) }}
+            <span class="fw-semibold text-denarius-tertiary">{{ reviewMonth }}</span>
+            {{ ui.btn_secondary('Next month', reviewBase ~ reviewNext ~ filterSuffix) }}
+        </div>
+        <p class="mb-2">
+            {% if uncategorizedOnly %}
+                <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth }}">Show all rows</a>
+            {% else %}
+                <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth }}&amp;uncategorized=1">Uncategorized only (least confident first)</a>
+            {% endif %}
+        </p>
+        {% if ledgerSync.showImportNotice %}
+            {% include 'components/alert.twig' with {
+                variant: 'info',
+                message: ledgerSync.importNotice
+            } %}
+            <p class="small mb-3">
+                <span class="text-body-secondary">Last checked:</span>
+                {% if ledgerSync.lastCheckedAt %}
+                    <span class="fw-semibold">{{ ledgerSync.lastCheckedAt }}</span>
+                {% else %}
+                    <span class="fw-semibold">Not yet</span>
+                {% endif %}
+                <span class="text-body-secondary"> — </span>
+                <span class="fw-semibold">{{ ledgerSync.statusLabel }}</span>
+                {% if ledgerSync.statusDetail %}
+                    <span class="d-block text-body-secondary mt-1">{{ ledgerSync.statusDetail }}</span>
+                {% endif %}
+            </p>
+        {% endif %}
+        {% if reviewQueue is empty %}
+            {% include 'components/alert.twig' with {
+                variant: 'info',
+                message: 'No transactions on published accounts for this month.'
+            } %}
+        {% else %}
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-striped align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Posted</th>
+                            <th scope="col">Account</th>
+                            <th scope="col">Counterparty</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Amount</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-center">Publish</th>
+                            <th scope="col" class="text-center">Redact</th>
+                            <th scope="col" class="text-center">Embargo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in reviewQueue %}
+                            {% set flow = row.amountCents > 0 ? 'income' : 'expense' %}
+                            <tr>
+                                <td>{{ row.postedOn }}</td>
+                                <td>{{ row.accountName }}</td>
+                                <td>{{ row.counterparty }}</td>
+                                <td>
+                                    <span>{{ row.description }}</span>
+                                    <button type="button"
+                                            class="btn btn-link btn-sm p-0 ms-1 align-baseline review-pattern-open"
+                                            data-pattern-token="{{ row.patternToken }}"
+                                            data-pattern-category="{{ row.patternCategorySlug }}"
+                                            data-pattern-category-display="{{ row.storedCategoryDisplay }}"
+                                            data-row-flow="{{ flow }}"
+                                            data-row-amount-cents="{{ row.amountCents }}"
+                                            data-row-transaction-id="{{ row.tellerTransactionId }}"
+                                            data-row-counterparty="{{ row.counterparty }}"
+                                            data-row-description="{{ row.description }}"
+                                            title="Create category pattern from this row"
+                                            aria-label="Create category pattern from this row">
+                                        <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                                <td>{{ row.amount }}</td>
+                                <td style="min-width: 14rem;">
+                                    <form method="post" action="/manage/{{ kingdom.slug }}/transactions/update" class="review-category-form" data-saved-category-id="{{ row.storedCategoryId }}">
+                                        <input type="hidden" name="csrf" value="{{ csrf }}">
+                                        <input type="hidden" name="review_month" value="{{ reviewMonth }}">
+                                        <input type="hidden" name="teller_transaction_id" value="{{ row.tellerTransactionId }}">
+                                        {% include 'components/category-typeahead.twig' with {
+                                            inputId: 'cat-' ~ row.tellerTransactionId,
+                                            listId: 'cat-list-' ~ row.tellerTransactionId,
+                                            inputName: 'category_display',
+                                            hiddenName: 'category_id',
+                                            selectedCategoryId: row.storedCategoryId,
+                                            displayValue: row.storedCategoryDisplay,
+                                            flow: flow,
+                                            searchUrl: '/manage/' ~ kingdom.slug ~ '/taxonomy/categories'
+                                        } %}
+                                    </form>
+                                </td>
+                                <td class="review-row-status">
+                                    {% if row.status == 'needs_category' %}
+                                        <span class="badge text-bg-danger">Needs category</span>
+                                    {% elseif row.status == 'pending' %}
+                                        <span class="badge text-bg-warning">Ready to publish</span>
+                                    {% elseif row.status == 'embargoed' %}
+                                        <span class="badge text-bg-secondary">Embargo</span>
+                                    {% else %}
+                                        <span class="badge text-bg-success">Published</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <input type="hidden" name="review_id[]" value="{{ row.tellerTransactionId }}" form="review-batch-form">
+                                    <input class="form-check-input{% if row.redact %} review-publish-via-redact{% endif %}"
+                                           type="checkbox"
+                                           name="review[{{ row.tellerTransactionId }}][publish]"
+                                           value="1"
+                                           form="review-batch-form"
+                                           data-review-publish="{{ row.tellerTransactionId }}"
+                                           aria-label="Publish"
+                                           {% if row.publish or row.redact %}checked{% endif %}
+                                           {% if row.redact or row.status == 'needs_category' %}disabled{% endif %}
+                                           {% if row.status == 'needs_category' %}title="Assign a category before publishing"{% endif %}>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="review[{{ row.tellerTransactionId }}][redact]"
+                                           value="1"
+                                           form="review-batch-form"
+                                           data-review-redact="{{ row.tellerTransactionId }}"
+                                           aria-label="Redact description"
+                                           {% if row.redact %}checked{% endif %}
+                                           {% if row.status == 'needs_category' %}disabled title="Assign a category before publishing"{% endif %}>
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" name="review[{{ row.tellerTransactionId }}][embargo]" value="1" form="review-batch-form" aria-label="Keep embargo" {% if row.embargo %}checked{% endif %}>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <form id="review-batch-form" method="post" action="/manage/{{ kingdom.slug }}/transactions/review" class="mt-3">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <input type="hidden" name="review_month" value="{{ reviewMonth }}">
+                {{ ui.submit('Update publication') }}
+            </form>
+        {% endif %}
+    {% endblock %}
+{% endembed %}
+
+{% include 'components/review-pattern-modal.twig' %}
+{% if patternAutomaticCandidates|default([])|length > 0 %}
+    {% include 'components/pattern-automatic-review-modal.twig' %}
+{% endif %}

@@ -49,6 +49,7 @@ final class SqliteLogBundleTest extends AmtgardTestCase
             $line,
             [],
         ));
+        $handler->flushBuffer();
 
         $drainer = new LogSpoolDrainer($paths, new SqliteLogSchema(), new MethodLogJsonLineParser());
         $this->assertSame(1, $drainer->drainOnce());

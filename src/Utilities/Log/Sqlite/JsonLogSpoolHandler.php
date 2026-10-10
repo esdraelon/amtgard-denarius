@@ -7,9 +7,14 @@ namespace Amtgard\Denarius\Utilities\Log\Sqlite;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\LogRecord;
 
-/** Adapter: append Monolog JSON message lines to the spool file (non-blocking). */
+/** Adapter: buffer Monolog JSON lines and append to the spool file once per request (shutdown flush). */
 final class JsonLogSpoolHandler extends AbstractProcessingHandler
 {
+    /** @var list<string> */
+    private array $buffer = [];
+
+    private bool $shutdownRegistered = false;
+
     public function __construct(
         private readonly LogPathResolver $paths,
     ) {
@@ -18,14 +23,29 @@ final class JsonLogSpoolHandler extends AbstractProcessingHandler
 
     protected function write(LogRecord $record): void
     {
+        $this->buffer[] = $record->message . "\n";
+        if ($this->shutdownRegistered) {
+            return;
+        }
+        $this->shutdownRegistered = true;
+        register_shutdown_function(function (): void {
+            $this->flushBuffer();
+        });
+    }
+
+    /** Visible for tests and explicit flush before process exit. */
+    public function flushBuffer(): void
+    {
+        if ($this->buffer === []) {
+            return;
+        }
+
         $spool = $this->paths->spoolFile();
         $this->paths->ensureDirectory($spool);
         $this->paths->ensureDirectory($this->paths->spoolDirectory());
 
-        $line = $record->message . "\n";
-        $written = @file_put_contents($spool, $line, FILE_APPEND | LOCK_EX);
-        if ($written === false) {
-            return;
-        }
+        $chunk = implode('', $this->buffer);
+        $this->buffer = [];
+        @file_put_contents($spool, $chunk, FILE_APPEND | LOCK_EX);
     }
 }

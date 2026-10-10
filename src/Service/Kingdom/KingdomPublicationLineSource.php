@@ -33,7 +33,7 @@ final class KingdomPublicationLineSource
                 if (!isset($names[$transaction->getTellerAccountId()])) {
                     continue;
                 }
-                $lines[] = $this->candidate($transaction, $names[$transaction->getTellerAccountId()]);
+                $lines[] = $this->buildCandidate($transaction, $names[$transaction->getTellerAccountId()]);
             }
 
             return $lines;
@@ -57,25 +57,22 @@ final class KingdomPublicationLineSource
         });
     }
 
-    private function candidate(TransactionRecord $transaction, string $accountName): PublicationCandidateLine
+    private function buildCandidate(TransactionRecord $transaction, string $accountName): PublicationCandidateLine
     {
-        return DenariusLog::trace(__METHOD__, function () use ($transaction, $accountName): PublicationCandidateLine {
-            return PublicationCandidateLine::builder()
-                ->tellerTransactionId($transaction->getTellerTransactionId())
-                ->postedOn($transaction->getPostedOn())
-                ->amountCents($transaction->getAmountCents())
-                ->category($transaction->getCategory())
-                ->categorySource($transaction->getCategorySource())
-                ->categoryConfidence($transaction->getCategoryConfidence())
-                ->categorySuggested($transaction->getCategorySuggested())
-                ->description($transaction->getDescription())
-                ->counterparty($transaction->getCounterparty())
-                ->status($transaction->getStatus())
-                ->accountName($accountName)
-                ->publishedAt($transaction->getPublishedAt())
-                ->publishableAfter($transaction->getPublishableAfter())
-                ->publicationFlags($transaction->getPublicationFlags())
-                ->build();
-        });
+        return PublicationCandidateLine::builder()
+            ->tellerTransactionId($transaction->getTellerTransactionId())
+            ->postedOn($transaction->getPostedOn())
+            ->amountCents($transaction->getAmountCents())
+            ->categoryId($transaction->getCategoryId())
+            ->categorySource($transaction->getCategorySource())
+            ->categoryConfidence($transaction->getCategoryConfidence())
+            ->description($transaction->getDescription())
+            ->counterparty($transaction->getCounterparty())
+            ->status($transaction->getStatus())
+            ->accountName($accountName)
+            ->publishedAt($transaction->getPublishedAt())
+            ->publishableAfter($transaction->getPublishableAfter())
+            ->publicationFlags($transaction->getPublicationFlags())
+            ->build();
     }
 }

@@ -19,21 +19,19 @@ final class KingdomPatternPrefill
      */
     public function fromReviewQuery(string $counterparty, string $description, string $category): array
     {
-        return DenariusLog::trace(__METHOD__, function () use ($counterparty, $description, $category): array {
-            $normalizedCounterparty = $this->normalizer->normalize($counterparty);
-            $normalizedDescription = $this->normalizer->normalize($description);
-            $token = $normalizedCounterparty !== '' ? $normalizedCounterparty : $normalizedDescription;
-            if (strlen($token) > 120) {
-                $token = substr($token, 0, 120);
-            }
+        $normalizedCounterparty = $this->normalizer->normalize($counterparty);
+        $normalizedDescription = $this->normalizer->normalize($description);
+        $token = $normalizedCounterparty !== '' ? $normalizedCounterparty : $normalizedDescription;
+        if (strlen($token) > 120) {
+            $token = substr($token, 0, 120);
+        }
 
-            return [
-                'counterparty' => $counterparty,
-                'description' => $description,
-                'category' => $category,
-                'token' => $token,
-                'matchType' => 'token',
-            ];
-        });
+        return [
+            'counterparty' => $counterparty,
+            'description' => $description,
+            'category' => $category,
+            'token' => $token,
+            'matchType' => 'token',
+        ];
     }
 }

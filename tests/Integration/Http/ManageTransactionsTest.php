@@ -17,9 +17,10 @@ final class ManageTransactionsTest extends IntegTestCase
     public function testManageTransactionReviewPostAppliesBatchPublishAndRedact(): void
     {
         $http = $this->loggedInManagerHttp();
-        $reviewPath = self::MANAGE_PREFIX . '?review_month=' . IntegFixtures::REVIEW_MONTH;
+        $reviewPath = self::MANAGE_PREFIX . '?tab=review&review_month=' . IntegFixtures::REVIEW_MONTH;
         $before = $this->manageHtml($http, $reviewPath);
         $this->assertReviewRowsPresent($before);
+        $this->assertStringContainsString('Ready to publish', $before);
 
         $response = $http->postForm(self::MANAGE_PREFIX . '/transactions/review', [
             'csrf' => $this->parseReviewBatchCsrf($before),
@@ -41,6 +42,8 @@ final class ManageTransactionsTest extends IntegTestCase
             '/name="review\[' . preg_quote(IntegFixtures::TXN_REVIEW_REDACT, '/') . '\]\[redact\]"[^>]*checked/',
             $after,
         );
+        $this->assertStringContainsString('Published', $after);
+        $this->assertStringNotContainsString('Ready to publish', $after);
     }
 
     private function loggedInManagerHttp(): IntegHttp
@@ -91,7 +94,7 @@ final class ManageTransactionsTest extends IntegTestCase
 
     private function assertReviewRedirect(IntegHttp $http, \Psr\Http\Message\ResponseInterface $response): void
     {
-        $expectedPath = self::MANAGE_PREFIX . '?review_month=' . rawurlencode(IntegFixtures::REVIEW_MONTH);
+        $expectedPath = self::MANAGE_PREFIX . '?tab=review&review_month=' . rawurlencode(IntegFixtures::REVIEW_MONTH);
         $this->assertSame(302, $response->getStatusCode());
         $location = $http->redirectLocation($response);
         $this->assertNotNull($location);
