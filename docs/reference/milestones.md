@@ -724,3 +724,14 @@ Suggested stack (one branch each):
 - Line coverage: unchanged (`composer test`; harness + docs only).
 - Infection: not run (no `src/` change).
 - Checklist: [dev-integ-coverage-checklist.md](../planning/dev-integ-coverage-checklist.md).
+
+## Global categories FK (stacked)
+
+- Branch: `stack/global-categories-fk`
+- Global `categories` / `category_lineages`, `transactions.category_id`, manage review and patterns on catalog ids, PHPUnit green.
+
+## Month balances and review navigation
+
+- Branch: `stack/month-balances-review-nav` (stacked on `stack/global-categories-fk`)
+- Public kingdom page shows coarsened starting/ending balances per disclosure mode via the publication pipeline; manage review month links use single-encoded query strings so `review_month` is honored.
+- Tests: `PublicationMonthBalanceTest`, `PublicationLedgerBalanceResolverTest`, `TransactionReviewMonthNavigationTest`, `ManageReadTest::testManageReviewMonthQuerySelectsRequestedMonth`.

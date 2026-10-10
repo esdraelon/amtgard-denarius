@@ -323,6 +323,8 @@ final class RestDomainArrange
             10_000,
             9_500,
         );
+        (new \Amtgard\Denarius\Domain\Statement\Publication\PublicationLedgerBalanceResolver())
+            ->snapshotForMonth(new MonthWindow(2026, 9), [$line]);
         $envelope->providerBalanceCents();
         $envelope->lastPublishedBalanceCents();
         $envelope->publishedBalanceCents();

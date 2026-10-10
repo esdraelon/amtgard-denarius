@@ -13,6 +13,19 @@ final class ManageReadTest extends IntegTestCase
 {
     private const MANAGE_PREFIX = '/manage/' . IntegFixtures::KINGDOM_SLUG;
 
+    public function testManageReviewMonthQuerySelectsRequestedMonth(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $response = $http->get(self::MANAGE_PREFIX . '?tab=review&review_month=2026-09');
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+
+        $body = (string) $response->getBody();
+        $this->assertStringContainsString('>2026-09</span>', $body);
+        $this->assertStringContainsString('tab=review&amp;review_month=2026-08', $body);
+    }
+
     public function testManageIndexRendersForKingdomManager(): void
     {
         $http = $this->integHttp();

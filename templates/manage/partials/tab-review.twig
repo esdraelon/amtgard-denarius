@@ -15,8 +15,8 @@
                 </button>
             </p>
         {% endif %}
-        {% set reviewBase = '/manage/' ~ kingdom.slug ~ '?tab=review&amp;review_month=' %}
-        {% set filterSuffix = uncategorizedOnly ? '&amp;uncategorized=1' : '' %}
+        {% set reviewBase = '/manage/' ~ kingdom.slug ~ '?tab=review&review_month=' %}
+        {% set filterSuffix = uncategorizedOnly ? '&uncategorized=1' : '' %}
         <div class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary mb-2">
             {{ ui.btn_secondary('Previous month', reviewBase ~ reviewPrevious ~ filterSuffix) }}
             <span class="fw-semibold text-denarius-tertiary">{{ reviewMonth }}</span>
@@ -26,7 +26,7 @@
             {% if uncategorizedOnly %}
                 <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth }}">Show all rows</a>
             {% else %}
-                <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth }}&amp;uncategorized=1">Uncategorized only (least confident first)</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ reviewBase ~ reviewMonth ~ '&uncategorized=1' }}">Uncategorized only (least confident first)</a>
             {% endif %}
         </p>
         {% if ledgerSync.showImportNotice %}

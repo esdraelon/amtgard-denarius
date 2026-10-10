@@ -32,6 +32,12 @@ final class MonthStatementCacheCodec
             if ($statement->absenceReason !== null) {
                 $payload['absence'] = $statement->absenceReason->toCache();
             }
+            if ($statement->openingBalanceCents !== null) {
+                $payload['openingBalanceCents'] = $statement->openingBalanceCents;
+            }
+            if ($statement->closingBalanceCents !== null) {
+                $payload['closingBalanceCents'] = $statement->closingBalanceCents;
+            }
 
             return json_encode($payload, JSON_THROW_ON_ERROR);
         });
@@ -52,7 +58,10 @@ final class MonthStatementCacheCodec
                 ? StatementAbsenceReason::fromCache($decoded['absence'])
                 : null;
 
-            return new MonthStatement($mode, $month, $this->rows($decoded['rows'] ?? []), $absence);
+            $opening = isset($decoded['openingBalanceCents']) ? (int) $decoded['openingBalanceCents'] : null;
+            $closing = isset($decoded['closingBalanceCents']) ? (int) $decoded['closingBalanceCents'] : null;
+
+            return new MonthStatement($mode, $month, $this->rows($decoded['rows'] ?? []), $absence, $opening, $closing);
         });
     }
 
