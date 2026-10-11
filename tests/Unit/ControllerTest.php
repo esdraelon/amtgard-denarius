@@ -160,6 +160,8 @@ final class ControllerTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
+            Strategies::manageCsrfGuard($twig),
         );
         $manage = $manager->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $this->assertStringContainsString('manage golden-plains', (string) $manage->getBody());

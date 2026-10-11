@@ -80,6 +80,15 @@ final class ManagerControllerCategorySearchTest extends TestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            Strategies::managePagePresenter(
+                new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
+                $kingdoms,
+                $accounts,
+                $transactions,
+            ),
+            Strategies::manageCsrfGuard(
+                new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
+            ),
         );
     }
 

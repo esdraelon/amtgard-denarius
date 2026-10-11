@@ -91,6 +91,7 @@ final class ManageConnectTest extends AmtgardTestCase
         ]);
         $transactions = new MemoryTransactions();
         $this->transactions = $transactions;
+        $twig = new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates')));
         $this->manager = new ManagerController(
             new SessionAuthStore('test_session'),
             $permissions,
@@ -99,7 +100,7 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::kingdomSettings($kingdoms),
             new EnrollmentService($kingdoms, $secrets = new MemorySecrets(), $accounts, $providers, new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset($transactions, $accounts, $secrets)),
             $queue,
-            new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
+            $twig,
             new BankConnect($providers),
             new SimpleFinConnectSession(),
             Strategies::reviewQueue($transactions, $accounts),
@@ -110,6 +111,8 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
+            Strategies::manageCsrfGuard($twig),
         );
     }
 
@@ -157,25 +160,29 @@ final class ManageConnectTest extends AmtgardTestCase
         $this->assertSame(404, $this->manager->connect($this->request('POST', '/missing', ['csrf' => 'token']), new Response(), 'missing')->getStatusCode());
         $guestTransactions = new MemoryTransactions();
         $guestAccounts = new MemoryAccounts();
+        $guestKingdoms = new MemoryKingdoms();
+        $guestTwig = new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates')));
         $guest = new ManagerController(
             new SessionAuthStore('empty'),
             new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null)),
-            new MemoryKingdoms(),
+            $guestKingdoms,
             $guestAccounts,
-            Strategies::kingdomSettings(new MemoryKingdoms()),
-            new EnrollmentService(new MemoryKingdoms(), new MemorySecrets(), $guestAccounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months(), Strategies::bankReset()),
+            Strategies::kingdomSettings($guestKingdoms),
+            new EnrollmentService($guestKingdoms, new MemorySecrets(), $guestAccounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months(), Strategies::bankReset()),
             new MemoryRefresh(),
-            new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
+            $guestTwig,
             new BankConnect(Strategies::providers(Strategies::teller())),
             new SimpleFinConnectSession(),
             Strategies::reviewQueue($guestTransactions, $guestAccounts),
             Strategies::reviewService($guestTransactions, $guestAccounts),
             Strategies::kingdomScopedCategorySearch(),
-            Strategies::kingdomPatternService(new MemoryKingdoms(), $guestTransactions),
-            Strategies::patternWizard(new MemoryKingdoms(), $guestTransactions, $guestAccounts),
+            Strategies::kingdomPatternService($guestKingdoms, $guestTransactions),
+            Strategies::patternWizard($guestKingdoms, $guestTransactions, $guestAccounts),
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
-            Strategies::patternAutomaticReview(new MemoryKingdoms(), $guestTransactions, $guestAccounts),
+            Strategies::patternAutomaticReview($guestKingdoms, $guestTransactions, $guestAccounts),
+            Strategies::managePagePresenter($guestTwig, $guestKingdoms, $guestAccounts, $guestTransactions),
+            Strategies::manageCsrfGuard($guestTwig),
         );
         $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), 'golden-plains')->getStatusCode());
     }

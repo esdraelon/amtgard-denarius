@@ -41,6 +41,8 @@ use Amtgard\Denarius\Domain\Bank\Provider\Providers\Teller\TellerApi;
 use Amtgard\Denarius\Controller\AdminController;
 use Amtgard\Denarius\Controller\HomeController;
 use Amtgard\Denarius\Controller\KingdomPageController;
+use Amtgard\Denarius\Controller\ManageCsrfGuard;
+use Amtgard\Denarius\Controller\ManagePagePresenter;
 use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
 use Amtgard\Denarius\Domain\Access\KingdomAccess;
@@ -68,9 +70,7 @@ use Amtgard\Denarius\Domain\Taxonomy\Categorization\TransactionCategorizer;
 use Amtgard\Denarius\Domain\Taxonomy\ReviewCategoryValidator;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalogLoader;
-use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategoryPicker;
 use Amtgard\Denarius\Domain\Taxonomy\KingdomScopedCategorySearch;
-use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch;
 use Amtgard\Denarius\Domain\Statement\MonthStatementBuilder;
 use Amtgard\Denarius\Domain\Statement\Presentation\StatementPresenterRegistry;
 use Amtgard\Denarius\Domain\Access\Policy\VisibilityPolicyRegistry;
@@ -385,7 +385,6 @@ return array_merge(
         $c->get(DescriptionNormalizer::class),
     ),
     KingdomCategoryAssigner::class => fn (ContainerInterface $c) => new KingdomCategoryAssigner(
-        $c->get(TaxonomyCategoryPicker::class),
         $c->get(TaxonomyCatalog::class),
         $c->get(CategoryCatalog::class),
     ),
@@ -523,9 +522,6 @@ return array_merge(
     KingdomScopedCategorySearch::class => fn (ContainerInterface $c) => new KingdomScopedCategorySearch(
         $c->get(CategoryCatalog::class),
     ),
-    TaxonomyCategoryPicker::class => fn (ContainerInterface $c) => new TaxonomyCategoryPicker(
-        $c->get(TaxonomyCatalog::class),
-    ),
     TransactionReviewQueue::class => fn (ContainerInterface $c) => new TransactionReviewQueue(
         $c->get(KingdomPublicationLineSource::class),
         $c->get(CategoryCatalog::class),
@@ -660,6 +656,17 @@ return array_merge(
         $c->get(AdminPrincipalSuggester::class),
     ),
     ManagerLedgerSyncFeedback::class => fn () => new ManagerLedgerSyncFeedback(),
+    ManageCsrfGuard::class => fn (ContainerInterface $c) => new ManageCsrfGuard(
+        $c->get(TwigHtmlRenderer::class),
+    ),
+    ManagePagePresenter::class => fn (ContainerInterface $c) => new ManagePagePresenter(
+        $c->get(TwigHtmlRenderer::class),
+        $c->get(AccountRepositoryInterface::class),
+        $c->get(TransactionReviewQueue::class),
+        $c->get(PatternAutomaticCategoryReview::class),
+        $c->get(KingdomPatternService::class),
+        $c->get(ManagerLedgerSyncFeedback::class),
+    ),
     ManagerController::class => fn (ContainerInterface $c) => new ManagerController(
         $c->get(SessionAuthStore::class),
         $c->get(PermissionService::class),
@@ -679,6 +686,8 @@ return array_merge(
         $c->get(KingdomPatternPrefill::class),
         $c->get(ManagerLedgerSyncFeedback::class),
         $c->get(PatternAutomaticCategoryReview::class),
+        $c->get(ManagePagePresenter::class),
+        $c->get(ManageCsrfGuard::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(
