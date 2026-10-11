@@ -9,10 +9,12 @@ use Amtgard\Denarius\Domain\Taxonomy\CategorySensitivity;
 use Amtgard\Denarius\Domain\Taxonomy\CategorySnapshot;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategoryDisplay;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
+use Amtgard\Denarius\Persistence\Repository\Category\CategoryRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\CategoryLineage\CategoryLineageRepositoryInterface;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use PDO;
 
-/** MariaDB-backed {@see CategoryCatalog}. */
+/** MariaDB-backed {@see CategoryCatalog}; bulk reload stays PDO, writes use AARO. */
 final class DbCategoryCatalog implements CategoryCatalog
 {
     /** @var array<int, CategorySnapshot> */
@@ -23,8 +25,11 @@ final class DbCategoryCatalog implements CategoryCatalog
 
     private int $nextId = 1;
 
-    public function __construct(private readonly PDO $pdo)
-    {
+    public function __construct(
+        private readonly PDO $pdo,
+        private readonly CategoryRepositoryInterface $categoryRows,
+        private readonly CategoryLineageRepositoryInterface $lineageRows,
+    ) {
         DenariusLog::enter(__METHOD__);
         $this->reload();
     }
@@ -137,20 +142,8 @@ final class DbCategoryCatalog implements CategoryCatalog
         }
         $now = (new \DateTimeImmutable('now'))->format(\DateTimeInterface::ATOM);
         $flowsJson = json_encode([$flow->value], JSON_THROW_ON_ERROR);
-        $statement = $this->pdo->prepare(
-            'INSERT INTO categories (lineage_key, label, flows_json, sensitivity, summary_parent_label, assignable, supersedes_id, created_at)
-             VALUES (:lineage_key, :label, :flows_json, NULL, NULL, 1, NULL, :created_at)',
-        );
-        $statement->execute([
-            'lineage_key' => $lineageKey,
-            'label' => $label,
-            'flows_json' => $flowsJson,
-            'created_at' => $now,
-        ]);
-        $id = (int) $this->pdo->lastInsertId();
-        $this->pdo->prepare(
-            'INSERT INTO category_lineages (lineage_key, current_category_id) VALUES (?, ?)',
-        )->execute([$lineageKey, $id]);
+        $id = $this->categoryRows->insertRow($lineageKey, $label, $flowsJson, null, null, true, null, $now);
+        $this->lineageRows->insertLineage($lineageKey, $id);
         $this->reload();
 
         return $id;
@@ -167,24 +160,17 @@ final class DbCategoryCatalog implements CategoryCatalog
             array_map(static fn (TransactionFlow $f): string => $f->value, $existing->flows),
             JSON_THROW_ON_ERROR,
         );
-        $statement = $this->pdo->prepare(
-            'INSERT INTO categories (lineage_key, label, flows_json, sensitivity, summary_parent_label, assignable, supersedes_id, created_at)
-             VALUES (:lineage_key, :label, :flows_json, :sensitivity, :summary_parent_label, :assignable, :supersedes_id, :created_at)',
+        $newId = $this->categoryRows->insertRow(
+            $existing->lineageKey,
+            $newLabel,
+            $flowsJson,
+            $existing->sensitivity?->value,
+            $existing->summaryParentLabel,
+            $existing->assignable,
+            $categoryId,
+            $now,
         );
-        $statement->execute([
-            'lineage_key' => $existing->lineageKey,
-            'label' => $newLabel,
-            'flows_json' => $flowsJson,
-            'sensitivity' => $existing->sensitivity?->value,
-            'summary_parent_label' => $existing->summaryParentLabel,
-            'assignable' => $existing->assignable ? 1 : 0,
-            'supersedes_id' => $categoryId,
-            'created_at' => $now,
-        ]);
-        $newId = (int) $this->pdo->lastInsertId();
-        $this->pdo->prepare(
-            'UPDATE category_lineages SET current_category_id = ? WHERE lineage_key = ?',
-        )->execute([$newId, $existing->lineageKey]);
+        $this->lineageRows->setCurrentCategoryId($existing->lineageKey, $newId);
         $this->reload();
 
         return $newId;

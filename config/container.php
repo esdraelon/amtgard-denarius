@@ -371,6 +371,8 @@ return array_merge(
 
         return new \Amtgard\Denarius\Service\Taxonomy\DbCategoryCatalog(
             MysqlPdoProvider::fromConfiguration(DatabaseConfiguration::fromEnvironment())->getPdo(),
+            Orm::repository(\Amtgard\Denarius\Persistence\Repository\Category\Impl\CategoryRepository::class),
+            Orm::repository(\Amtgard\Denarius\Persistence\Repository\CategoryLineage\Impl\CategoryLineageRepository::class),
         );
     },
     CategoryMatcherChain::class => fn (ContainerInterface $c) => new CategoryMatcherChain([
