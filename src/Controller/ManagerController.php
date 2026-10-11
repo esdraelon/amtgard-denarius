@@ -55,6 +55,8 @@ final class ManagerController
         private readonly KingdomPatternPrefill $patternPrefill,
         private readonly ManagerLedgerSyncFeedback $ledgerSyncFeedback,
         private readonly PatternAutomaticCategoryReview $patternAutomaticReview,
+        private readonly ManagePagePresenter $managePresenter,
+        private readonly ManageCsrfGuard $csrfGuard,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -70,13 +72,13 @@ final class ManagerController
             $uncategorizedOnly = ($params['uncategorized'] ?? '') === '1';
             $connect = $kingdom->getEnrollmentStatus() === 'connected' ? $this->connects->linked() : $this->connects->idle();
 
-            return $this->page(
+            return $this->managePresenter->renderManagePage(
                 $response,
                 $kingdom,
                 $connect,
                 trim((string) ($params['review_month'] ?? '')),
                 $uncategorizedOnly,
-                $this->resolveManageTab($params),
+                $this->managePresenter->resolveManageTab($params),
             );
         });
     }
@@ -96,8 +98,9 @@ final class ManagerController
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
-            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            $csrfReject = $this->csrfGuard->rejectHtmlIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
 
             $connect = $this->connects->launch($kingdom->getSlug(), $body);
@@ -105,7 +108,7 @@ final class ManagerController
                 $this->simplefinSession->remember($kingdom->getSlug());
             }
 
-            return $this->page($response, $kingdom, $connect, '', false, 'settings');
+            return $this->managePresenter->renderManagePage($response, $kingdom, $connect, '', false, 'settings');
         });
     }
 
@@ -117,8 +120,9 @@ final class ManagerController
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
-            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            $csrfReject = $this->csrfGuard->rejectHtmlIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->settings->update(
@@ -128,7 +132,7 @@ final class ManagerController
                 (int) ($body['embargo_days'] ?? 3),
             );
 
-            return $this->manageRedirect($response, $kingdom, '', 'settings');
+            return $this->managePresenter->manageRedirect($response, $kingdom, '', 'settings');
         });
     }
 
@@ -140,8 +144,9 @@ final class ManagerController
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
-            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            $csrfReject = $this->csrfGuard->rejectHtmlIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
             $payload = json_decode((string) ($body['enrollment'] ?? ''), true);
             if (!is_array($payload)) {
@@ -150,7 +155,7 @@ final class ManagerController
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->connect($kingdom, $payload);
 
-            return $this->manageRedirect($response, $kingdom, '', 'settings');
+            return $this->managePresenter->manageRedirect($response, $kingdom, '', 'settings');
         });
     }
 
@@ -162,8 +167,9 @@ final class ManagerController
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
-            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            $csrfReject = $this->csrfGuard->rejectHtmlIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
             $selected = $body['published'] ?? [];
             $flags = [];
@@ -175,7 +181,7 @@ final class ManagerController
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->setPublished($kingdom, $flags);
 
-            return $this->manageRedirect($response, $kingdom, '', 'settings');
+            return $this->managePresenter->manageRedirect($response, $kingdom, '', 'settings');
         });
     }
 
@@ -187,13 +193,14 @@ final class ManagerController
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
-            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            $csrfReject = $this->csrfGuard->rejectHtmlIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
             CurrentActor::set((string) $this->auth->get()->profile->id);
             $this->enrollments->disconnectBank($kingdom);
 
-            return $this->manageRedirect($response, $kingdom, '', 'settings');
+            return $this->managePresenter->manageRedirect($response, $kingdom, '', 'settings');
         });
     }
 
@@ -205,12 +212,13 @@ final class ManagerController
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
-            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            $csrfReject = $this->csrfGuard->rejectHtmlIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
             $this->queue->publishLedger($kingdom->getOrkKingdomId());
 
-            return $this->manageRedirect($response, $kingdom, '', 'review');
+            return $this->managePresenter->manageRedirect($response, $kingdom, '', 'review');
         });
     }
 
@@ -282,7 +290,7 @@ final class ManagerController
 
             $connect = $kingdom->getEnrollmentStatus() === 'connected' ? $this->connects->linked() : $this->connects->idle();
 
-            return $this->page($response, $kingdom, $connect, '', false, 'patterns');
+            return $this->managePresenter->renderManagePage($response, $kingdom, $connect, '', false, 'patterns');
         });
     }
 
@@ -303,6 +311,7 @@ final class ManagerController
             return $this->html->html($response, 'pattern-form.twig', [
                 'csrf' => CsrfToken::issue(),
                 'kingdom' => $kingdom->view(),
+                'categorySearchUrl' => '/manage/' . $kingdom->getSlug() . '/taxonomy/categories',
                 'prefill' => $prefill,
                 'ruleId' => null,
                 'formAction' => '/manage/' . $kingdom->getSlug() . '/patterns',
@@ -345,8 +354,9 @@ final class ManagerController
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
-            if (! CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                return JsonBody::write($response, ['error' => 'Forbidden'], 403);
+            $csrfReject = $this->csrfGuard->rejectJsonIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
             try {
                 $matches = $this->patternWizard->previewMatches($kingdom, $body);
@@ -398,8 +408,9 @@ final class ManagerController
                 return $kingdom;
             }
             $body = (array) $request->getParsedBody();
-            if (! CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            $csrfReject = $this->csrfGuard->rejectHtmlIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
             try {
                 CurrentActor::set((string) $this->auth->get()->profile->id);
@@ -409,10 +420,10 @@ final class ManagerController
             }
 
             if (($body['return_to'] ?? '') === 'review') {
-                return $this->manageRedirect($response, $kingdom, trim((string) ($body['review_month'] ?? '')));
+                return $this->managePresenter->manageRedirect($response, $kingdom, trim((string) ($body['review_month'] ?? '')));
             }
 
-            return $this->manageRedirect($response, $kingdom, '', 'patterns');
+            return $this->managePresenter->manageRedirect($response, $kingdom, '', 'patterns');
         });
     }
 
@@ -433,12 +444,11 @@ final class ManagerController
             }
             $body = (array) $request->getParsedBody();
             $wantsJson = $jsonOnSuccess && $this->acceptsJson($request);
-            if (!CsrfToken::matches(isset($body['csrf']) ? (string) $body['csrf'] : null)) {
-                if ($wantsJson) {
-                    return JsonBody::write($response, ['error' => 'The form token did not match.'], 403);
-                }
-
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'The form token did not match.'], 403);
+            $csrfReject = $wantsJson
+                ? $this->csrfGuard->rejectJsonIfInvalid($response, $body)
+                : $this->csrfGuard->rejectHtmlIfInvalid($response, $body);
+            if ($csrfReject instanceof ResponseInterface) {
+                return $csrfReject;
             }
             $result = null;
             try {
@@ -459,75 +469,13 @@ final class ManagerController
                 ]);
             }
 
-            return $this->manageRedirect($response, $kingdom, trim((string) ($body['review_month'] ?? '')));
+            return $this->managePresenter->manageRedirect($response, $kingdom, trim((string) ($body['review_month'] ?? '')));
         });
     }
 
     private function acceptsJson(ServerRequestInterface $request): bool
     {
         return str_contains($request->getHeaderLine('Accept'), 'application/json');
-    }
-
-    /**
-     * @param array<string, mixed> $connect
-     */
-    private function page(
-        ResponseInterface $response,
-        KingdomRecord $kingdom,
-        array $connect,
-        string $requestedMonth = '',
-        bool $uncategorizedOnly = false,
-        string $manageTab = 'review',
-    ): ResponseInterface {
-        return DenariusLog::trace(__METHOD__, function () use (
-            $response,
-            $kingdom,
-            $connect,
-            $requestedMonth,
-            $uncategorizedOnly,
-            $manageTab,
-        ): ResponseInterface {
-            [$reviewMonth, $reviewQueue] = $this->reviewQueue->manageReview($kingdom, $requestedMonth, $uncategorizedOnly);
-            $patternAutomaticCandidates = $this->patternAutomaticReview->candidatesForMonth(
-                $kingdom,
-                $reviewMonth->key(),
-            );
-            $patterns = $manageTab === 'patterns' ? $this->patterns->listViews($kingdom) : [];
-
-            return $this->html->html($response, 'manage.twig', [
-                'csrf' => CsrfToken::issue(),
-                'kingdom' => $kingdom->view(),
-                'accounts' => $this->accountViews((int) $kingdom->getId()),
-                'connect' => $connect,
-                'reviewQueue' => $reviewQueue,
-                'reviewMonth' => $reviewMonth->key(),
-                'reviewPrevious' => $reviewMonth->previous()->key(),
-                'reviewNext' => $reviewMonth->next()->key(),
-                'uncategorizedOnly' => $uncategorizedOnly,
-                'ledgerSync' => $this->ledgerSyncFeedback->forManage($kingdom, $reviewQueue !== []),
-                'patternAutomaticCandidates' => $patternAutomaticCandidates,
-                'manageTab' => $manageTab,
-                'patterns' => $patterns,
-            ]);
-        });
-    }
-
-    /**
-     * @param array<string, mixed> $params
-     */
-    private function resolveManageTab(array $params): string
-    {
-        return DenariusLog::trace(__METHOD__, function () use ($params): string {
-            $tab = trim((string) ($params['tab'] ?? ''));
-            if ($tab === '') {
-                return 'review';
-            }
-            if (! in_array($tab, ['settings', 'review', 'patterns'], true)) {
-                return 'review';
-            }
-
-            return $tab;
-        });
     }
 
     /**
@@ -548,45 +496,6 @@ final class ManagerController
         }
 
         return $ids;
-    }
-
-    private function manageRedirect(
-        ResponseInterface $response,
-        KingdomRecord $kingdom,
-        string $reviewMonth = '',
-        string $tab = 'review',
-        bool $uncategorizedOnly = false,
-    ): ResponseInterface {
-        return DenariusLog::trace(__METHOD__, function () use (
-            $response,
-            $kingdom,
-            $reviewMonth,
-            $tab,
-            $uncategorizedOnly,
-        ): ResponseInterface {
-            $query = ['tab' => $tab];
-            if ($tab === 'review') {
-                if ($reviewMonth !== '') {
-                    $query['review_month'] = $reviewMonth;
-                }
-                if ($uncategorizedOnly) {
-                    $query['uncategorized'] = '1';
-                }
-            }
-            $url = '/manage/' . $kingdom->getSlug() . '?' . http_build_query($query);
-
-            return $response->withHeader('Location', $url)->withStatus(302);
-        });
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function accountViews(int $kingdomId): array
-    {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdomId): array {
-            return array_map(static fn ($account) => $account->view(), $this->accounts->forKingdom($kingdomId));
-        });
     }
 
     private function managed(ResponseInterface $response, string $slug): mixed

@@ -764,6 +764,8 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
+            Strategies::manageCsrfGuard($twig),
         );
         $response = $manager->patterns(
             (new \Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest('GET', '/manage/golden-plains/patterns'),
