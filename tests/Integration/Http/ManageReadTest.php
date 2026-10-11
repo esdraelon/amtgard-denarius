@@ -113,4 +113,84 @@ final class ManageReadTest extends IntegTestCase
             $this->assertSame('expense', $row['flow']);
         }
     }
+
+    public function testManageTaxonomyCategorySearchEmptyFlow(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $response = $http->get(self::MANAGE_PREFIX . '/taxonomy/categories?q=rent');
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+
+        /** @var array{results: list<mixed>} $payload */
+        $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame([], $payload['results']);
+    }
+
+    public function testManageTaxonomyCategorySearchIncomeFlow(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $response = $http->get(self::MANAGE_PREFIX . '/taxonomy/categories?flow=income&q=dues');
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+
+        /** @var array{results: list<array{flow: string}>} $payload */
+        $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+        foreach ($payload['results'] as $row) {
+            $this->assertSame('income', $row['flow']);
+        }
+    }
+
+    public function testManageReviewTabTypeaheadUsesCategorySearchUrl(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $response = $http->get(self::MANAGE_PREFIX . '?tab=review');
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+
+        $expected = 'data-search-url="' . self::MANAGE_PREFIX . '/taxonomy/categories"';
+        $this->assertStringContainsString($expected, (string) $response->getBody());
+    }
+
+    public function testManagePatternsTabTypeaheadUsesCategorySearchUrl(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $response = $http->get(self::MANAGE_PREFIX . '/patterns');
+        $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+
+        $expected = 'data-search-url="' . self::MANAGE_PREFIX . '/taxonomy/categories"';
+        $this->assertStringContainsString($expected, (string) $response->getBody());
+    }
+
+    public function testManageReviewTabIncludesCategoryTypeaheadScriptOnce(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $body = (string) $http->get(self::MANAGE_PREFIX)->getBody();
+        $this->assertSame(1, substr_count($body, '<script src="/js/category-typeahead.js"></script>'));
+    }
+
+    public function testManagePatternsTabIncludesCategoryTypeaheadScriptOnce(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $body = (string) $http->get(self::MANAGE_PREFIX . '/patterns')->getBody();
+        $this->assertSame(1, substr_count($body, '<script src="/js/category-typeahead.js"></script>'));
+    }
+
+    public function testManagePatternNewFormUsesCategorySearchUrl(): void
+    {
+        $http = $this->integHttp();
+        IntegAuth::loginKingdomManagerViaIdpOrSkip($http, $this);
+
+        $body = (string) $http->get(self::MANAGE_PREFIX . '/patterns/new')->getBody();
+        $expected = 'data-search-url="' . self::MANAGE_PREFIX . '/taxonomy/categories"';
+        $this->assertStringContainsString($expected, $body);
+    }
 }
