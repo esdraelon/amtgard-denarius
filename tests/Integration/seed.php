@@ -160,7 +160,7 @@ function seedReviewTransactions(PDO $pdo, int $kingdomId): void
     $transaction = $pdo->prepare(
         'INSERT INTO transactions (
             kingdom_id, teller_transaction_id, teller_account_id, posted_on, amount_cents,
-            category, description, status, publishable_after
+            category_id, description, status, publishable_after
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     $publishableAfter = '2020-01-01T00:00:00+00:00';
@@ -170,7 +170,7 @@ function seedReviewTransactions(PDO $pdo, int $kingdomId): void
         IntegFixtures::REVIEW_ACCOUNT_ID,
         IntegFixtures::REVIEW_MONTH . '-02',
         -1250,
-        'expense.site_rental',
+        categoryIdForLineage($pdo, 'expense.site_rental'),
         'D9 publish row',
         'posted',
         $publishableAfter,
@@ -181,9 +181,26 @@ function seedReviewTransactions(PDO $pdo, int $kingdomId): void
         IntegFixtures::REVIEW_ACCOUNT_ID,
         IntegFixtures::REVIEW_MONTH . '-03',
         -2500,
-        'expense.feast_groceries',
+        categoryIdForLineage($pdo, 'expense.feast_groceries'),
         'D9 redact row',
         'posted',
         $publishableAfter,
     ]);
+}
+
+function categoryIdForLineage(PDO $pdo, string $lineageKey): int
+{
+    $statement = $pdo->prepare(
+        'SELECT cl.current_category_id
+         FROM category_lineages cl
+         WHERE cl.lineage_key = ?
+         LIMIT 1',
+    );
+    $statement->execute([$lineageKey]);
+    $id = $statement->fetchColumn();
+    if ($id === false) {
+        throw new RuntimeException('Missing category lineage: ' . $lineageKey);
+    }
+
+    return (int) $id;
 }

@@ -735,3 +735,13 @@ Suggested stack (one branch each):
 - Branch: `stack/month-balances-review-nav` (stacked on `stack/global-categories-fk`)
 - Public kingdom page shows coarsened starting/ending balances per disclosure mode via the publication pipeline; manage review month links use single-encoded query strings so `review_month` is honored.
 - Tests: `PublicationMonthBalanceTest`, `PublicationLedgerBalanceResolverTest`, `TransactionReviewMonthNavigationTest`, `ManageReadTest::testManageReviewMonthQuerySelectsRequestedMonth`.
+
+## Post-PR-3 hygiene (`post-pr-3-hygiene`)
+
+- Test plan: [post-pr-3-hygiene-test-plan.md](../planning/post-pr-3-hygiene-test-plan.md); `CategoryDisplayInput`, extended assigner/search/manage integ tests.
+- H1a: shared `categorySearchUrl`; single typeahead script on manage review/patterns tabs.
+- H1b: `KingdomCategoryAssigner` uses catalog + display parsing; removed `TaxonomyCategoryPicker` / `TaxonomyCategorySearch`.
+- H1c: `ManagePagePresenter` (Facade), `ManageCsrfGuard` (Template Method), `ManageKingdomAccess` (Guard); unit tests `ManagePagePresenterTest`, `ManageCsrfGuardTest`, `ManageKingdomAccessTest`.
+- A1/A2: `amtgard/active-record-orm` **1.7.0**; [aaro-1.7-performance-review.md](../planning/aaro-1.7-performance-review.md).
+- PHPUnit: 374 tests green; `./scripts/integ.sh` green on manage taxonomy/typeahead rows.
+- Project line coverage gate still ~92% (pre-existing vs 95% target).

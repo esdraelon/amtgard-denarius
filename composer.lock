@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "67b60d36363d77bbf2d9f774a9607373",
+    "content-hash": "545dfadbaddd1b99a8a32779c4dbdd2b",
     "packages": [
         {
             "name": "amtgard/aaro-extensions",
@@ -58,16 +58,16 @@
         },
         {
             "name": "amtgard/active-record-orm",
-            "version": "v1.6.0",
+            "version": "v1.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/amtgard/active-record-orm.git",
-                "reference": "5f74ae036537d8374f10316c8b68dee34c4d090d"
+                "reference": "292527abc63969b6e908db38b0df61e44dcf9cfc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/amtgard/active-record-orm/zipball/5f74ae036537d8374f10316c8b68dee34c4d090d",
-                "reference": "5f74ae036537d8374f10316c8b68dee34c4d090d",
+                "url": "https://api.github.com/repos/amtgard/active-record-orm/zipball/292527abc63969b6e908db38b0df61e44dcf9cfc",
+                "reference": "292527abc63969b6e908db38b0df61e44dcf9cfc",
                 "shasum": ""
             },
             "require": {
@@ -79,10 +79,12 @@
                 "jedibc/optional": "^1.0",
                 "monolog/monolog": "^3.7",
                 "php": "^8.3",
+                "psr/simple-cache": "^3.0",
                 "vlucas/phpdotenv": "^5.6"
             },
             "require-dev": {
                 "ext-openssl": "*",
+                "infection/infection": "^0.29",
                 "phake/phake": "^4.5",
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^11.3",
@@ -109,9 +111,9 @@
             "homepage": "https://github.com/amtgard/active-record-orm",
             "support": {
                 "issues": "https://github.com/amtgard/active-record-orm/issues",
-                "source": "https://github.com/amtgard/active-record-orm/tree/v1.6.0"
+                "source": "https://github.com/amtgard/active-record-orm/tree/v1.7.0"
             },
-            "time": "2026-06-09T15:50:44+00:00"
+            "time": "2026-10-10T23:43:57+00:00"
         },
         {
             "name": "amtgard/amtgard-interfaces",

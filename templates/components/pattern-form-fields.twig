@@ -28,22 +28,17 @@
         </div>
         <div class="col-auto pb-1 text-body-secondary pattern-form-match-arrow" aria-hidden="true">→</div>
         <div class="col min-w-0">
-            {% if categoryMode|default('slug') == 'typeahead' %}
-                <label class="form-label mb-1 small" for="{{ categoryInputId|default('pattern-category-display') }}">Category</label>
-                {% include 'components/category-typeahead.twig' with {
-                    inputId: categoryInputId|default('pattern-category-display'),
-                    listId: categoryListId|default('pattern-category-list'),
-                    inputName: 'category_display',
-                    hiddenName: 'category_id',
-                    selectedCategoryId: prefill.categoryId|default(''),
-                    displayValue: prefill.categoryDisplay|default(''),
-                    flow: categoryFlow|default('expense'),
-                    searchUrl: categorySearchUrl
-                } %}
-            {% else %}
-                <label class="form-label mb-1 small" for="{{ categoryInputId|default('pattern-category') }}">Category</label>
-                <input class="form-control form-control-sm" id="{{ categoryInputId|default('pattern-category') }}" name="category" value="{{ prefill.category|default('') }}" required>
-            {% endif %}
+            <label class="form-label mb-1 small" for="{{ categoryInputId|default('pattern-category-display') }}">Category</label>
+            {% include 'components/category-typeahead.twig' with {
+                inputId: categoryInputId|default('pattern-category-display'),
+                listId: categoryListId|default('pattern-category-list'),
+                inputName: 'category_display',
+                hiddenName: 'category_id',
+                selectedCategoryId: prefill.categoryId|default(''),
+                displayValue: prefill.categoryDisplay|default(''),
+                flow: categoryFlow|default('expense'),
+                searchUrl: categorySearchUrl
+            } %}
         </div>
     </div>
 </div>

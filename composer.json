@@ -11,7 +11,7 @@
         "ext-pdo": "*",
         "ext-redis": "*",
         "amtgard/aaro-extensions": "^0.9",
-        "amtgard/active-record-orm": "^1.6",
+        "amtgard/active-record-orm": "^1.7",
         "amtgard/idp-php-client": "^2.0",
         "amtgard/redis-set-queue": "^1.1",
         "guzzlehttp/guzzle": "^7.9",

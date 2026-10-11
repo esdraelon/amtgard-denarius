@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace Amtgard\Denarius\Service\Ledger;
 
 use Amtgard\Denarius\Domain\Taxonomy\CategoryCatalog;
+use Amtgard\Denarius\Domain\Taxonomy\CategoryDisplayInput;
 use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCatalog;
-use Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategoryPicker;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
 use Amtgard\Denarius\Persistence\Record\KingdomRecord;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 
-/** Resolves manager category input to a persisted {@see CategoryCatalog} category id. */
+/** Adapter: resolves manager category input to a persisted {@see CategoryCatalog} category id. */
 final class KingdomCategoryAssigner
 {
     public function __construct(
-        private readonly TaxonomyCategoryPicker $picker,
         private readonly TaxonomyCatalog $catalog,
         private readonly CategoryCatalog $categories,
     ) {
@@ -113,9 +112,17 @@ final class KingdomCategoryAssigner
 
             if ($display !== '') {
                 try {
-                    $slug = $amountCents !== null
-                        ? $this->picker->resolveForReview($legacySlug, $display, $amountCents)
-                        : $this->picker->resolveForPattern($legacySlug, $display);
+                    $flowHint = $amountCents !== null
+                        ? TransactionFlow::defaultFromSignedCents($amountCents)
+                        : null;
+                    $slug = $this->resolveAssignableSlug($legacySlug, $display, $flowHint);
+                    $this->guardSlugForMode($slug, $display, $amountCents === null);
+                    if ($amountCents !== null) {
+                        $flow = TransactionFlow::defaultFromSignedCents($amountCents);
+                        if (! $this->catalog->permitsFlow($slug, $flow)) {
+                            throw new \InvalidArgumentException('That category does not match this transaction\'s direction.');
+                        }
+                    }
                     $id = $this->categories->currentIdForLineageKey($this->catalog->resolveSlug($slug));
                     if (! $this->displayLabelMatchesSlug($display, $slug)) {
                         $flow = $amountCents !== null
@@ -137,7 +144,12 @@ final class KingdomCategoryAssigner
 
             if ($legacySlug !== '') {
                 if ($amountCents !== null) {
-                    $slug = $this->picker->resolveForReview($legacySlug, '', $amountCents);
+                    $flow = TransactionFlow::defaultFromSignedCents($amountCents);
+                    $slug = $this->resolveAssignableSlug($legacySlug, '', $flow);
+                    $this->guardSlugForMode($slug, '', false);
+                    if (! $this->catalog->permitsFlow($slug, $flow)) {
+                        throw new \InvalidArgumentException('That category does not match this transaction\'s direction.');
+                    }
 
                     return $this->categories->currentIdForLineageKey($this->catalog->resolveSlug($slug));
                 }
@@ -151,6 +163,93 @@ final class KingdomCategoryAssigner
                     : 'Enter a category name for this pattern.',
             );
         });
+    }
+
+    private function guardSlugForMode(string $slug, string $display, bool $patternMode): void
+    {
+        if (! $this->catalog->hasSlug($slug)) {
+            throw new \InvalidArgumentException('That category is not in the taxonomy.');
+        }
+        if ($patternMode) {
+            if (str_starts_with($slug, 'system.') || $slug === 'uncategorized') {
+                throw new \InvalidArgumentException(
+                    trim($display) !== ''
+                        ? 'Pick a category from the suggestions. Patterns cannot use Uncategorized.'
+                        : 'Choose an assignable category for this pattern.',
+                );
+            }
+
+            return;
+        }
+        if (str_starts_with($slug, 'system.')) {
+            throw new \InvalidArgumentException('System categories cannot be assigned manually.');
+        }
+    }
+
+    private function resolveAssignableSlug(string $hiddenSlug, string $displayValue, ?TransactionFlow $flowHint): string
+    {
+        $displayValue = trim($displayValue);
+        $hiddenSlug = trim($hiddenSlug);
+        if ($hiddenSlug !== '') {
+            $resolvedHidden = $this->catalog->resolveSlug($hiddenSlug);
+            $displayOverridesBlockedHidden = $displayValue !== ''
+                && ($resolvedHidden === 'uncategorized' || str_starts_with($resolvedHidden, 'system.'));
+            if (! $displayOverridesBlockedHidden) {
+                return $resolvedHidden;
+            }
+        }
+
+        if ($displayValue === '') {
+            throw new \InvalidArgumentException('Choose a category from the list.');
+        }
+
+        if (str_contains($displayValue, '.')) {
+            return $this->catalog->resolveSlug($displayValue);
+        }
+
+        $parsed = CategoryDisplayInput::parsePrefixedDisplay($displayValue);
+        if ($parsed !== null) {
+            $slug = $this->matchLabel($parsed['label'], $parsed['flow']);
+            if ($slug !== null) {
+                return $slug;
+            }
+        }
+
+        $slug = $this->matchLabel($displayValue, $flowHint);
+        if ($slug !== null) {
+            return $slug;
+        }
+
+        throw new \InvalidArgumentException(
+            'Pick a category from the suggestions, or type Expense: followed by an exact taxonomy label.',
+        );
+    }
+
+    private function matchLabel(string $label, ?TransactionFlow $flowHint): ?string
+    {
+        $needle = strtolower(trim($label));
+        if ($needle === '') {
+            return null;
+        }
+
+        $matches = [];
+        foreach ($this->catalog->assignableDefinitions() as $definition) {
+            if (strtolower($definition->label) !== $needle) {
+                continue;
+            }
+            foreach ($definition->flows as $flow) {
+                if ($flowHint !== null && $flow !== $flowHint) {
+                    continue;
+                }
+                $matches[$definition->slug] = true;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return array_key_first($matches);
+        }
+
+        return null;
     }
 
     /**
@@ -170,7 +269,7 @@ final class KingdomCategoryAssigner
         if ($display === '') {
             return $categoryId;
         }
-        $label = $this->labelFromDisplay($display);
+        $label = CategoryDisplayInput::labelFromDisplay($display);
         if ($label === '' || strcasecmp($this->categories->labelFor($categoryId), $label) === 0) {
             return $categoryId;
         }
@@ -180,7 +279,7 @@ final class KingdomCategoryAssigner
 
     private function forkOrCreateFromLabel(int $kingdomId, string $display, TransactionFlow $flow, int $existingId): int
     {
-        $label = $this->labelFromDisplay($display);
+        $label = CategoryDisplayInput::labelFromDisplay($display);
         if ($label === '') {
             return $existingId;
         }
@@ -214,7 +313,7 @@ final class KingdomCategoryAssigner
     {
         $display = trim((string) ($body['category_display'] ?? ''));
         if ($display !== '') {
-            return $this->labelFromDisplay($display);
+            return CategoryDisplayInput::labelFromDisplay($display);
         }
 
         return trim((string) ($body['category'] ?? ''));
@@ -233,17 +332,13 @@ final class KingdomCategoryAssigner
 
             return TransactionFlow::Expense;
         }
-        $display = trim((string) ($body['category_display'] ?? ''));
-        if (preg_match('/^Income:/i', $display)) {
-            return TransactionFlow::Income;
-        }
 
-        return TransactionFlow::Expense;
+        return CategoryDisplayInput::flowHintFromDisplay(trim((string) ($body['category_display'] ?? '')));
     }
 
     private function displayLabelMatchesSlug(string $display, string $slug): bool
     {
-        $label = $this->labelFromDisplay($display);
+        $label = CategoryDisplayInput::labelFromDisplay($display);
         if ($label === '') {
             return true;
         }
@@ -252,19 +347,6 @@ final class KingdomCategoryAssigner
         }
 
         return strcasecmp($this->catalog->label($slug), $label) === 0;
-    }
-
-    private function labelFromDisplay(string $display): string
-    {
-        $display = trim($display);
-        if ($display === '') {
-            return '';
-        }
-        if (preg_match('/^(?:Expense|Income):\s*(.+)$/i', $display, $matches)) {
-            return trim($matches[1]);
-        }
-
-        return $display;
     }
 
     private function allocateLineageKey(int $kingdomId, string $label): string

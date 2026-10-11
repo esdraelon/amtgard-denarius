@@ -26,15 +26,15 @@
 {% endblock %}
 
 {% block scripts %}
-{% if manageTab == 'review' %}
+{% if manageTab == 'review' or manageTab == 'patterns' %}
 <script src="/js/category-typeahead.js"></script>
+{% endif %}
+{% if manageTab == 'review' %}
 <script src="/js/review-publication-checkboxes.js"></script>
 <script src="/js/review-pattern-modal.js"></script>
 {% if patternAutomaticCandidates|default([])|length > 0 %}
 <script src="/js/pattern-automatic-review-modal.js"></script>
 {% endif %}
-{% elseif manageTab == 'patterns' %}
-<script src="/js/category-typeahead.js"></script>
 {% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
