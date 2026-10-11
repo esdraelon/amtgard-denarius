@@ -741,6 +741,7 @@ Suggested stack (one branch each):
 - Test plan: [post-pr-3-hygiene-test-plan.md](../planning/post-pr-3-hygiene-test-plan.md); `CategoryDisplayInput`, extended assigner/search/manage integ tests.
 - H1a: shared `categorySearchUrl`; single typeahead script on manage review/patterns tabs.
 - H1b: `KingdomCategoryAssigner` uses catalog + display parsing; removed `TaxonomyCategoryPicker` / `TaxonomyCategorySearch`.
-- H1c: `ManagePagePresenter` (Facade), `ManageCsrfGuard` (Template Method).
+- H1c: `ManagePagePresenter` (Facade), `ManageCsrfGuard` (Template Method), `ManageKingdomAccess` (Guard); unit tests `ManagePagePresenterTest`, `ManageCsrfGuardTest`, `ManageKingdomAccessTest`.
 - A1/A2: `amtgard/active-record-orm` **1.7.0**; [aaro-1.7-performance-review.md](../planning/aaro-1.7-performance-review.md).
-- PHPUnit: 359 tests green (project line coverage gate still ~92% — pre-existing vs 95% target).
+- PHPUnit: 374 tests green; `./scripts/integ.sh` green on manage taxonomy/typeahead rows.
+- Project line coverage gate still ~92% (pre-existing vs 95% target).

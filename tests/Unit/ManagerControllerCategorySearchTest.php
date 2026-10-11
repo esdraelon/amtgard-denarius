@@ -52,10 +52,10 @@ final class ManagerControllerCategorySearchTest extends TestCase
             }
         };
         $permissions = new PermissionService(new FakePolicies([ClaimOrn::admin()]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
+        $twig = new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates')));
+        $auth = new SessionAuthStore('test_session');
         $this->manager = new ManagerController(
-            new SessionAuthStore('test_session'),
-            $permissions,
-            $kingdoms,
+            $auth,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
             new EnrollmentService(
@@ -69,7 +69,7 @@ final class ManagerControllerCategorySearchTest extends TestCase
                 Strategies::bankReset(),
             ),
             $queue,
-            new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
+            $twig,
             new BankConnect(Strategies::providers(Strategies::teller())),
             new SimpleFinConnectSession(),
             Strategies::reviewQueue($transactions, $accounts),
@@ -80,15 +80,9 @@ final class ManagerControllerCategorySearchTest extends TestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
-            Strategies::managePagePresenter(
-                new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
-                $kingdoms,
-                $accounts,
-                $transactions,
-            ),
-            Strategies::manageCsrfGuard(
-                new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'))),
-            ),
+            Strategies::manageKingdomAccess($twig, $kingdoms, $permissions, $auth),
+            Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
+            Strategies::manageCsrfGuard($twig),
         );
     }
 

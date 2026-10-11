@@ -18,6 +18,11 @@ use Psr\Http\Message\ResponseInterface;
 /** Facade: assemble manage page Twig models. */
 final class ManagePagePresenter
 {
+    public static function categorySearchUrlForSlug(string $slug): string
+    {
+        return '/manage/' . $slug . '/taxonomy/categories';
+    }
+
     public function __construct(
         private readonly TwigHtmlRenderer $html,
         private readonly AccountRepositoryInterface $accounts,
@@ -58,7 +63,7 @@ final class ManagePagePresenter
             return $this->html->html($response, 'manage.twig', [
                 'csrf' => CsrfToken::issue(),
                 'kingdom' => $kingdom->view(),
-                'categorySearchUrl' => '/manage/' . $kingdom->getSlug() . '/taxonomy/categories',
+                'categorySearchUrl' => self::categorySearchUrlForSlug($kingdom->getSlug()),
                 'accounts' => $this->accountViews((int) $kingdom->getId()),
                 'connect' => $connect,
                 'reviewQueue' => $reviewQueue,

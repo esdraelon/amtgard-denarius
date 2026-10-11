@@ -451,6 +451,15 @@ final class Strategies
         return new \Amtgard\Denarius\Controller\ManageCsrfGuard($html);
     }
 
+    public static function manageKingdomAccess(
+        \Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer $html,
+        KingdomRepositoryInterface $kingdoms,
+        \Amtgard\Denarius\Service\Access\PermissionService $permissions,
+        \Amtgard\IdpClient\Session\SessionAuthStore $auth,
+    ): \Amtgard\Denarius\Controller\ManageKingdomAccess {
+        return new \Amtgard\Denarius\Controller\ManageKingdomAccess($auth, $permissions, $kingdoms, $html);
+    }
+
     public static function managePagePresenter(
         \Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer $html,
         KingdomRepositoryInterface $kingdoms,

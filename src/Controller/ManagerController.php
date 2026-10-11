@@ -7,7 +7,6 @@ namespace Amtgard\Denarius\Controller;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
-use Amtgard\Denarius\Persistence\Repository\Kingdom\KingdomRepositoryInterface;
 use Amtgard\Denarius\Domain\Statement\Presentation\DisplayMode;
 use Amtgard\Denarius\Domain\Access\Visibility;
 use Amtgard\Denarius\Utilities\Http\CsrfToken;
@@ -29,7 +28,6 @@ use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Domain\Taxonomy\KingdomPatternPrefill;
 use Amtgard\Denarius\Utilities\Http\JsonBody;
 use Amtgard\Denarius\Utilities\Http\ReviewSelectionParser;
-use Amtgard\Denarius\Service\Access\PermissionService;
 use Amtgard\IdpClient\Session\SessionAuthStore;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -38,8 +36,6 @@ final class ManagerController
 {
     public function __construct(
         private readonly SessionAuthStore $auth,
-        private readonly PermissionService $permissions,
-        private readonly KingdomRepositoryInterface $kingdoms,
         private readonly AccountRepositoryInterface $accounts,
         private readonly KingdomSettings $settings,
         private readonly EnrollmentService $enrollments,
@@ -55,6 +51,7 @@ final class ManagerController
         private readonly KingdomPatternPrefill $patternPrefill,
         private readonly ManagerLedgerSyncFeedback $ledgerSyncFeedback,
         private readonly PatternAutomaticCategoryReview $patternAutomaticReview,
+        private readonly ManageKingdomAccess $kingdomAccess,
         private readonly ManagePagePresenter $managePresenter,
         private readonly ManageCsrfGuard $csrfGuard,
     ) {
@@ -64,7 +61,7 @@ final class ManagerController
     public function show(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -93,7 +90,7 @@ final class ManagerController
     public function connect(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -115,7 +112,7 @@ final class ManagerController
     public function settings(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -139,7 +136,7 @@ final class ManagerController
     public function enrollment(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -162,7 +159,7 @@ final class ManagerController
     public function accounts(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -188,7 +185,7 @@ final class ManagerController
     public function disconnectBank(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -207,7 +204,7 @@ final class ManagerController
     public function refresh(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -261,7 +258,7 @@ final class ManagerController
     public function categorySearch(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -283,7 +280,7 @@ final class ManagerController
     public function patterns(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -297,7 +294,7 @@ final class ManagerController
     public function patternNew(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -311,7 +308,7 @@ final class ManagerController
             return $this->html->html($response, 'pattern-form.twig', [
                 'csrf' => CsrfToken::issue(),
                 'kingdom' => $kingdom->view(),
-                'categorySearchUrl' => '/manage/' . $kingdom->getSlug() . '/taxonomy/categories',
+                'categorySearchUrl' => ManagePagePresenter::categorySearchUrlForSlug($kingdom->getSlug()),
                 'prefill' => $prefill,
                 'ruleId' => null,
                 'formAction' => '/manage/' . $kingdom->getSlug() . '/patterns',
@@ -349,7 +346,7 @@ final class ManagerController
     public function patternPreview(ServerRequestInterface $request, ResponseInterface $response, string $slug): ResponseInterface
     {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -403,7 +400,7 @@ final class ManagerController
         callable $action,
     ): ResponseInterface {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug, $action): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -438,7 +435,7 @@ final class ManagerController
         bool $jsonOnSuccess = false,
     ): ResponseInterface {
         return DenariusLog::trace(__METHOD__, function () use ($request, $response, $slug, $action, $jsonOnSuccess): ResponseInterface {
-            $kingdom = $this->managed($response, $slug);
+            $kingdom = $this->kingdomAccess->resolveManaged($response, $slug);
             if ($kingdom instanceof ResponseInterface) {
                 return $kingdom;
             }
@@ -498,25 +495,4 @@ final class ManagerController
         return $ids;
     }
 
-    private function managed(ResponseInterface $response, string $slug): mixed
-    {
-        return DenariusLog::trace(__METHOD__, function () use ($response, $slug): mixed {
-            $session = $this->auth->get();
-            if ($session === null) {
-                return $response->withHeader('Location', '/login')->withStatus(302);
-            }
-            $kingdom = $this->kingdoms->findBySlug($slug);
-            if ($kingdom === null) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Not found', 'message' => 'That kingdom is not assigned.'], 404);
-            }
-            $userId = (string) $session->profile->id;
-            $allowed = $this->permissions->isAdmin($userId)
-                || in_array($kingdom->getOrkKingdomId(), $this->permissions->managedKingdomIds($userId), true);
-            if (!$allowed) {
-                return $this->html->html($response, 'message.twig', ['title' => 'Forbidden', 'message' => 'You do not manage this kingdom.'], 403);
-            }
-
-            return $kingdom;
-        });
-    }
 }

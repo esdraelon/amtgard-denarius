@@ -17,7 +17,7 @@
 | `KingdomPatternService` | 486 | **77%** | Via `KingdomCategoryPatternsTest` |
 | `ManagerController` | 613 | **low in isolation** | Broad coverage via `TracedHttpMethodsTest`, `ManageConnectTest`, `KingdomCategoryPatternsTest`, `CoverageTest` |
 | `CategoryDisplayInput` | *new H1b* | 0% | T1 adds full unit suite (test-first) |
-| `ManagePagePresenter` / `ManageCsrfGuard` | *new H1c* | 0% | **Tests in H1c commit**, not T1 (see §H1c strategy) |
+| `ManagePagePresenter` / `ManageCsrfGuard` / `ManageKingdomAccess` | H1c | — | **`ManagePagePresenterTest`**, **`ManageCsrfGuardTest`**, **`ManageKingdomAccessTest`** (follow-up on `post-pr-3-hygiene`) |
 
 ---
 

@@ -143,8 +143,6 @@ final class ControllerTest extends AmtgardTestCase
         $transactions = new MemoryTransactions();
         $manager = new ManagerController(
             $auth,
-            $permissions,
-            $kingdoms,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
             new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
@@ -160,6 +158,7 @@ final class ControllerTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            Strategies::manageKingdomAccess($twig, $kingdoms, $permissions, $auth),
             Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
             Strategies::manageCsrfGuard($twig),
         );
