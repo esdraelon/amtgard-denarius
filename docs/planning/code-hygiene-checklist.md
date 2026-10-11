@@ -15,6 +15,6 @@ Execution plan: Cursor plan **Post-PR-3 hygiene** (`post-pr-3-hygiene` branch).
 | H1c | `ManagePagePresenter` + CSRF helper; slim `ManagerController` | `post-pr-3-hygiene` | [x] |
 | A1 | Bump `amtgard/active-record-orm` to **1.7.0** (^1.7); align `aaro-extensions` | `post-pr-3-hygiene` | [x] |
 | A2 | `docs/planning/aaro-1.7-performance-review.md` — AARO loops vs direct SQL (1.7 10×–500× context) | `post-pr-3-hygiene` | [x] |
-| PR | Push + GitHub PR vs `main` (includes hygiene + AARO work) | — | [ ] |
+| PR | Push + GitHub PR vs `main` (includes hygiene + AARO work) | — | [x] |
 
 **H0:** Run hygiene review on `src/`; write `docs/planning/code-hygiene-plan.md` with class-size violations, missing pattern names, strategy-injection opportunities. No production refactor in H0-only commit.
