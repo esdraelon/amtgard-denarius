@@ -242,8 +242,6 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         $connects = new BankConnect(Strategies::providers(Strategies::teller()));
         $manager = new ManagerController(
             $auth,
-            $permissions,
-            $kingdoms,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
             new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
@@ -259,10 +257,11 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            Strategies::manageKingdomAccess($twig, $kingdoms, $permissions, $auth),
             Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
             Strategies::manageCsrfGuard($twig),
         );
-        (new ManagerController(new SessionAuthStore('empty'), $member, $kingdoms, $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::kingdomScopedCategorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternWizard($kingdoms, $transactions, $accounts), Strategies::patternPrefill(), Strategies::ledgerSyncFeedback(), Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts), Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions), Strategies::manageCsrfGuard($twig)))
+        (new ManagerController(new SessionAuthStore('empty'), $accounts, Strategies::kingdomSettings($kingdoms), new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()), $queue, $twig, $connects, new \Amtgard\Denarius\Service\Enrollment\SimpleFinConnectSession(), Strategies::reviewQueue($transactions, $accounts), Strategies::reviewService($transactions, $accounts), Strategies::kingdomScopedCategorySearch(), Strategies::kingdomPatternService($kingdoms, $transactions), Strategies::patternWizard($kingdoms, $transactions, $accounts), Strategies::patternPrefill(), Strategies::ledgerSyncFeedback(), Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts), Strategies::manageKingdomAccess($twig, $kingdoms, $member, new SessionAuthStore('empty')), Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions), Strategies::manageCsrfGuard($twig)))
             ->show($this->request('GET', '/manage/golden-plains'), new Response(), 'golden-plains');
         $manager->show($this->request('GET', '/manage/missing'), new Response(), 'missing');
         $manager->show($this->request('GET', '/manage/golden-plains', ['uncategorized' => '1']), new Response(), 'golden-plains');
@@ -420,7 +419,7 @@ final class TracedHttpMethodsTest extends AmtgardTestCase
         }))->sendRequest(new \Nyholm\Psr7\Request('GET', 'http://localhost:37080/version'));
 
         $scope = $this->methodsInScope();
-        $this->assertCount(92, $scope);
+        $this->assertCount(93, $scope);
         foreach ($scope as $method) {
             if (str_ends_with($method, '::__construct')) {
                 MethodLogAssert::assertConstructorEntered($method);

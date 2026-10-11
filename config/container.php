@@ -42,6 +42,7 @@ use Amtgard\Denarius\Controller\AdminController;
 use Amtgard\Denarius\Controller\HomeController;
 use Amtgard\Denarius\Controller\KingdomPageController;
 use Amtgard\Denarius\Controller\ManageCsrfGuard;
+use Amtgard\Denarius\Controller\ManageKingdomAccess;
 use Amtgard\Denarius\Controller\ManagePagePresenter;
 use Amtgard\Denarius\Controller\ManagerController;
 use Amtgard\Denarius\Controller\WebhookController;
@@ -659,6 +660,12 @@ return array_merge(
     ManageCsrfGuard::class => fn (ContainerInterface $c) => new ManageCsrfGuard(
         $c->get(TwigHtmlRenderer::class),
     ),
+    ManageKingdomAccess::class => fn (ContainerInterface $c) => new ManageKingdomAccess(
+        $c->get(SessionAuthStore::class),
+        $c->get(PermissionService::class),
+        $c->get(KingdomRepositoryInterface::class),
+        $c->get(TwigHtmlRenderer::class),
+    ),
     ManagePagePresenter::class => fn (ContainerInterface $c) => new ManagePagePresenter(
         $c->get(TwigHtmlRenderer::class),
         $c->get(AccountRepositoryInterface::class),
@@ -669,8 +676,6 @@ return array_merge(
     ),
     ManagerController::class => fn (ContainerInterface $c) => new ManagerController(
         $c->get(SessionAuthStore::class),
-        $c->get(PermissionService::class),
-        $c->get(KingdomRepositoryInterface::class),
         $c->get(AccountRepositoryInterface::class),
         $c->get(KingdomSettings::class),
         $c->get(EnrollmentService::class),
@@ -686,6 +691,7 @@ return array_merge(
         $c->get(KingdomPatternPrefill::class),
         $c->get(ManagerLedgerSyncFeedback::class),
         $c->get(PatternAutomaticCategoryReview::class),
+        $c->get(ManageKingdomAccess::class),
         $c->get(ManagePagePresenter::class),
         $c->get(ManageCsrfGuard::class),
     ),

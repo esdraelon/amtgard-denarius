@@ -6,7 +6,7 @@ Post-PR-3 stack on `post-pr-3-hygiene`. Test plan: [post-pr-3-hygiene-test-plan.
 
 | Class | Lines (approx.) | Milestone |
 |-------|-----------------|-----------|
-| `ManagerController` | 613 → split H1c | `ManagePagePresenter` Facade |
+| `ManagerController` | ~498 after H1c | `ManagePagePresenter` Facade + `ManageKingdomAccess` Guard |
 | `KingdomPatternService` | 486 | Defer H2 patterns theme |
 | `TaxonomyCatalogLoader` | 494 | Defer H2 YAML seed-only |
 

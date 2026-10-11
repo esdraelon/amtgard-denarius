@@ -92,10 +92,9 @@ final class ManageConnectTest extends AmtgardTestCase
         $transactions = new MemoryTransactions();
         $this->transactions = $transactions;
         $twig = new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates')));
+        $auth = new SessionAuthStore('test_session');
         $this->manager = new ManagerController(
-            new SessionAuthStore('test_session'),
-            $permissions,
-            $kingdoms,
+            $auth,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
             new EnrollmentService($kingdoms, $secrets = new MemorySecrets(), $accounts, $providers, new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset($transactions, $accounts, $secrets)),
@@ -111,6 +110,7 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            Strategies::manageKingdomAccess($twig, $kingdoms, $permissions, $auth),
             Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
             Strategies::manageCsrfGuard($twig),
         );
@@ -162,10 +162,10 @@ final class ManageConnectTest extends AmtgardTestCase
         $guestAccounts = new MemoryAccounts();
         $guestKingdoms = new MemoryKingdoms();
         $guestTwig = new TwigHtmlRenderer(new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates')));
+        $guestPermissions = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
+        $guestAuth = new SessionAuthStore('empty');
         $guest = new ManagerController(
-            new SessionAuthStore('empty'),
-            new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null)),
-            $guestKingdoms,
+            $guestAuth,
             $guestAccounts,
             Strategies::kingdomSettings($guestKingdoms),
             new EnrollmentService($guestKingdoms, new MemorySecrets(), $guestAccounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), new MemoryRefresh(), Strategies::months(), Strategies::bankReset()),
@@ -181,6 +181,7 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($guestKingdoms, $guestTransactions, $guestAccounts),
+            Strategies::manageKingdomAccess($guestTwig, $guestKingdoms, $guestPermissions, $guestAuth),
             Strategies::managePagePresenter($guestTwig, $guestKingdoms, $guestAccounts, $guestTransactions),
             Strategies::manageCsrfGuard($guestTwig),
         );
