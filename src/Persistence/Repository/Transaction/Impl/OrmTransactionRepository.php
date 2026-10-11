@@ -88,6 +88,24 @@ class OrmTransactionRepository extends Repository implements EntityRepositoryInt
         });
     }
 
+    public function removeAllForKingdom(int $kingdomId): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdomId): void {
+            $this->clear();
+            $this->kingdom_id = $kingdomId;
+            $this->orderBy('id', OrderBy::ASC);
+            if ($this->find() === 0) {
+                return;
+            }
+            while ($this->next()) {
+                $current = $this->getCurrent();
+                if ($current instanceof TransactionEntity) {
+                    $this->delete($current);
+                }
+            }
+        });
+    }
+
     private function fill(TransactionEntity $entity, TransactionRecord $transaction, bool $existing): void
     {
         DenariusLog::trace(__METHOD__, function () use ($entity, $transaction, $existing): mixed {
