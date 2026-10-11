@@ -53,7 +53,7 @@ N and iteration counts are configured in the benchmark CLI (`--seed`, `--iterati
 | **A1** | `stack/aaro-bank-reset-repos` | `BankConnectionReset` → repository APIs | Yes (disconnect path) |
 | **A2** | `stack/aaro-category-repos` | AARO repos for `categories` / `category_lineages`; catalog mutations | Writes only; reload TBD |
 | **A3** | `stack/aaro-transaction-read-driver` | `AaroTransactionReadDriver` + env toggle | Parallel; PDO default |
-| **A4** | `stack/aaro-transaction-read-cutover` | Flip default to AARO reads after benchmarks | PDO driver deleted only if A3 green |
+| **A4** | `stack/aaro-transaction-read-cutover` | Record benchmark; flip only if green | **2026-10-11:** p95 ratio **16.57×** at 2000 rows — **PDO default retained**; `PdoTransactionReadDriver` stays |
 
 Each implementation milestone: unit suite, mutation gate, logging tests, **benchmark step** (record or re-verify).
 
