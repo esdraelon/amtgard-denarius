@@ -9,7 +9,7 @@ Workers: [development](file:///Users/inoahsmi/.cursor/skills/development/SKILL.m
 |---|-----------|--------|------|
 | A0 | Plan + checklist + microbenchmark harness | `stack/aaro-migration-plan` → `stack/aaro-read-benchmark` | [x] |
 | A1 | `BankConnectionReset` via AARO repositories | `stack/aaro-bank-reset-repos` | [x] |
-| A2 | Category/lineage AARO repos; catalog writes on AARO | `stack/aaro-category-repos` | [ ] |
+| A2 | Category/lineage AARO repos; catalog writes on AARO | `stack/aaro-category-repos` | [x] |
 | A3 | `AaroTransactionReadDriver` + feature toggle (PDO default) | `stack/aaro-transaction-read-driver` | [ ] |
 | A4 | Cutover to AARO reads if benchmarks pass; remove PDO driver | `stack/aaro-transaction-read-cutover` | [ ] |
 

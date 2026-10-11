@@ -27,6 +27,8 @@ use Amtgard\Denarius\Persistence\Driver\Transaction\TransactionRecordMapper;
 use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\OrmTransactionRepository;
 use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\TransactionRepository;
 use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Category\Impl\CategoryRepository;
+use Amtgard\Denarius\Persistence\Repository\CategoryLineage\Impl\CategoryLineageRepository;
 use Amtgard\Denarius\Domain\Statement\Publication\PublicationFlags;
 use Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
@@ -226,6 +228,10 @@ final class PersistenceStoreArrange
         RoleGrantRepository::getEntityClass();
         KingdomCategoryRuleRepository::getTableName();
         KingdomCategoryRuleRepository::getEntityClass();
+        CategoryRepository::getTableName();
+        CategoryRepository::getEntityClass();
+        CategoryLineageRepository::getTableName();
+        CategoryLineageRepository::getEntityClass();
 
         $kingdoms = Orm::repository(KingdomRepository::class);
         $saved = $kingdoms->save(KingdomRecord::builder()->orkKingdomId(4)->name('Golden Plains')->slug('golden-plains')->visibility('public')->displayMode('all')->enrollmentId('enr')->institutionName('Bank')->provider('teller')->enrollmentStatus('connected')->build());
@@ -301,5 +307,26 @@ final class PersistenceStoreArrange
             ->confidence(100)
             ->build());
         $patternRules->removeRule((int) $saved->getId(), (int) $pattern->getId());
+
+        $categoryRows = Orm::repository(CategoryRepository::class);
+        $benchLineage = 'bench.trace.' . uniqid('', true);
+        $benchCategoryId = $categoryRows->insertRow(
+            $benchLineage,
+            'Bench trace',
+            json_encode(['expense'], JSON_THROW_ON_ERROR),
+            null,
+            null,
+            true,
+            null,
+            (new \DateTimeImmutable('now'))->format(\DateTimeInterface::ATOM),
+        );
+        $lineageRows = Orm::repository(CategoryLineageRepository::class);
+        $lineageRows->insertLineage($benchLineage, $benchCategoryId);
+        $lineageRows->setCurrentCategoryId($benchLineage, $benchCategoryId);
+
+        $kingdomId = (int) $saved->getId();
+        $transactions->removeAllForKingdom($kingdomId);
+        $accounts->removeAllForKingdom($kingdomId);
+        $secrets->removeForKingdom($kingdomId);
     }
 }

@@ -576,7 +576,11 @@ final class ServiceWorkerArrange
 
         $mariadb = PersistenceStoreArrange::tryPdo();
         if ($mariadb !== null && $mariadb->query("SHOW TABLES LIKE 'categories'")->fetchColumn() === 'categories') {
-            new \Amtgard\Denarius\Service\Taxonomy\DbCategoryCatalog($mariadb);
+            new \Amtgard\Denarius\Service\Taxonomy\DbCategoryCatalog(
+                $mariadb,
+                \Amtgard\Denarius\Persistence\Orm::repository(\Amtgard\Denarius\Persistence\Repository\Category\Impl\CategoryRepository::class),
+                \Amtgard\Denarius\Persistence\Orm::repository(\Amtgard\Denarius\Persistence\Repository\CategoryLineage\Impl\CategoryLineageRepository::class),
+            );
         }
     }
 }
