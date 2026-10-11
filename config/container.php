@@ -29,6 +29,7 @@ use Amtgard\Denarius\Persistence\Repository\RoleGrant\Impl\RoleGrantRepository;
 use Amtgard\Denarius\Persistence\Repository\RoleGrant\RoleGrantRepositoryInterface;
 use Amtgard\Denarius\Persistence\Repository\Secret\Impl\SecretRepository;
 use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
+use Amtgard\Denarius\Persistence\Driver\Transaction\AaroTransactionReadDriver;
 use Amtgard\Denarius\Persistence\Driver\Transaction\PdoTransactionReadDriver;
 use Amtgard\Denarius\Persistence\Driver\Transaction\TransactionReadDriver;
 use Amtgard\Denarius\Persistence\Driver\Transaction\TransactionRecordMapper;
@@ -207,10 +208,16 @@ return array_merge(
     AccountRepositoryInterface::class => fn () => Orm::repository(AccountRepository::class),
     SecretRepositoryInterface::class => fn () => Orm::repository(SecretRepository::class),
     TransactionRecordMapper::class => fn () => new TransactionRecordMapper(),
-    TransactionReadDriver::class => fn (ContainerInterface $c) => new PdoTransactionReadDriver(
-        MysqlPdoProvider::fromConfiguration(DatabaseConfiguration::fromEnvironment())->getPdo(),
-        $c->get(TransactionRecordMapper::class),
-    ),
+    TransactionReadDriver::class => function (ContainerInterface $c): TransactionReadDriver {
+        if (denariusEnv('TRANSACTION_READ_DRIVER') === 'aaro') {
+            return new AaroTransactionReadDriver(Orm::repository(OrmTransactionRepository::class));
+        }
+
+        return new PdoTransactionReadDriver(
+            MysqlPdoProvider::fromConfiguration(DatabaseConfiguration::fromEnvironment())->getPdo(),
+            $c->get(TransactionRecordMapper::class),
+        );
+    },
     TransactionRepositoryInterface::class => fn (ContainerInterface $c) => new TransactionRepository(
         Orm::repository(OrmTransactionRepository::class),
         $c->get(TransactionReadDriver::class),

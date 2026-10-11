@@ -8,6 +8,8 @@
 `composer benchmark:aaro-reads -- --kingdom-id=1 --seed=5000 --iterations=7`.  
 Purges only rows matching `bench-aaro-*`. Use `--purge-only` to clean up.
 
+**Read driver toggle:** `TRANSACTION_READ_DRIVER=aaro` selects `AaroTransactionReadDriver`; default (unset or any other value) keeps `PdoTransactionReadDriver`.
+
 ## PDO allowlist (never migrate to AARO)
 
 | Area | Examples | Reason |

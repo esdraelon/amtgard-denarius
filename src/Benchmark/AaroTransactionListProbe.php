@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Benchmark;
 
-use Amtgard\ActiveRecordOrm\Query\OrderBy;
+use Amtgard\Denarius\Persistence\Driver\Transaction\AaroTransactionReadDriver;
 use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\OrmTransactionRepository;
 
-/**
- * Benchmark probe: kingdom-scoped transaction list via AARO 1.7 find/next.
- * Future {@see \Amtgard\Denarius\Persistence\Driver\Transaction\AaroTransactionReadDriver} should match this shape.
- */
+/** Benchmark probe: delegates to {@see AaroTransactionReadDriver}. */
 final class AaroTransactionListProbe
 {
-    public function __construct(
-        private readonly OrmTransactionRepository $transactions,
-    ) {
+    private readonly AaroTransactionReadDriver $driver;
+
+    public function __construct(OrmTransactionRepository $transactions)
+    {
+        $this->driver = new AaroTransactionReadDriver($transactions);
     }
 
     public function countForKingdom(int $kingdomId): int
@@ -24,15 +23,10 @@ final class AaroTransactionListProbe
     }
 
     /**
-     * @return list<object>
+     * @return list<\Amtgard\Denarius\Persistence\Record\TransactionRecord>
      */
     public function collectedForKingdom(int $kingdomId): array
     {
-        $this->transactions->clear();
-        $this->transactions->kingdom_id = $kingdomId;
-        $this->transactions->orderBy('posted_on', OrderBy::ASC);
-        $this->transactions->orderBy('id', OrderBy::ASC);
-
-        return $this->transactions->collected();
+        return $this->driver->listForKingdom($kingdomId);
     }
 }

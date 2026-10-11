@@ -22,6 +22,7 @@ use Amtgard\Denarius\Persistence\Repository\Secret\Impl\SecretRepository;
 use Amtgard\Denarius\Persistence\Repository\KingdomCategoryRule\Impl\KingdomCategoryRuleRepository;
 use Amtgard\Denarius\Persistence\Record\KingdomCategoryRuleRecord;
 use Amtgard\Denarius\Domain\Taxonomy\TransactionFlow;
+use Amtgard\Denarius\Persistence\Driver\Transaction\AaroTransactionReadDriver;
 use Amtgard\Denarius\Persistence\Driver\Transaction\PdoTransactionReadDriver;
 use Amtgard\Denarius\Persistence\Driver\Transaction\TransactionRecordMapper;
 use Amtgard\Denarius\Persistence\Repository\Transaction\Impl\OrmTransactionRepository;
@@ -273,6 +274,8 @@ final class PersistenceStoreArrange
         $transactions->upsert(TransactionRecordRebuilder::from($grocery)->publicationFlags(PublicationFlags::empty()->withManagerEmbargoWaived(true)->encode())->build());
         $transactions->forKingdom((int) $saved->getId());
         $transactions->forKingdomPublished((int) $saved->getId());
+        Orm::repository(OrmTransactionRepository::class)->recordsForKingdom((int) $saved->getId());
+        (new AaroTransactionReadDriver(Orm::repository(OrmTransactionRepository::class)))->listForKingdom((int) $saved->getId());
         $transactions->markPublished((int) $saved->getId(), 'txn-grocery', '2026-09-05T12:00:00+00:00');
         $transactions->markUnpublished((int) $saved->getId(), 'txn-grocery');
 
