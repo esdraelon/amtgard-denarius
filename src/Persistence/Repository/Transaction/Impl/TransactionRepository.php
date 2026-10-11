@@ -73,7 +73,9 @@ final class TransactionRepository implements TransactionRepositoryInterface
     public function removeAllForKingdom(int $kingdomId): void
     {
         DenariusLog::trace(__METHOD__, function () use ($kingdomId): void {
-            $this->orm->removeAllForKingdom($kingdomId);
+            foreach ($this->reads->listForKingdom($kingdomId) as $record) {
+                $this->orm->deleteByTellerTransactionId($record->getTellerTransactionId());
+            }
         });
     }
 }
