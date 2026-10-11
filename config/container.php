@@ -335,8 +335,10 @@ return array_merge(
         $c->get(MonthInvalidator::class),
         $c->get(KingdomBankReset::class),
     ),
-    KingdomBankReset::class => fn () => new BankConnectionReset(
-        MysqlPdoProvider::fromConfiguration(DatabaseConfiguration::fromEnvironment())->getPdo(),
+    KingdomBankReset::class => fn (ContainerInterface $c) => new BankConnectionReset(
+        $c->get(TransactionRepositoryInterface::class),
+        $c->get(AccountRepositoryInterface::class),
+        $c->get(SecretRepositoryInterface::class),
     ),
     PublicationSettingsValidator::class => fn () => new PublicationSettingsValidator(),
     PublicationEmbargoCalculator::class => fn () => new PublicationEmbargoCalculator(),

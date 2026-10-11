@@ -27,4 +27,6 @@ interface TransactionRepositoryInterface
     public function markPublished(int $kingdomId, string $tellerTransactionId, string $publishedAt): void;
 
     public function markUnpublished(int $kingdomId, string $tellerTransactionId): void;
+
+    public function removeAllForKingdom(int $kingdomId): void;
 }
