@@ -736,6 +736,13 @@ Suggested stack (one branch each):
 - Public kingdom page shows coarsened starting/ending balances per disclosure mode via the publication pipeline; manage review month links use single-encoded query strings so `review_month` is honored.
 - Tests: `PublicationMonthBalanceTest`, `PublicationLedgerBalanceResolverTest`, `TransactionReviewMonthNavigationTest`, `ManageReadTest::testManageReviewMonthQuerySelectsRequestedMonth`.
 
+## AARO PDO migration — plan & benchmark (stack)
+
+- Branches: `stack/aaro-migration-plan` (docs), `stack/aaro-read-benchmark` (harness, stacked on plan).
+- [aaro-pdo-migration-plan.md](../planning/aaro-pdo-migration-plan.md), [aaro-pdo-migration-checklist.md](../planning/aaro-pdo-migration-checklist.md), [aaro-pdo-migration-benchmarks.md](../planning/aaro-pdo-migration-benchmarks.md).
+- CLI: `composer benchmark:aaro-reads` — compares `PdoTransactionReadDriver` vs AARO `collected()` probe and times `DbCategoryCatalog` reload.
+- Orchestrator: branch-orchestrator skill includes benchmark gate for milestones A1–A4.
+
 ## Post-PR-3 hygiene (`post-pr-3-hygiene`)
 
 - Test plan: [post-pr-3-hygiene-test-plan.md](../planning/post-pr-3-hygiene-test-plan.md); `CategoryDisplayInput`, extended assigner/search/manage integ tests.
