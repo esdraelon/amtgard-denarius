@@ -69,4 +69,13 @@ final class TransactionRepository implements TransactionRepositoryInterface
             return null;
         });
     }
+
+    public function removeAllForKingdom(int $kingdomId): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdomId): void {
+            foreach ($this->reads->listForKingdom($kingdomId) as $record) {
+                $this->orm->deleteByTellerTransactionId($record->getTellerTransactionId());
+            }
+        });
+    }
 }

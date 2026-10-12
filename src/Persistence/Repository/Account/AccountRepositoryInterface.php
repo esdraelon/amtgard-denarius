@@ -14,4 +14,6 @@ interface AccountRepositoryInterface
     public function forKingdom(int $kingdomId): array;
 
     public function save(AccountRecord $account): AccountRecord;
+
+    public function removeAllForKingdom(int $kingdomId): void;
 }
