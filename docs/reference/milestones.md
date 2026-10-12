@@ -736,6 +736,15 @@ Suggested stack (one branch each):
 - Public kingdom page shows coarsened starting/ending balances per disclosure mode via the publication pipeline; manage review month links use single-encoded query strings so `review_month` is honored.
 - Tests: `PublicationMonthBalanceTest`, `PublicationLedgerBalanceResolverTest`, `TransactionReviewMonthNavigationTest`, `ManageReadTest::testManageReviewMonthQuerySelectsRequestedMonth`.
 
+## AARO PDO migration (stack tip: `stack/aaro-transaction-read-cutover`)
+
+- Stack: `stack/aaro-migration-plan` → `stack/aaro-read-benchmark` → `stack/aaro-bank-reset-repos` → `stack/aaro-category-repos` → `stack/aaro-transaction-read-driver` → `stack/aaro-transaction-read-cutover`.
+- A1: `BankConnectionReset` uses repository APIs (no PDO DELETE).
+- A2: `CategoryRepository` / `CategoryLineageRepository`; `DbCategoryCatalog` writes on AARO, reload on PDO.
+- A3: `AaroTransactionReadDriver` + `TRANSACTION_READ_DRIVER=aaro` toggle; **PDO remains default**.
+- A4: Docker benchmark @ 2000 rows — AARO list p95 **16.57×** PDO; **no cutover** ([benchmark log](../planning/aaro-pdo-migration-benchmarks.md)).
+- Docs: [aaro-pdo-migration-plan.md](../planning/aaro-pdo-migration-plan.md), [checklist](../planning/aaro-pdo-migration-checklist.md).
+
 ## Post-PR-3 hygiene (`post-pr-3-hygiene`)
 
 - Test plan: [post-pr-3-hygiene-test-plan.md](../planning/post-pr-3-hygiene-test-plan.md); `CategoryDisplayInput`, extended assigner/search/manage integ tests.

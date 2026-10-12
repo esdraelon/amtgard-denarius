@@ -9,4 +9,6 @@ interface SecretRepositoryInterface
     public function findCiphertext(int $kingdomId): ?string;
 
     public function saveCiphertext(int $kingdomId, string $ciphertext): void;
+
+    public function removeForKingdom(int $kingdomId): void;
 }

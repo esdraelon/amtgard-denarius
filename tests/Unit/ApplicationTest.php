@@ -682,6 +682,11 @@ final class MemorySecrets implements SecretRepositoryInterface
     {
         $this->rows[$kingdomId] = $ciphertext;
     }
+
+    public function removeForKingdom(int $kingdomId): void
+    {
+        unset($this->rows[$kingdomId]);
+    }
 }
 
 final class MemoryAccounts implements AccountRepositoryInterface
@@ -717,6 +722,11 @@ final class MemoryAccounts implements AccountRepositoryInterface
         }
         $this->rows[$account->getKingdomId()] = $list;
         return $saved;
+    }
+
+    public function removeAllForKingdom(int $kingdomId): void
+    {
+        unset($this->rows[$kingdomId]);
     }
 }
 
@@ -774,6 +784,16 @@ final class MemoryTransactions implements TransactionRepositoryInterface
             throw new \InvalidArgumentException('Transaction not found.');
         }
         $this->upsert(\Amtgard\Denarius\Domain\Statement\Publication\TransactionRecordRebuilder::from($row)->publishedAt(null)->build());
+    }
+
+    public function removeAllForKingdom(int $kingdomId): void
+    {
+        unset($this->rows[$kingdomId]);
+        foreach ($this->rowsByTellerId as $tellerId => $row) {
+            if ($row->getKingdomId() === $kingdomId) {
+                unset($this->rowsByTellerId[$tellerId]);
+            }
+        }
     }
 }
 

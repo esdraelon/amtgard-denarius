@@ -568,13 +568,19 @@ final class ServiceWorkerArrange
         $ignoredJob->type();
         $ignoredJob->handle(['orkKingdomId' => 4]);
 
-        $pdo = new \PDO('sqlite::memory:');
-        $pdo->exec('CREATE TABLE transactions (kingdom_id INTEGER); CREATE TABLE published_accounts (kingdom_id INTEGER); CREATE TABLE enrollment_secrets (kingdom_id INTEGER);');
-        (new \Amtgard\Denarius\Service\Enrollment\BankConnectionReset($pdo))->clearKingdom(4);
+        (new \Amtgard\Denarius\Service\Enrollment\BankConnectionReset(
+            new \Amtgard\Denarius\Tests\Unit\MemoryTransactions(),
+            new \Amtgard\Denarius\Tests\Unit\MemoryAccounts(),
+            new \Amtgard\Denarius\Tests\Unit\MemorySecrets(),
+        ))->clearKingdom(4);
 
         $mariadb = PersistenceStoreArrange::tryPdo();
         if ($mariadb !== null && $mariadb->query("SHOW TABLES LIKE 'categories'")->fetchColumn() === 'categories') {
-            new \Amtgard\Denarius\Service\Taxonomy\DbCategoryCatalog($mariadb);
+            new \Amtgard\Denarius\Service\Taxonomy\DbCategoryCatalog(
+                $mariadb,
+                \Amtgard\Denarius\Persistence\Orm::repository(\Amtgard\Denarius\Persistence\Repository\Category\Impl\CategoryRepository::class),
+                \Amtgard\Denarius\Persistence\Orm::repository(\Amtgard\Denarius\Persistence\Repository\CategoryLineage\Impl\CategoryLineageRepository::class),
+            );
         }
     }
 }
