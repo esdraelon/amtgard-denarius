@@ -52,6 +52,22 @@ class AccountRepository extends Repository implements EntityRepositoryInterface,
         });
     }
 
+    public function removeAllForKingdom(int $kingdomId): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdomId): void {
+            foreach ($this->forKingdom($kingdomId) as $account) {
+                $id = $account->getId();
+                if ($id === null) {
+                    continue;
+                }
+                $entity = $this->fetch($id);
+                if ($entity instanceof AccountEntity) {
+                    $this->delete($entity);
+                }
+            }
+        });
+    }
+
     private function entity(AccountRecord $account): AccountEntity
     {
         return DenariusLog::trace(__METHOD__, function () use ($account): AccountEntity {

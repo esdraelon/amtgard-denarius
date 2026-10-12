@@ -52,6 +52,31 @@ class OrmTransactionRepository extends Repository implements EntityRepositoryInt
         });
     }
 
+    /**
+     * @return list<TransactionRecord>
+     */
+    public function recordsForKingdom(int $kingdomId): array
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdomId): array {
+            $this->clear();
+            $this->kingdom_id = $kingdomId;
+            $this->orderBy('posted_on', OrderBy::ASC);
+            $this->orderBy('id', OrderBy::ASC);
+            if ($this->find() === 0) {
+                return [];
+            }
+            $records = [];
+            while ($this->next()) {
+                $record = $this->record($this->getCurrent());
+                if ($record !== null) {
+                    $records[] = $record;
+                }
+            }
+
+            return $records;
+        });
+    }
+
     public function markPublished(int $kingdomId, string $tellerTransactionId, string $publishedAt): void
     {
         DenariusLog::trace(__METHOD__, function () use ($kingdomId, $tellerTransactionId, $publishedAt): mixed {
@@ -85,6 +110,16 @@ class OrmTransactionRepository extends Repository implements EntityRepositoryInt
             $this->persist($entity);
 
             return null;
+        });
+    }
+
+    public function deleteByTellerTransactionId(string $tellerTransactionId): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($tellerTransactionId): void {
+            $entity = $this->fetchBy('teller_transaction_id', $tellerTransactionId);
+            if ($entity instanceof TransactionEntity) {
+                $this->delete($entity);
+            }
         });
     }
 

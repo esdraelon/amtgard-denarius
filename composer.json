@@ -45,6 +45,7 @@
         "test": "phpunit --coverage-clover build/coverage.xml && php bin/check-coverage.php build/coverage.xml 95",
         "test:unit": "phpunit --testsuite Unit",
         "integ": "@php -d display_errors=0 -d error_reporting=24575 vendor/bin/phpunit -c phpunit.integ.xml --testdox --order-by=random",
+        "benchmark:aaro-reads": "@php bin/benchmark-aaro-reads.php",
         "infection": "infection --min-msi=80 --min-covered-msi=80 --threads=max",
         "infection:ci": [
             "@php -d display_errors=0 -d error_reporting=8191 vendor/bin/phpunit --coverage-xml build/coverage-xml --log-junit build/junit.xml",

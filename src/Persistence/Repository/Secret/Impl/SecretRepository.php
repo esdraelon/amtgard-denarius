@@ -52,4 +52,14 @@ class SecretRepository extends Repository implements EntityRepositoryInterface, 
             return null;
         });
     }
+
+    public function removeForKingdom(int $kingdomId): void
+    {
+        DenariusLog::trace(__METHOD__, function () use ($kingdomId): void {
+            $entity = $this->fetchBy('kingdom_id', $kingdomId);
+            if ($entity instanceof SecretEntity) {
+                $this->delete($entity);
+            }
+        });
+    }
 }

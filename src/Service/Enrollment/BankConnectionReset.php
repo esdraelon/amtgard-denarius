@@ -4,26 +4,28 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Enrollment;
 
+use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Secret\SecretRepositoryInterface;
+use Amtgard\Denarius\Persistence\Repository\Transaction\TransactionRepositoryInterface;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
-use PDO;
 
-/** Removes local ledger rows so a kingdom can connect a bank again from a clean state. */
+/** Facade: clear kingdom ledger rows via AARO repositories before reconnecting a bank. */
 final class BankConnectionReset implements KingdomBankReset
 {
-    public function __construct(private readonly PDO $pdo)
-    {
-        $entered = DenariusLog::enter(__METHOD__);
+    public function __construct(
+        private readonly TransactionRepositoryInterface $transactions,
+        private readonly AccountRepositoryInterface $accounts,
+        private readonly SecretRepositoryInterface $secrets,
+    ) {
+        DenariusLog::enter(__METHOD__);
     }
 
     public function clearKingdom(int $kingdomId): void
     {
         DenariusLog::trace(__METHOD__, function () use ($kingdomId): void {
-            $stmt = $this->pdo->prepare('DELETE FROM transactions WHERE kingdom_id = ?');
-            $stmt->execute([$kingdomId]);
-            $stmt = $this->pdo->prepare('DELETE FROM published_accounts WHERE kingdom_id = ?');
-            $stmt->execute([$kingdomId]);
-            $stmt = $this->pdo->prepare('DELETE FROM enrollment_secrets WHERE kingdom_id = ?');
-            $stmt->execute([$kingdomId]);
+            $this->transactions->removeAllForKingdom($kingdomId);
+            $this->accounts->removeAllForKingdom($kingdomId);
+            $this->secrets->removeForKingdom($kingdomId);
         });
     }
 }
