@@ -19,6 +19,21 @@ final class CategorySearchQueryTest extends TestCase
         self::assertSame('dues', CategorySearchQuery::normalize('  income : dues'));
     }
 
+    public function testNormalizeStripsTransferPrefix(): void
+    {
+        self::assertSame('foo', CategorySearchQuery::normalize('Transfer: foo'));
+    }
+
+    public function testNormalizeBlankReturnsEmpty(): void
+    {
+        self::assertSame('', CategorySearchQuery::normalize('   '));
+    }
+
+    public function testNormalizeWithoutPrefixUnchanged(): void
+    {
+        self::assertSame('site rental', CategorySearchQuery::normalize('site rental'));
+    }
+
     public function testKingdomSearchFiltersByFlowAndIgnoresPrefixInQuery(): void
     {
         $catalog = CategoryCatalogFixture::load();

@@ -291,7 +291,6 @@ final class Strategies
         $catalog = CategorizationArrange::bundledCatalog();
 
         return new \Amtgard\Denarius\Service\Ledger\KingdomCategoryAssigner(
-            new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategoryPicker($catalog),
             $catalog,
             \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
         );
@@ -366,13 +365,6 @@ final class Strategies
             self::categoryAssigner(),
             self::patternPrefill(),
             $now ?? new \DateTimeImmutable('2026-10-01'),
-        );
-    }
-
-    public static function categorySearch(): \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch
-    {
-        return new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch(
-            \Amtgard\Denarius\Tests\Support\CategorizationArrange::bundledCatalog(),
         );
     }
 
@@ -451,6 +443,36 @@ final class Strategies
             \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
             self::publicationApplier($transactions, $now),
             new \Amtgard\Denarius\Domain\Statement\Publication\Ingest\MicroDepositPairReconciler($transactions),
+        );
+    }
+
+    public static function manageCsrfGuard(\Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer $html): \Amtgard\Denarius\Controller\ManageCsrfGuard
+    {
+        return new \Amtgard\Denarius\Controller\ManageCsrfGuard($html);
+    }
+
+    public static function manageKingdomAccess(
+        \Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer $html,
+        KingdomRepositoryInterface $kingdoms,
+        \Amtgard\Denarius\Service\Access\PermissionService $permissions,
+        \Amtgard\IdpClient\Session\SessionAuthStore $auth,
+    ): \Amtgard\Denarius\Controller\ManageKingdomAccess {
+        return new \Amtgard\Denarius\Controller\ManageKingdomAccess($auth, $permissions, $kingdoms, $html);
+    }
+
+    public static function managePagePresenter(
+        \Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer $html,
+        KingdomRepositoryInterface $kingdoms,
+        AccountRepositoryInterface $accounts,
+        TransactionRepositoryInterface $transactions,
+    ): \Amtgard\Denarius\Controller\ManagePagePresenter {
+        return new \Amtgard\Denarius\Controller\ManagePagePresenter(
+            $html,
+            $accounts,
+            self::reviewQueue($transactions, $accounts),
+            self::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            self::kingdomPatternService($kingdoms, $transactions),
+            self::ledgerSyncFeedback(),
         );
     }
 }

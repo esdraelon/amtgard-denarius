@@ -745,10 +745,9 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
         $queue = new MemoryRefresh();
         $twig = new TwigHtmlRenderer(new Environment(new ArrayLoader(['manage.twig' => 'manage'])));
         $permissions = new PermissionService(new FakePolicies([]), new ArrayStore(), new DenariusAuthorizer(), BootstrapAdmins::fromEnv(null));
+        $guestAuth = new SessionAuthStore('empty');
         $manager = new ManagerController(
-            new SessionAuthStore('empty'),
-            $permissions,
-            $kingdoms,
+            $guestAuth,
             $accounts,
             Strategies::kingdomSettings($kingdoms),
             new EnrollmentService($kingdoms, new MemorySecrets(), $accounts, Strategies::providers(Strategies::teller()), new TokenCipher('k'), $queue, Strategies::months(), Strategies::bankReset()),
@@ -764,6 +763,9 @@ final class KingdomCategoryPatternsTest extends AmtgardTestCase
             Strategies::patternPrefill(),
             Strategies::ledgerSyncFeedback(),
             Strategies::patternAutomaticReview($kingdoms, $transactions, $accounts),
+            Strategies::manageKingdomAccess($twig, $kingdoms, $permissions, $guestAuth),
+            Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
+            Strategies::manageCsrfGuard($twig),
         );
         $response = $manager->patterns(
             (new \Slim\Psr7\Factory\ServerRequestFactory())->createServerRequest('GET', '/manage/golden-plains/patterns'),

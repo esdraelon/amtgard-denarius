@@ -379,10 +379,13 @@ final class RestDomainArrange
             -100,
             1,
         );
-        (new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategorySearch($catalog))->search('site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
-        $picker = new \Amtgard\Denarius\Domain\Taxonomy\TaxonomyCategoryPicker($catalog);
-        $picker->resolveForPattern('expense.event_supplies', '');
-        $picker->resolveForReview('', 'Expense: Event supplies', -100);
+        $kingdom = \Amtgard\Denarius\Persistence\Record\KingdomRecord::builder()->id(1)->orkKingdomId(1)->name('K')->slug('k')->build();
+        (new \Amtgard\Denarius\Domain\Taxonomy\KingdomScopedCategorySearch(
+            \Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::asInterface(),
+        ))->search($kingdom, 'site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
+        $assigner = \Amtgard\Denarius\Tests\Unit\Strategies::categoryAssigner();
+        $assigner->resolveForPattern($kingdom, ['category' => 'expense.event_supplies']);
+        $assigner->resolveForReview($kingdom, ['category_display' => 'Expense: Event supplies'], -100);
     }
 
     private static function exercisePublicationPipeline(): void

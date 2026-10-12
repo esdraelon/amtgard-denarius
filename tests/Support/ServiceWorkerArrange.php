@@ -243,7 +243,11 @@ final class ServiceWorkerArrange
             $reviewQueue = Strategies::reviewQueue($transactions, $accounts, new \DateTimeImmutable('2026-10-01'));
             $reviewQueue->latestReviewMonth($reviewKingdom);
             $reviewQueue->rowsForManage($reviewKingdom, $reviewQueue->reviewMonth($reviewKingdom, ''), true);
-            Strategies::categorySearch()->search('site', \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense);
+            Strategies::kingdomScopedCategorySearch()->search(
+                $reviewKingdom,
+                'site',
+                \Amtgard\Denarius\Domain\Taxonomy\TransactionFlow::Expense,
+            );
         }
 
         $connect = new BankConnect(Strategies::providers($teller));
