@@ -10,11 +10,18 @@ services:
       - "41193:9003"
     volumes:
       - .:/var/www/denarius.amtgard.com
+      - ${DENARIUS_HEV_WEB_SECRETS:-./.local/empty-secrets}:/run/secrets:ro
+      - ${DENARIUS_HEV_CONNECT_SECRETS:-./.local/empty-secrets}:/run/secrets-connect:ro
+      - ${HOST_ENV_VAULT_RUNTIME_DIR:-./.local/empty-runtime}:/run/host-env-vault:ro
     env_file:
       - .env
     environment:
       - ENVIRONMENT=DEV
       - XDEBUG_MODE=off
+      - HOST_ENV_SECRETS_DIR=/run/secrets
+      - DENARIUS_HEV_CONNECT_SECRETS=/run/secrets-connect
+      - HOST_ENV_VAULT_RUNTIME_DIR=/run/host-env-vault
+      - DENARIUS_HEV_CONNECT_PROFILE=denarius-connect
     networks:
       - amtgard-denarius-net
       - amtgard-denarius-shared

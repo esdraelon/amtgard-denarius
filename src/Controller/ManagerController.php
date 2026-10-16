@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Controller;
 
+use Amtgard\Denarius\Contract\StripeConnectSecretSupplier;
 use Amtgard\Denarius\Utilities\Auth\CurrentActor;
 use Amtgard\Denarius\Persistence\Repository\Account\AccountRepositoryInterface;
 use Amtgard\Denarius\Utilities\Queue\KingdomRefresh\KingdomRefreshQueue;
@@ -54,6 +55,7 @@ final class ManagerController
         private readonly ManageKingdomAccess $kingdomAccess,
         private readonly ManagePagePresenter $managePresenter,
         private readonly ManageCsrfGuard $csrfGuard,
+        private readonly StripeConnectSecretSupplier $stripeConnectSecret,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -100,7 +102,7 @@ final class ManagerController
                 return $csrfReject;
             }
 
-            $connect = $this->connects->launch($kingdom->getSlug(), $body);
+            $connect = $this->connects->launch($kingdom->getSlug(), $body, $this->stripeConnectSecret);
             if (($connect['provider'] ?? '') === 'simplefin') {
                 $this->simplefinSession->remember($kingdom->getSlug());
             }

@@ -1,0 +1,62 @@
+# Dev stack (bind-mounted source). Copy to .greenblue at the repo root (do not commit).
+# Run from anywhere (project root = this repo, must contain .greenblue):
+#   /path/to/generic-green-blue-deployment/bin/gb /full/path/to/amtgard-denarius deploy
+# Or: cd /full/path/to/amtgard-denarius && gb "$PWD" deploy
+
+# shellcheck source=scripts/gb-greenblue-helpers.sh disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/gb-greenblue-helpers.sh"
+
+GB_MODE="dev"
+
+GB_PROJECT_NAME="amtgard-denarius"
+GB_CONTAINER_APP_DIR="/var/www/denarius.amtgard.com"
+GB_COMPOSE_SERVICE="denariusapp"
+
+GB_LEGACY_CONTAINER="amtgard-denarius"
+GB_BLUE_CONTAINER="amtgard-denarius-blue"
+GB_GREEN_CONTAINER="amtgard-denarius-green"
+GB_BLUE_PORT="37180"
+GB_GREEN_PORT="37181"
+
+GB_WEB_COMPOSE_PROJECT="amtgard-denarius"
+GB_SHARED_NETWORK="amtgard-denarius-shared"
+GB_STATE_DIR="${GB_ROOT}/.gb/state"
+
+GB_NGINX_STRATEGY="site-file"
+GB_NGINX_SITE_NAME="denarius.amtgard.com"
+GB_NGINX_TEMPLATE="host/nginx.%slot%.conf"
+
+GB_DEV_STACKS="sessions web worker"
+GB_DEPLOY_STACKS="sessions web worker"
+
+GB_SESSIONS_COMPOSE_PROJECT="amtgard-denarius-sessions"
+GB_SESSIONS_COMPOSE_FILES="docker/compose.sessions.yml"
+GB_SESSIONS_COMPOSE_DEV_FILES="docker/compose.sessions.dev.yml"
+GB_SESSIONS_CONTAINER="amtgard-denarius-sessions"
+GB_WORKER_COMPOSE_PROJECT="amtgard-denarius-worker"
+GB_WORKER_COMPOSE_FILES="docker/compose.worker.yml"
+GB_WORKER_COMPOSE_DEV_FILES="docker/compose.worker.dev.yml"
+GB_WORKER_CONTAINER="amtgard-denarius-ledger-worker"
+
+GB_APP_INSTALL="composer-phinx"
+GB_HOOK_AFTER_SLOT_UP="scripts/gb-after-slot-up.sh"
+GB_HOOK_HEV_AFTER_RENDER="scripts/gb-hev-after-render.sh"
+GB_HOOK_PRE_DEPLOY="scripts/gb-pre-hev-sync.sh"
+
+# host-env-vault (local dev-shared tree). Override GB_HEV_VAULT_ROOT / GB_HEV_CONFIG if needed.
+# GB_HEV_VAULT_ROOT="/absolute/path/to/host-env-vault/Untitled"
+# GB_HEV_CONFIG="${GB_HEV_VAULT_ROOT}/dev-shared/host-config.toml"
+# GB_HEV_REPO="${GB_HEV_VAULT_ROOT}"
+
+GB_HEV_PROFILES="denarius-web denarius-worker denarius-connect"
+GB_HEV_SYNC_ON_DEV_UP="1"
+GB_HEV_RENDER_ON_DEV_UP="1"
+GB_HEV_SYNC_ON_DEPLOY="0"
+GB_HEV_RENDER_ON_DEPLOY="0"
+GB_HEV_SYNC_SOURCE="local"
+GB_HEV_SYNC_STRICT="0"
+
+GB_HEV_MOUNT_MAP="denarius-web:DENARIUS_HEV_WEB_SECRETS denarius-worker:DENARIUS_HEV_WORKER_SECRETS denarius-connect:DENARIUS_HEV_CONNECT_SECRETS"
+
+# Dev deploy does not run GB_HOOK_PRE_DEPLOY; refresh catalog before gb runs HEV sync/render.
+bash "${GB_ROOT}/scripts/gb-pre-hev-sync.sh"

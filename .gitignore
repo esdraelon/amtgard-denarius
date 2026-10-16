@@ -1,4 +1,7 @@
 .env
+.greenblue
+.gb/
+dev-shared/
 provider.env
 data/ork-kingdoms.json
 .idea

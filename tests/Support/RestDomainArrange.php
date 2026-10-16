@@ -63,6 +63,71 @@ final class RestDomainArrange
         self::run(ProviderSetupTest::class, 'testHiddenLineAndEnvFragmentKeepSecretsOutOfTheTerminal');
         self::run(ProviderSetupTest::class, 'testConsoleIoHidesInputOnlyOnATerminal');
         self::run(ProviderSetupTest::class, 'testCurlClientUsesAFetcherOrTheNetwork');
+        self::exerciseHostEnv();
+    }
+
+    private static function exerciseHostEnv(): void
+    {
+        $root = sys_get_temp_dir() . '/denarius-rest-hev-' . bin2hex(random_bytes(4));
+        mkdir($root, 0700, true);
+        $webDir = $root . '/web';
+        mkdir($webDir . '/files', 0700, true);
+        file_put_contents($webDir . '/secrets.env', "VAULT_ONLY_KEY=from-vault\n");
+        file_put_contents($webDir . '/files/teller.pem', "pem-bytes\n");
+
+        $priorHostEnv = getenv('HOST_ENV_SECRETS_DIR');
+        putenv('HOST_ENV_SECRETS_DIR=' . $webDir);
+        $_ENV['HOST_ENV_SECRETS_DIR'] = $webDir;
+        \Amtgard\Denarius\Utilities\Setup\HostEnv\HostEnvBootstrap::builder()->build()->applyFromProcessEnv();
+
+        $connectDir = $root . '/connect';
+        mkdir($connectDir, 0700, true);
+        file_put_contents($connectDir . '/secrets.env', "STRIPE_SECRET_KEY=sk_test_log\nRUNTIME_KEY=connect-inject\n");
+
+        \Amtgard\Denarius\Utilities\Setup\HostEnv\InjectedSecretsLoader::builder()->build()
+            ->secretsDir($root . '/missing')
+            ->applyMissing();
+
+        $gateway = \Amtgard\Denarius\Utilities\Setup\HostEnv\HostEnvRuntimeSecretGateway::builder()->build()
+            ->injectFallbackDirs(['denarius-connect' => $connectDir]);
+        $gateway->fetchEnv('denarius-connect', 'RUNTIME_KEY');
+
+        $supplier = new \Amtgard\Denarius\Utilities\Setup\HostEnv\HostEnvStripeConnectSecretSupplier(
+            $gateway,
+            'denarius-connect',
+        );
+        $supplier->stripeSecretKey();
+
+        $client = \Amtgard\HostEnvVault\RuntimeVaultClient::builder()->build()->socketPath('/tmp/unused.sock');
+        $client->transport(new \Amtgard\Denarius\Tests\Unit\FakeRuntimeTransport(['RUNTIME_KEY' => 'runtime-value']));
+        $socketGateway = \Amtgard\Denarius\Utilities\Setup\HostEnv\HostEnvRuntimeSecretGateway::builder()->build()
+            ->runtimeDir('/run/host-env-vault')
+            ->client($client);
+        $socketGateway->fetchEnv('denarius-connect', 'RUNTIME_KEY');
+
+        if ($priorHostEnv === false) {
+            putenv('HOST_ENV_SECRETS_DIR');
+            unset($_ENV['HOST_ENV_SECRETS_DIR']);
+        } else {
+            putenv('HOST_ENV_SECRETS_DIR=' . $priorHostEnv);
+            $_ENV['HOST_ENV_SECRETS_DIR'] = $priorHostEnv;
+        }
+        self::rmTree($root);
+    }
+
+    private static function rmTree(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+        foreach (scandir($dir) ?: [] as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $path = $dir . '/' . $item;
+            is_dir($path) ? self::rmTree($path) : unlink($path);
+        }
+        rmdir($dir);
     }
 
     private static function exerciseTaxonomyDomain(): void

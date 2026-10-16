@@ -30,7 +30,7 @@ Outbound calls to real Stripe, Plaid, Teller, SimpleFIN, ORK, or production IdP 
 | Routes | 36 in `config/routes.php` |
 | HTTP integ | **None** — no `phpunit.integ.xml`, no `composer integ` |
 | `tests/Integration/` | 3 classes, MariaDB/persistence only (included in `composer test`) |
-| Docker | `scripts/dev-up.sh`; integ DB/Redis in `docker/compose.integ-infra.yml` (C1); web overlay + `scripts/integ*.sh` (C2) |
+| Docker | `gb … deploy` (`.greenblue`); integ DB/Redis in `docker/compose.integ-infra.yml` (C1); web overlay + `scripts/integ*.sh` (C2) |
 
 ## Architecture target
 

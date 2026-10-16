@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Amtgard\Denarius\Service\Enrollment;
 
+use Amtgard\Denarius\Contract\StripeConnectSecretSupplier;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\LedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Optional\Optional;
 
@@ -41,9 +44,9 @@ final class BankConnect
      * @param array<string, mixed> $body
      * @return array<string, mixed>
      */
-    public function launch(string $kingdomKey, array $body): array
+    public function launch(string $kingdomKey, array $body, ?StripeConnectSecretSupplier $stripeConnectSecret = null): array
     {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdomKey, $body): array {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdomKey, $body, $stripeConnectSecret): array {
             $skipped = $this->skipped($body);
             $provider = $this->providers->next($skipped);
             if ($provider->id() === '') {
@@ -58,7 +61,7 @@ final class BankConnect
                 'reason' => '',
                 'provider' => $id,
                 'skipped' => $skipped,
-                'config' => $provider->connectConfig($kingdomKey),
+                'config' => $this->connectConfig($provider, $kingdomKey, $stripeConnectSecret),
             ];
         });
     }
@@ -156,5 +159,17 @@ final class BankConnect
                 'config' => [],
             ];
         });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function connectConfig(LedgerProvider $provider, string $kingdomKey, ?StripeConnectSecretSupplier $stripeConnectSecret): array
+    {
+        if ($provider->id() === 'stripe' && $stripeConnectSecret !== null && $provider instanceof StripeLedgerProvider) {
+            return $provider->connectConfigForPlatformSecret($kingdomKey, $stripeConnectSecret->stripeSecretKey());
+        }
+
+        return $provider->connectConfig($kingdomKey);
     }
 }

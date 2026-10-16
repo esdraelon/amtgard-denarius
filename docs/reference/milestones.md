@@ -317,7 +317,7 @@ Work uses **stacked git branches** (one branch per milestone, each stacked on th
 ## Dev docker networks and env (I1)
 
 - Branch: `publication/i01-dev-docker-networks` (stacked on `publication/p09-admin-principal-suggester`).
-- Dev web and worker compose files load `.env` through `env_file`; the dev web container joins `amtgard-denarius-net` and the external `amtgard-denarius-shared`, and the worker joins both so it reaches MariaDB and Redis. `scripts/dev-up.sh` is executable. `.env.example` documents the worker network requirement and optional `IDP_SUGGEST_EMAIL_DOMAINS`. The test database, MariaDB init script, and bundled ORK kingdoms were already on the stack. C2 (removing single-row publish/withhold/update routes) skipped: the per-row category form still posts to `/transactions/update`, and single-row publish reports embargo/category errors the batch apply skips.
+- Dev web and worker compose files load `.env` through `env_file`; the dev web container joins `amtgard-denarius-net` and the external `amtgard-denarius-shared`, and the worker joins both so it reaches MariaDB and Redis. Local stack start is **`gb … deploy`** via `.greenblue`. `.env.example` documents the worker network requirement and optional `IDP_SUGGEST_EMAIL_DOMAINS`. The test database, MariaDB init script, and bundled ORK kingdoms were already on the stack. C2 (removing single-row publish/withhold/update routes) skipped: the per-row category form still posts to `/transactions/update`, and single-row publish reports embargo/category errors the batch apply skips.
 - Line coverage: 95.74% (6723/7022).
 - Infection covered MSI: not re-run (no `src/` change).
 
@@ -744,6 +744,15 @@ Suggested stack (one branch each):
 - A3: `AaroTransactionReadDriver` + `TRANSACTION_READ_DRIVER=aaro` toggle; **PDO remains default**.
 - A4: Docker benchmark @ 2000 rows — AARO list p95 **16.57×** PDO; **no cutover** ([benchmark log](../planning/aaro-pdo-migration-benchmarks.md)).
 - Docs: [aaro-pdo-migration-plan.md](../planning/aaro-pdo-migration-plan.md), [checklist](../planning/aaro-pdo-migration-checklist.md).
+
+## Host-env local dev (`stack/host-env-local-dev`)
+
+- Branch: `stack/host-env-local-dev`
+- Local dev uses **generic-green-blue** only (`GB_MODE=dev`, `gb … deploy`; templates `.greenblue.example.dev` / `.greenblue.example.prod`) with **host-env-vault** sync/render for `denarius-web`, `denarius-worker`, and `denarius-connect`. `GB_HEV_MOUNT_MAP` writes `{repo}/.gb/runtime.env` for compose mounts; bootstrap loads `secrets.env` via **Dotenv safeLoad** after `.env`. Prod: `gb /var/www/denarius.amtgard.com deploy`. Stripe **connect** uses `StripeConnectSecretSupplier` on `ManagerController` + `HostEnvRuntimeSecretGateway`.
+- Catalog fragment and secret templates: `host-env/` (copy into shared `dev-shared/` per `host-env/README.md`).
+- Line coverage: 91.62% (8030/8764); project gate still below 95% (pre-existing).
+- Infection: not run (same baseline as post-pr-3-hygiene).
+- Log-tested: `host_env_inject_skip`, `host_env_inject_applied`, `host_env_runtime_applied` in `HostEnvBootstrapTest`.
 
 ## Post-PR-3 hygiene (`post-pr-3-hygiene`)
 

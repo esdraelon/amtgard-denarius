@@ -12,7 +12,12 @@ use Amtgard\Denarius\Domain\Bank\Notice\Impl\DisconnectLedgerNotice;
 use Amtgard\Denarius\Domain\Bank\Notice\LedgerNoticeRegistry;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\LedgerProvider;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
+use Amtgard\Denarius\Contract\HostEnvRuntimeSecret;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AnyProviderReady;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\PresentCredentials;
+use Amtgard\Denarius\Contract\StripeConnectSecretSupplier;
+use Amtgard\Denarius\Utilities\Setup\HostEnv\HostEnvRuntimeSecretGateway;
+use Amtgard\Denarius\Utilities\Setup\HostEnv\HostEnvStripeConnectSecretSupplier;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Support\PreviousMonthWindow;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\ProviderAdmission;
 use Amtgard\Denarius\Domain\Bank\Notice\Impl\RefreshLedgerNotice;
@@ -280,6 +285,21 @@ return array_merge(
         denariusEnv('TELLER_APPLICATION_ID'),
         denariusEnv('TELLER_ENVIRONMENT') !== '' ? denariusEnv('TELLER_ENVIRONMENT') : 'sandbox',
     ),
+    HostEnvRuntimeSecret::class => function (): HostEnvRuntimeSecret {
+        $connectProfile = denariusEnv('DENARIUS_HEV_CONNECT_PROFILE') !== ''
+            ? denariusEnv('DENARIUS_HEV_CONNECT_PROFILE')
+            : 'denarius-connect';
+        $connectSecrets = denariusEnv('DENARIUS_HEV_CONNECT_SECRETS');
+        $fallbacks = $connectSecrets !== '' ? [$connectProfile => $connectSecrets] : [];
+
+        return HostEnvRuntimeSecretGateway::builder()->build()
+            ->runtimeDir(denariusEnv('HOST_ENV_VAULT_RUNTIME_DIR'))
+            ->injectFallbackDirs($fallbacks);
+    },
+    StripeConnectSecretSupplier::class => fn (ContainerInterface $c) => new HostEnvStripeConnectSecretSupplier(
+        $c->get(HostEnvRuntimeSecret::class),
+        denariusEnv('DENARIUS_HEV_CONNECT_PROFILE') !== '' ? denariusEnv('DENARIUS_HEV_CONNECT_PROFILE') : 'denarius-connect',
+    ),
     StripeWebhookVerifier::class => fn () => new StripeWebhookVerifier(denariusEnv('STRIPE_WEBHOOK_SECRET')),
     StripeTransactionRefreshWait::class => fn (ContainerInterface $c) => new StripeTransactionRefreshWait(
         $c->get(StripeApi::class),
@@ -288,10 +308,14 @@ return array_merge(
         $c->get(StripeApi::class),
         $c->get(StripeWebhookVerifier::class),
         StripeLedgerProvider::actions(),
-        new PresentCredentials([denariusEnv('STRIPE_SECRET_KEY')]),
+        new AnyProviderReady([
+            new PresentCredentials([denariusEnv('STRIPE_SECRET_KEY')]),
+            new PresentCredentials([denariusEnv('STRIPE_PUBLISHABLE_KEY')]),
+        ]),
         new PreviousMonthWindow(new DateTimeImmutable('now')),
         $c->get(StripeTransactionRefreshWait::class),
-        $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '',
+        denariusEnv('STRIPE_PUBLISHABLE_KEY'),
+        denariusEnv('STRIPE_API_BASE') !== '' ? denariusEnv('STRIPE_API_BASE') : 'https://api.stripe.com',
     ),
     PlaidWebhookVerifier::class => fn (ContainerInterface $c) => new PlaidWebhookVerifier($c->get(PlaidApi::class)),
     PlaidLedgerProvider::class => fn (ContainerInterface $c) => new PlaidLedgerProvider(
@@ -302,7 +326,10 @@ return array_merge(
         new PreviousMonthWindow(new DateTimeImmutable('now')),
     ),
     LedgerProviderRegistry::class => fn (ContainerInterface $c) => (new ConfiguredLedgerProviders([
-        new ProviderAdmission($c->get(StripeLedgerProvider::class), new PresentCredentials([denariusEnv('STRIPE_SECRET_KEY')])),
+        new ProviderAdmission($c->get(StripeLedgerProvider::class), new AnyProviderReady([
+            new PresentCredentials([denariusEnv('STRIPE_SECRET_KEY')]),
+            new PresentCredentials([denariusEnv('STRIPE_PUBLISHABLE_KEY')]),
+        ])),
         new ProviderAdmission($c->get(PlaidLedgerProvider::class), new PresentCredentials([denariusEnv('PLAID_CLIENT_ID'), denariusEnv('PLAID_SECRET')])),
         new ProviderAdmission($c->get(LedgerProvider::class), new PresentCredentials([denariusEnv('TELLER_APPLICATION_ID')])),
         new ProviderAdmission($c->get(SimpleFinLedgerProvider::class), new PresentCredentials([
@@ -705,6 +732,7 @@ return array_merge(
         $c->get(ManageKingdomAccess::class),
         $c->get(ManagePagePresenter::class),
         $c->get(ManageCsrfGuard::class),
+        $c->get(StripeConnectSecretSupplier::class),
     ),
     WebhookController::class => fn (ProviderWebhookHandler $handler) => new WebhookController($handler),
     LedgerWorker::class => fn (ContainerInterface $c) => new LedgerWorker(

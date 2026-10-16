@@ -1,0 +1,16 @@
+{
+  "profiles": [
+    {
+      "name": "denarius-web",
+      "gid": 33
+    },
+    {
+      "name": "denarius-worker",
+      "gid": 33
+    },
+    {
+      "name": "denarius-connect",
+      "gid": 33
+    }
+  ]
+}

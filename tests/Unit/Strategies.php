@@ -45,7 +45,9 @@ use Amtgard\Denarius\Service\Ledger\KingdomPatternReviewWizard;
 use Amtgard\Denarius\Service\Ledger\LedgerProviderIdResolver;
 use Amtgard\Denarius\Service\Ledger\TransactionCategoryApplier;
 use Amtgard\Denarius\Service\Ledger\TransactionPublicationApplier;
+use Amtgard\Denarius\Contract\StripeConnectSecretSupplier;
 use Amtgard\Denarius\Tests\Support\CategorizationArrange;
+use Amtgard\Denarius\Tests\Support\UnreachableStripeConnectSecretSupplier;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewQueue;
 use Amtgard\Denarius\Service\Ledger\TransactionReviewService;
 use Amtgard\Denarius\Service\Ledger\TransactionSynchronizer;
@@ -449,6 +451,11 @@ final class Strategies
     public static function manageCsrfGuard(\Amtgard\Denarius\Utilities\Http\TwigHtmlRenderer $html): \Amtgard\Denarius\Controller\ManageCsrfGuard
     {
         return new \Amtgard\Denarius\Controller\ManageCsrfGuard($html);
+    }
+
+    public static function stripeConnectSecret(): StripeConnectSecretSupplier
+    {
+        return new UnreachableStripeConnectSecretSupplier();
     }
 
     public static function manageKingdomAccess(
