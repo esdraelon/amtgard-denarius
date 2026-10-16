@@ -113,6 +113,7 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::manageKingdomAccess($twig, $kingdoms, $permissions, $auth),
             Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
             Strategies::manageCsrfGuard($twig),
+            Strategies::stripeConnectSecret(),
         );
     }
 
@@ -184,6 +185,7 @@ final class ManageConnectTest extends AmtgardTestCase
             Strategies::manageKingdomAccess($guestTwig, $guestKingdoms, $guestPermissions, $guestAuth),
             Strategies::managePagePresenter($guestTwig, $guestKingdoms, $guestAccounts, $guestTransactions),
             Strategies::manageCsrfGuard($guestTwig),
+            Strategies::stripeConnectSecret(),
         );
         $this->assertSame(302, $guest->connect($this->request('POST', '/manage/golden-plains/connect', ['csrf' => 'token']), new Response(), 'golden-plains')->getStatusCode());
     }

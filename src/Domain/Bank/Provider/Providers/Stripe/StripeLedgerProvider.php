@@ -12,6 +12,7 @@ use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderAccount;
 use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderNotice;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\ProviderReady;
 use Amtgard\Denarius\Domain\Bank\Enrollment\ProviderTransaction;
+use Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi;
 use Amtgard\Denarius\Domain\Statement\Line\Money;
 use Amtgard\Denarius\Utilities\Log\DenariusLog;
 use Optional\Optional;
@@ -29,6 +30,9 @@ final class StripeLedgerProvider implements LedgerProvider
         private readonly PreviousMonthWindow $window,
         private readonly StripeTransactionRefreshWait $refreshWait,
         private readonly string $publishableKey = '',
+        private readonly string $stripeApiBase = 'https://api.stripe.com',
+        /** @var (\Closure(string): StripeApi)|null */
+        private readonly ?\Closure $platformConnectApiFactory = null,
     ) {
         $entered = DenariusLog::enter(__METHOD__);
     }
@@ -60,18 +64,36 @@ final class StripeLedgerProvider implements LedgerProvider
 
     public function connectConfig(string $kingdomKey): array
     {
-        return DenariusLog::trace(__METHOD__, function () use ($kingdomKey): array {
-            $customerId = $this->required($this->api->createCustomer($kingdomKey), 'id', 'Stripe did not return a customer.');
-            $clientSecret = $this->required($this->api->createSession($customerId), 'client_secret', 'Stripe did not return a session.');
+        return DenariusLog::trace(__METHOD__, fn (): array => $this->buildConnectConfig($this->api, $kingdomKey));
+    }
 
-            return [
-                'provider' => $this->id(),
-                'clientSecret' => $clientSecret,
-                'customerId' => $customerId,
-                'publishableKey' => $this->publishableKey,
-                'kingdomKey' => $kingdomKey,
-            ];
+    public function connectConfigForPlatformSecret(string $kingdomKey, string $platformSecret): array
+    {
+        return DenariusLog::trace(__METHOD__, function () use ($kingdomKey, $platformSecret): array {
+            $factory = $this->platformConnectApiFactory;
+            $connect = $factory !== null
+                ? $factory($platformSecret)
+                : new CurlStripeApi($this->stripeApiBase, $platformSecret);
+
+            return $this->buildConnectConfig($connect, $kingdomKey);
         });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildConnectConfig(StripeApi $connect, string $kingdomKey): array
+    {
+        $customerId = $this->required($connect->createCustomer($kingdomKey), 'id', 'Stripe did not return a customer.');
+        $clientSecret = $this->required($connect->createSession($customerId), 'client_secret', 'Stripe did not return a session.');
+
+        return [
+            'provider' => $this->id(),
+            'clientSecret' => $clientSecret,
+            'customerId' => $customerId,
+            'publishableKey' => $this->publishableKey,
+            'kingdomKey' => $kingdomKey,
+        ];
     }
 
     public function enrollment(array $payload): ConnectedEnrollment

@@ -96,6 +96,7 @@ final class TracedPersistenceMethodsTest extends AmtgardTestCase
         $transactions->upsert(TransactionRecord::builder()->kingdomId(1)->tellerTransactionId('t')->tellerAccountId('acc')->postedOn('2026-09-02')->amountCents(100)->categoryId(\Amtgard\Denarius\Tests\Support\CategoryCatalogFixture::id('office'))->build());
 
         PersistenceStoreArrange::exerciseRepositories();
+        PersistenceStoreArrange::exerciseRepositoryCleanup(1);
 
         $scope = $this->methodsInScope();
         $this->assertCount(111, $scope);

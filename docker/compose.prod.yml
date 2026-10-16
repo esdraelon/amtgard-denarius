@@ -7,10 +7,17 @@ services:
     volumes:
       - ./.env:/var/www/denarius.amtgard.com/.env:ro
       - ./keys:/var/www/denarius.amtgard.com/keys:ro
+      - ${DENARIUS_HEV_WEB_SECRETS:-./.local/empty-secrets}:/run/secrets:ro
+      - ${DENARIUS_HEV_CONNECT_SECRETS:-./.local/empty-secrets}:/run/secrets-connect:ro
+      - ${HOST_ENV_VAULT_RUNTIME_DIR:-./.local/empty-runtime}:/run/host-env-vault:ro
     env_file:
       - .env
     environment:
       - ENVIRONMENT=PROD
+      - HOST_ENV_SECRETS_DIR=/run/secrets
+      - DENARIUS_HEV_CONNECT_SECRETS=/run/secrets-connect
+      - HOST_ENV_VAULT_RUNTIME_DIR=/run/host-env-vault
+      - DENARIUS_HEV_CONNECT_PROFILE=denarius-connect
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

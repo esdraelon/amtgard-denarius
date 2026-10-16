@@ -8,6 +8,8 @@ require __DIR__ . '/../vendor/autoload.php';
 
 Dotenv\Dotenv::createMutable(__DIR__ . '/..')->safeLoad();
 
+require __DIR__ . '/host-env-bootstrap.php';
+
 $debug = ($_ENV['APP_DEBUG'] ?? 'false') === 'true';
 error_reporting($debug ? (E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED) : (E_ERROR | E_PARSE));
 ini_set('display_errors', $debug ? '1' : '0');

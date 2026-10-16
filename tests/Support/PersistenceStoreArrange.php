@@ -275,7 +275,9 @@ final class PersistenceStoreArrange
         $transactions->forKingdom((int) $saved->getId());
         $transactions->forKingdomPublished((int) $saved->getId());
         Orm::repository(OrmTransactionRepository::class)->recordsForKingdom((int) $saved->getId());
-        (new AaroTransactionReadDriver(Orm::repository(OrmTransactionRepository::class)))->listForKingdom((int) $saved->getId());
+        $aaroRead = new AaroTransactionReadDriver(Orm::repository(OrmTransactionRepository::class));
+        $aaroRead->listForKingdom((int) $saved->getId());
+        $aaroRead->findByTellerTransactionId('txn-rent');
         $transactions->markPublished((int) $saved->getId(), 'txn-grocery', '2026-09-05T12:00:00+00:00');
         $transactions->markUnpublished((int) $saved->getId(), 'txn-grocery');
 
@@ -326,10 +328,14 @@ final class PersistenceStoreArrange
         $lineageRows = Orm::repository(CategoryLineageRepository::class);
         $lineageRows->insertLineage($benchLineage, $benchCategoryId);
         $lineageRows->setCurrentCategoryId($benchLineage, $benchCategoryId);
+    }
 
-        $kingdomId = (int) $saved->getId();
-        $transactions->removeAllForKingdom($kingdomId);
-        $accounts->removeAllForKingdom($kingdomId);
-        $secrets->removeForKingdom($kingdomId);
+    /** Exercises kingdom-scoped delete paths (method-log catalog); not for StoreTest assertions. */
+    public static function exerciseRepositoryCleanup(int $kingdomId): void
+    {
+        Orm::configure(true);
+        self::transactionRepository()->removeAllForKingdom($kingdomId);
+        Orm::repository(AccountRepository::class)->removeAllForKingdom($kingdomId);
+        Orm::repository(SecretRepository::class)->removeForKingdom($kingdomId);
     }
 }

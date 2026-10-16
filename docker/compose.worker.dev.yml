@@ -6,9 +6,11 @@ services:
       dockerfile: docker/Dockerfile.dev
     volumes:
       - .:/var/www/denarius.amtgard.com
+      - ${DENARIUS_HEV_WORKER_SECRETS:-./.local/empty-secrets}:/run/secrets:ro
     env_file:
       - .env
     environment:
+      - HOST_ENV_SECRETS_DIR=/run/secrets
       - ENVIRONMENT=DEV
       - XDEBUG_MODE=off
     command:

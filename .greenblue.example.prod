@@ -1,0 +1,70 @@
+# Production blue-green at /var/www/denarius.amtgard.com. Copy to .greenblue (do not commit).
+#
+#   /var/gb/generic-green-blue-deployment/bin/gb /var/www/denarius.amtgard.com deploy
+#   /var/gb/generic-green-blue-deployment/bin/gb /var/www/denarius.amtgard.com revert
+#
+# With host-env-vault (recommended):
+#   /var/gb/generic-green-blue-deployment/bin/gb \
+#     --hev-config /etc/host-env-vault/config.toml \
+#     /var/www/denarius.amtgard.com deploy
+
+GB_MODE="prod"
+
+GB_PROJECT_NAME="amtgard-denarius"
+GB_CONTAINER_APP_DIR="/var/www/denarius.amtgard.com"
+GB_COMPOSE_SERVICE="denariusapp"
+
+GB_LEGACY_CONTAINER="amtgard-denarius"
+GB_BLUE_CONTAINER="amtgard-denarius-blue"
+GB_GREEN_CONTAINER="amtgard-denarius-green"
+GB_BLUE_PORT="37180"
+GB_GREEN_PORT="37181"
+
+GB_WEB_COMPOSE_PROJECT="amtgard-denarius"
+GB_WEB_COMPOSE_BASE="docker/compose.prod.yml"
+GB_WEB_COMPOSE_SLOT="docker/compose.%slot%.yml"
+GB_WEB_COMPOSE_DEV="docker/compose.dev.yml"
+GB_SHARED_NETWORK="amtgard-denarius-shared"
+GB_STATE_DIR="/var/lib/amtgard-denarius"
+
+GB_NGINX_STRATEGY="site-file"
+GB_NGINX_SITE_NAME="denarius.amtgard.com"
+GB_NGINX_TEMPLATE="host/nginx.%slot%.conf"
+
+GB_DEV_STACKS="sessions web worker"
+GB_DEPLOY_STACKS="sessions web worker"
+
+GB_SESSIONS_COMPOSE_PROJECT="amtgard-denarius-sessions"
+GB_SESSIONS_COMPOSE_FILES="docker/compose.sessions.yml"
+GB_SESSIONS_COMPOSE_DEV_FILES="docker/compose.sessions.dev.yml"
+GB_SESSIONS_CONTAINER="amtgard-denarius-sessions"
+GB_WORKER_COMPOSE_PROJECT="amtgard-denarius-worker"
+GB_WORKER_COMPOSE_FILES="docker/compose.worker.yml"
+GB_WORKER_COMPOSE_DEV_FILES="docker/compose.worker.dev.yml"
+GB_WORKER_CONTAINER="amtgard-denarius-ledger-worker"
+
+GB_APP_INSTALL="composer-phinx"
+GB_GIT_BRANCH="main"
+GB_SESSION_REDIS_DB="1"
+
+GB_HOOK_AFTER_SLOT_UP="scripts/gb-after-slot-up.sh"
+GB_HOOK_HEV_AFTER_RENDER="scripts/gb-hev-after-render.sh"
+GB_HOOK_PRE_DEPLOY="scripts/gb-pre-hev-sync.sh"
+
+# Production vault (SSM). Set absolute paths on the host.
+# GB_HEV_CONFIG="/etc/host-env-vault/config.toml"
+# GB_HEV_VAULT_ROOT="/var/lib/host-env-vault"
+# GB_HEV_RENDER_ROOT="/var/lib/host-env-vault/run"
+
+GB_HEV_PROFILES="denarius-web denarius-worker denarius-connect"
+GB_HEV_SYNC_ON_DEV_UP="0"
+GB_HEV_RENDER_ON_DEV_UP="0"
+GB_HEV_SYNC_ON_DEPLOY="1"
+GB_HEV_RENDER_ON_DEPLOY="1"
+# Omit GB_HEV_SYNC_SOURCE on SSM hosts (default).
+
+GB_HEV_MOUNT_MAP="denarius-web:DENARIUS_HEV_WEB_SECRETS denarius-worker:DENARIUS_HEV_WORKER_SECRETS denarius-connect:DENARIUS_HEV_CONNECT_SECRETS"
+
+# Optional install flags (see generic-green-blue-deployment README):
+# GB_INSTALL_RESET_SESSIONS="1"
+# GB_INSTALL_REBUILD_SESSIONS="1"

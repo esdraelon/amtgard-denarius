@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "545dfadbaddd1b99a8a32779c4dbdd2b",
+    "content-hash": "24d8deaca779d893aee3ffac4b2d8079",
     "packages": [
         {
             "name": "amtgard/aaro-extensions",
@@ -232,6 +232,50 @@
                 "source": "https://github.com/amtgard/fuzzywuzzy/tree/v1.0.0"
             },
             "time": "2026-06-01T14:10:39+00:00"
+        },
+        {
+            "name": "amtgard/host-env-vault",
+            "version": "v0.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/esdraelon/host-env-vault-php.git",
+                "reference": "4b7b0358d413ff64e06fdfaf85345503aa3fc44a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/esdraelon/host-env-vault-php/zipball/4b7b0358d413ff64e06fdfaf85345503aa3fc44a",
+                "reference": "4b7b0358d413ff64e06fdfaf85345503aa3fc44a",
+                "shasum": ""
+            },
+            "require": {
+                "amtgard/builder-traits": "^2.0",
+                "ext-sockets": "*",
+                "jedibc/optional": "^1.0",
+                "php": "^8.4",
+                "psr/log": "^3.0"
+            },
+            "require-dev": {
+                "infection/infection": "^0.29",
+                "monolog/monolog": "^3.7",
+                "phpunit/phpunit": "^11.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Amtgard\\HostEnvVault\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Runtime-mode unix socket client for host-env-vault profiles.",
+            "homepage": "https://github.com/esdraelon/host-env-vault-php",
+            "support": {
+                "issues": "https://github.com/esdraelon/host-env-vault-php/issues",
+                "source": "https://github.com/esdraelon/host-env-vault-php/tree/v0.1.0"
+            },
+            "time": "2026-10-16T15:10:08+00:00"
         },
         {
             "name": "amtgard/idp-php-client",
@@ -7302,12 +7346,13 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.3",
+        "php": "^8.4",
         "ext-curl": "*",
         "ext-json": "*",
         "ext-openssl": "*",
         "ext-pdo": "*",
-        "ext-redis": "*"
+        "ext-redis": "*",
+        "ext-sockets": "*"
     },
     "platform-dev": {},
     "plugin-api-version": "2.9.0"

@@ -6,6 +6,8 @@ namespace Amtgard\Denarius\Tests\Support;
 
 use Amtgard\Denarius\Domain\Bank\Notice\Impl\IgnoredLedgerNotice;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Impl\MissingLedgerProvider;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AlwaysReady;
+use Amtgard\Denarius\Domain\Bank\Provider\Framework\Readiness\Impl\AnyProviderReady;
 use Amtgard\Denarius\Domain\Bank\Provider\Framework\Registry\LedgerProviderRegistry;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\Plaid\Impl\CurlPlaidApi;
 use Amtgard\Denarius\Domain\Bank\Provider\Providers\SimpleFin\Impl\CurlSimpleFinApi;
@@ -59,6 +61,40 @@ final class BankDomainArrange
         self::exerciseTellerHttpClients();
         self::exerciseCurlFetchPaths();
         self::exerciseIntegProviderStubs();
+        self::exerciseAnyProviderReady();
+    }
+
+    private static function exerciseAnyProviderReady(): void
+    {
+        $ready = new AnyProviderReady([new AlwaysReady()]);
+        $ready->ready();
+        self::exerciseStripePlatformConnectConfig();
+    }
+
+    private static function exerciseStripePlatformConnectConfig(): void
+    {
+        $fetcher = static function (string $method, string $url, array $fields): string {
+            if (str_contains($url, '/v1/customers')) {
+                return '{"id":"cus_platform"}';
+            }
+
+            return '{"client_secret":"cs_platform"}';
+        };
+        $provider = new \Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider(
+            new \Amtgard\Denarius\Tests\Unit\ScriptedStripe(),
+            new \Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeWebhookVerifier('whsec', 300),
+            \Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeLedgerProvider::actions(),
+            new AlwaysReady(),
+            new \Amtgard\Denarius\Domain\Bank\Provider\Framework\Support\PreviousMonthWindow(new \DateTimeImmutable('@1758000000')),
+            new \Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeTransactionRefreshWait(new \Amtgard\Denarius\Tests\Unit\ScriptedStripe(), pollMicros: 0, timeoutSeconds: 1),
+            'pk_test',
+            platformConnectApiFactory: static fn (string $secret): \Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\StripeApi => new \Amtgard\Denarius\Domain\Bank\Provider\Providers\Stripe\Impl\CurlStripeApi(
+                'https://api.stripe.com/',
+                $secret,
+                $fetcher,
+            ),
+        );
+        $provider->connectConfigForPlatformSecret('golden-plains', 'sk_test_platform');
     }
 
     private static function exerciseIntegProviderStubs(): void

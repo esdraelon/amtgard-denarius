@@ -83,6 +83,7 @@ final class ManagerControllerCategorySearchTest extends TestCase
             Strategies::manageKingdomAccess($twig, $kingdoms, $permissions, $auth),
             Strategies::managePagePresenter($twig, $kingdoms, $accounts, $transactions),
             Strategies::manageCsrfGuard($twig),
+            Strategies::stripeConnectSecret(),
         );
     }
 

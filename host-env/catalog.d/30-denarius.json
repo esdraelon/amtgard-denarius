@@ -1,0 +1,43 @@
+{
+  "profiles": [
+    {
+      "name": "denarius-web",
+      "inject": [
+        "DB_PASS",
+        "IDP_CLIENT_SECRET",
+        "STRIPE_PUBLISHABLE_KEY"
+      ],
+      "runtime": [],
+      "inject_files": [],
+      "runtime_files": [],
+      "socket": false
+    },
+    {
+      "name": "denarius-worker",
+      "inject": [
+        "APP_KEY",
+        "DB_PASS",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "PLAID_CLIENT_ID",
+        "PLAID_SECRET",
+        "TELLER_APPLICATION_ID",
+        "TELLER_WEBHOOK_SECRET",
+        "SIMPLEFIN_APP_ID",
+        "SIMPLEFIN_APP_TOKEN"
+      ],
+      "runtime": [],
+      "inject_files": ["teller.pem", "teller.key"],
+      "runtime_files": [],
+      "socket": false
+    },
+    {
+      "name": "denarius-connect",
+      "inject": ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"],
+      "runtime": [],
+      "inject_files": [],
+      "runtime_files": [],
+      "socket": false
+    }
+  ]
+}
