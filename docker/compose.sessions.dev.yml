@@ -1,4 +1,11 @@
+x-denarius-docker-logging: &denarius-docker-logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"
+
 services:
   sessions:
+    logging: *denarius-docker-logging
     ports:
       - "36390:6379"

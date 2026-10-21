@@ -48,6 +48,20 @@ Tier profiles match [docs/planning/security-architecture.md](../docs/planning/se
 
    Compose mount wiring comes from `GB_HEV_MOUNT_MAP` → `{repo}/.gb/runtime.env` (not application `.env`).
 
+## Host logs
+
+Application logs and log bundles are bind-mounted under **`${DENARIUS_HOST_LOG_DIR:-/var/log/amtgard-denarius}`** (see `docker/compose.*.yml`). Before the first deploy on a host:
+
+```bash
+sudo install -d -m 0755 /var/log/amtgard-denarius/{web-blue,web-green,worker,dev-web,dev-worker}
+sudo chown -R "$(id -un):$(id -gn)" /var/log/amtgard-denarius   # dev laptop; prod: www-data or container uid
+sudo cp host/logrotate/amtgard-denarius /etc/logrotate.d/amtgard-denarius
+```
+
+Each container also uses Docker **`json-file`** logging with **`max-size=100m`** and **`max-file=3`** (~300 MB cap on stdout/stderr). Optional **`host/logrotate/amtgard-denarius`** keeps on-disk JSONL **`rotate 3`** (daily).
+
+Production web and worker stacks set **`APP_DEBUG=false`** and **`LOG_SPOOL_ENABLED=false`** in compose so idle workers do not flood stderr.
+
 ## Production
 
 Copy `.greenblue.example.prod` to `/var/www/denarius.amtgard.com/.greenblue` on the host. Deploy from the toolkit install:

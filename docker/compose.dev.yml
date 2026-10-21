@@ -1,7 +1,14 @@
 name: amtgard-denarius
 
+x-denarius-docker-logging: &denarius-docker-logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"
+
 services:
   denariusapp:
+    logging: *denarius-docker-logging
     image: amtgard-denarius-dev
     build:
       context: .
@@ -10,6 +17,7 @@ services:
       - "41193:9003"
     volumes:
       - .:/var/www/denarius.amtgard.com
+      - ${DENARIUS_HOST_LOG_DIR:-/var/log/amtgard-denarius}/dev-web:/var/www/denarius.amtgard.com/logs
       - ${DENARIUS_HEV_WEB_SECRETS:-./.local/empty-secrets}:/run/secrets:ro
       - ${DENARIUS_HEV_CONNECT_SECRETS:-./.local/empty-secrets}:/run/secrets-connect:ro
       - ${HOST_ENV_VAULT_RUNTIME_DIR:-./.local/empty-runtime}:/run/host-env-vault:ro
@@ -32,6 +40,7 @@ services:
 
   test:
     profiles: ["test"]
+    logging: *denarius-docker-logging
     image: amtgard-denarius-dev
     build:
       context: .
@@ -52,6 +61,7 @@ services:
       - amtgard-denarius-net
 
   amtgarddenariusdb:
+    logging: *denarius-docker-logging
     image: mariadb:11
     restart: always
     environment:

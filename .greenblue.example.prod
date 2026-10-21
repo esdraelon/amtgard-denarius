@@ -1,4 +1,6 @@
 # Production blue-green at /var/www/denarius.amtgard.com. Copy to .greenblue (do not commit).
+# One-time: sudo install -d -m 0755 /var/log/amtgard-denarius/{web-blue,web-green,worker}
+#           sudo cp host/logrotate/amtgard-denarius /etc/logrotate.d/amtgard-denarius
 #
 #   /var/gb/generic-green-blue-deployment/bin/gb /var/www/denarius.amtgard.com deploy
 #   /var/gb/generic-green-blue-deployment/bin/gb /var/www/denarius.amtgard.com revert

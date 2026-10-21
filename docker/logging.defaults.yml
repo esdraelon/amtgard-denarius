@@ -1,0 +1,7 @@
+# Reference copy of the json-file rotation block (Compose anchors are file-local).
+# Keep in sync with x-denarius-docker-logging in docker/compose.*.yml.
+x-denarius-docker-logging: &denarius-docker-logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"

@@ -1,5 +1,12 @@
+x-denarius-docker-logging: &denarius-docker-logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"
+
 services:
   denariusapp:
+    logging: *denarius-docker-logging
     build:
       context: .
       dockerfile: docker/Dockerfile.prod
@@ -14,6 +21,9 @@ services:
       - .env
     environment:
       - ENVIRONMENT=PROD
+      - APP_DEBUG=false
+      - LOG_SPOOL_ENABLED=false
+      - LOG_ROOT=/var/www/denarius.amtgard.com/logs/bundles
       - HOST_ENV_SECRETS_DIR=/run/secrets
       - DENARIUS_HEV_CONNECT_SECRETS=/run/secrets-connect
       - HOST_ENV_VAULT_RUNTIME_DIR=/run/host-env-vault

@@ -1,12 +1,15 @@
+x-denarius-docker-logging: &denarius-docker-logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"
+
 services:
   denariusapp:
+    logging: *denarius-docker-logging
     ports:
       - "37181:80"
     container_name: amtgard-denarius-green
     hostname: amtgard-denarius-green
     volumes:
-      - amtgard-denarius-green-logs:/var/www/denarius.amtgard.com/logs
-
-volumes:
-  amtgard-denarius-green-logs:
-    name: amtgard-denarius-green-logs
+      - ${DENARIUS_HOST_LOG_DIR:-/var/log/amtgard-denarius}/web-green:/var/www/denarius.amtgard.com/logs

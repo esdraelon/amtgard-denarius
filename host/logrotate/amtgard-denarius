@@ -1,0 +1,12 @@
+# Install on the host: sudo cp host/logrotate/amtgard-denarius /etc/logrotate.d/amtgard-denarius
+/var/log/amtgard-denarius/*/*.jsonl
+/var/log/amtgard-denarius/*/*.log
+/var/log/amtgard-denarius/*/bundles/spool/*.jsonl {
+    daily
+    rotate 3
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}
