@@ -6,11 +6,16 @@ RUN apt-get update \
  && add-apt-repository -y ppa:ondrej/php && apt-get update \
  && apt-get install --no-install-recommends -y php8.4 \
  && apt-get install -y php8.4-fpm php8.4-cli php8.4-common php8.4-mysql php8.4-mbstring php8.4-curl php8.4-xml php8.4-memcached php8.4-redis php8.4-gd php8.4-xdebug \
+ && apt-get install -y --only-upgrade 'php8.4*' \
+ && php -r 'if (version_compare(PHP_VERSION, "8.4.27", "<")) { fwrite(STDERR, "Require PHP >= 8.4.27 (CVE-2026-109618/619), got ".PHP_VERSION.PHP_EOL); exit(1); }' \
  && sed -i 's/;\s*clear_env = no/clear_env = no/g' /etc/php/8.4/fpm/pool.d/www.conf \
  && sed -i 's/;\s*catch_workers_output = no/catch_workers_output = yes/g' /etc/php/8.4/fpm/pool.d/www.conf \
  && echo "env[ENVIRONMENT] = DEV" >> /etc/php/8.4/fpm/pool.d/www.conf \
  && sed -i 's/^variables_order = .*/variables_order = "EGPCS"/' /etc/php/8.4/fpm/php.ini /etc/php/8.4/cli/php.ini \
  && mkdir -p /var/www/denarius.amtgard.com
+
+COPY docker/php-security.ini /etc/php/8.4/fpm/conf.d/99-security.ini
+COPY docker/php-security.ini /etc/php/8.4/cli/conf.d/99-security.ini
 
 COPY docker/nginx.denarius.config /etc/nginx/sites-available/denarius.amtgard.com
 RUN rm /etc/nginx/sites-enabled/* \
