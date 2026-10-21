@@ -1,5 +1,12 @@
+x-denarius-docker-logging: &denarius-docker-logging
+  driver: json-file
+  options:
+    max-size: "100m"
+    max-file: "3"
+
 services:
   ledger-worker:
+    logging: *denarius-docker-logging
     image: amtgard-denarius-ledger-worker:latest
     container_name: amtgard-denarius-ledger-worker
     hostname: amtgard-denarius-ledger-worker
@@ -13,8 +20,12 @@ services:
       - ./.env:/var/www/denarius.amtgard.com/.env:ro
       - ./keys:/var/www/denarius.amtgard.com/keys:ro
       - ${DENARIUS_HEV_WORKER_SECRETS:-./.local/empty-secrets}:/run/secrets:ro
+      - ${DENARIUS_HOST_LOG_DIR:-/var/log/amtgard-denarius}/worker:/var/www/denarius.amtgard.com/logs
     environment:
       - HOST_ENV_SECRETS_DIR=/run/secrets
+      - APP_DEBUG=false
+      - LOG_SPOOL_ENABLED=false
+      - LOG_ROOT=/var/www/denarius.amtgard.com/logs/bundles
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

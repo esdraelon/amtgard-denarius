@@ -1,4 +1,6 @@
 # Dev stack (bind-mounted source). Copy to .greenblue at the repo root (do not commit).
+# One-time: sudo install -d -m 0755 /var/log/amtgard-denarius/{dev-web,dev-worker}
+#           sudo chown -R "$(id -un):$(id -gn)" /var/log/amtgard-denarius
 # Run from anywhere (project root = this repo, must contain .greenblue):
 #   /path/to/generic-green-blue-deployment/bin/gb /full/path/to/amtgard-denarius deploy
 # Or: cd /full/path/to/amtgard-denarius && gb "$PWD" deploy
