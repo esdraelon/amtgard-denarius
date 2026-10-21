@@ -745,6 +745,10 @@ Suggested stack (one branch each):
 - A4: Docker benchmark @ 2000 rows — AARO list p95 **16.57×** PDO; **no cutover** ([benchmark log](../planning/aaro-pdo-migration-benchmarks.md)).
 - Docs: [aaro-pdo-migration-plan.md](../planning/aaro-pdo-migration-plan.md), [checklist](../planning/aaro-pdo-migration-checklist.md).
 
+## PHP 8.4.27 security (`main`)
+
+- Docker images require **PHP >= 8.4.27** at build time (CVE-2026-109618, CVE-2026-109619 — unauthenticated RCE; see [PHP news 2026-10-21](https://www.php.net/archive/2026.php#2026-10-21-5)). `docker/php-security.ini` disables `session.upload_progress` in FPM/CLI; rebuild web and worker slots after pulling.
+
 ## Host-env local dev (`stack/host-env-local-dev`)
 
 - Branch: `stack/host-env-local-dev`
