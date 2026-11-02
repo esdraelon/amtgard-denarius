@@ -60,5 +60,9 @@ GB_HEV_SYNC_STRICT="0"
 
 GB_HEV_MOUNT_MAP="denarius-web:DENARIUS_HEV_WEB_SECRETS denarius-worker:DENARIUS_HEV_WORKER_SECRETS denarius-connect:DENARIUS_HEV_CONNECT_SECRETS"
 
+# Secrets posture: plaintext | local | host-store (see scripts/denarius-secrets-mode.sh)
+# shellcheck source=host-env/load-secrets-mode.sh disable=SC1091
+source "${GB_ROOT}/host-env/load-secrets-mode.sh"
+
 # Dev deploy does not run GB_HOOK_PRE_DEPLOY; refresh catalog before gb runs HEV sync/render.
 bash "${GB_ROOT}/scripts/gb-pre-hev-sync.sh"

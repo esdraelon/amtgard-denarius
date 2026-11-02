@@ -25,6 +25,12 @@ Shipped milestones, spikes, and test conventions. Cite when implementing; do not
 | [reference/logging-spike.md](reference/logging-spike.md) | Logging design spike (M-01, M-08 branches) |
 | [reference/method-log-tests.md](reference/method-log-tests.md) | Method trace catalog and PHPUnit gate tests |
 
+## Operations
+
+| Document | Description |
+|----------|-------------|
+| [deploy-gb-host-env-vault.md](deploy-gb-host-env-vault.md) | **gb** deploy, host-env-vault inject, local **host-store** migration |
+
 ## For agents
 
 1. **New feature work** → `planning/` + append outcomes to `reference/milestones.md` when a branch merges.

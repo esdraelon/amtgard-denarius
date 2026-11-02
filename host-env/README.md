@@ -1,5 +1,7 @@
 # Denarius + host-env-vault (local dev)
 
+**Operator runbook (gb + vault + host-store migration):** [docs/deploy-gb-host-env-vault.md](../docs/deploy-gb-host-env-vault.md).
+
 Tier profiles match [docs/planning/security-architecture.md](../docs/planning/security-architecture.md): **denarius-web**, **denarius-worker**, **denarius-connect**.
 
 ## One-time laptop setup
@@ -13,7 +15,11 @@ Tier profiles match [docs/planning/security-architecture.md](../docs/planning/se
 
 2. Denarius catalog fragment — `scripts/gb-pre-hev-sync.sh` (from `.greenblue` on dev load and prod `GB_HOOK_PRE_DEPLOY`) copies `host-env/catalog.d/30-denarius.json` into the vault’s `dev-shared/catalog.d/` and refreshes `secrets/catalog.json` when merge scripts exist.
 
-   **Local dev mode:** `host-config.toml` uses `[sync] source = "local"`. Match that with `GB_HEV_SYNC_SOURCE=local` in `.greenblue` (see `.greenblue.example.dev`).
+   **Local dev mode:** `host-config.toml` uses `[sync] source = "local"`. Match that with `GB_HEV_SYNC_SOURCE=local` in `.greenblue` (see `.greenblue.example.dev`), or run `scripts/denarius-secrets-mode.sh local`.
+
+   **Transition mode (encrypted host store):** after `scripts/migrate-denarius-secrets-to-host-store.sh INSTALL_DIR`, run `scripts/denarius-secrets-mode.sh host-store`. Uses `[sync] source = "host-store"` and SQLite profile files under `{state_dir}/store/` (see host-env-vault skill).
+
+   **Plaintext `.env` only:** `scripts/denarius-secrets-mode.sh plaintext` disables HEV sync/render/mounts for local gb.
 
    **macOS render:** omit `"gid"` in the laptop catalog (as in `30-denarius.json`) so `render` does not `chown root:www-data`. On Linux production hosts, add `"gid": 33` per profile (see `catalog.d/31-denarius-linux-gid.json.example`).
 
