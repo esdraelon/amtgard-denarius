@@ -10,6 +10,10 @@ RUN apt-get update \
  && php -r 'if (version_compare(PHP_VERSION, "8.4.27", "<")) { fwrite(STDERR, "Require PHP >= 8.4.27 (CVE-2026-109618/619), got ".PHP_VERSION.PHP_EOL); exit(1); }' \
  && sed -i 's/;\s*clear_env = no/clear_env = no/g' /etc/php/8.4/fpm/pool.d/www.conf \
  && echo "env[ENVIRONMENT] = PROD" >> /etc/php/8.4/fpm/pool.d/www.conf \
+ && echo "env[HOST_ENV_SECRETS_DIR] = /run/secrets" >> /etc/php/8.4/fpm/pool.d/www.conf \
+ && echo "env[DENARIUS_HEV_CONNECT_SECRETS] = /run/secrets-connect" >> /etc/php/8.4/fpm/pool.d/www.conf \
+ && echo "env[DENARIUS_HEV_CONNECT_PROFILE] = denarius-connect" >> /etc/php/8.4/fpm/pool.d/www.conf \
+ && echo "env[HOST_ENV_VAULT_RUNTIME_DIR] = /run/host-env-vault" >> /etc/php/8.4/fpm/pool.d/www.conf \
  && sed -i 's/^variables_order = .*/variables_order = "EGPCS"/' /etc/php/8.4/fpm/php.ini /etc/php/8.4/cli/php.ini \
  && mkdir -p /var/www/denarius.amtgard.com
 
