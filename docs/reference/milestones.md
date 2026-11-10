@@ -767,3 +767,9 @@ Suggested stack (one branch each):
 - A1/A2: `amtgard/active-record-orm` **1.7.0**; [aaro-1.7-performance-review.md](../planning/aaro-1.7-performance-review.md).
 - PHPUnit: 374 tests green; `./scripts/integ.sh` green on manage taxonomy/typeahead rows.
 - Project line coverage gate still ~92% (pre-existing vs 95% target).
+
+## Psalm 7 static analysis (`stack/psalm-7`)
+
+- Psalm **7.2** on `src/` with taint analysis; `psalm-baseline.xml` is **gitignored** (generate via `composer psalm:baseline`).
+- Scripts: `composer psalm`, `psalm:ci`, `psalm:security` (SARIF under `build/`).
+- Baseline ~2220 issues / 4443 XML lines (local only); `composer psalm` exit 0 with baseline.
