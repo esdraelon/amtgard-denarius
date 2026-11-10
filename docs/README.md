@@ -31,6 +31,8 @@ Shipped milestones, spikes, and test conventions. Cite when implementing; do not
 |----------|-------------|
 | [deploy-gb-host-env-vault.md](deploy-gb-host-env-vault.md) | **gb** deploy, host-env-vault inject, local **host-store** migration |
 
+**Static analysis:** `composer psalm` (Psalm 7, `src/` + taint). Generate a **local** baseline with `composer psalm:baseline` → `psalm-baseline.xml` (gitignored); `scripts/psalm.sh` applies it when present.
+
 ## For agents
 
 1. **New feature work** → `planning/` + append outcomes to `reference/milestones.md` when a branch merges.

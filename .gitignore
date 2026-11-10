@@ -8,6 +8,7 @@ data/ork-kingdoms.json
 .phpunit.cache
 .phpunit.cache/
 build/
+psalm-baseline.xml
 logs/
 vendor/
 .DS_Store
